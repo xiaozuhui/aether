@@ -40,6 +40,9 @@ pub enum RuntimeError {
 
     /// Throw statement (user-thrown error)
     Throw(Value),
+
+    /// Custom error message (用于IO操作等)
+    CustomError(String),
 }
 
 impl std::fmt::Display for RuntimeError {
@@ -63,6 +66,7 @@ impl std::fmt::Display for RuntimeError {
             RuntimeError::Return(val) => write!(f, "Return: {}", val),
             RuntimeError::Yield(val) => write!(f, "Yield: {}", val),
             RuntimeError::Throw(val) => write!(f, "Throw: {}", val),
+            RuntimeError::CustomError(msg) => write!(f, "{}", msg),
         }
     }
 }
@@ -75,26 +79,34 @@ pub type EvalResult = Result<Value, RuntimeError>;
 pub struct Evaluator {
     /// Global environment
     env: Rc<RefCell<Environment>>,
+    /// Built-in function registry
+    registry: BuiltInRegistry,
 }
 
 impl Evaluator {
-    /// Create a new evaluator
+    /// Create a new evaluator (默认禁用IO)
     pub fn new() -> Self {
+        Self::with_permissions(crate::builtins::IOPermissions::default())
+    }
+
+    /// Create a new evaluator with custom IO permissions
+    pub fn with_permissions(permissions: crate::builtins::IOPermissions) -> Self {
         let env = Rc::new(RefCell::new(Environment::new()));
 
-        // Register built-in functions
-        let registry = BuiltInRegistry::new();
+        // Register built-in functions with permissions
+        let registry = BuiltInRegistry::with_permissions(permissions);
         for name in registry.names() {
             env.borrow_mut()
                 .set(name.clone(), Value::BuiltIn { name, arity: 0 });
         }
 
-        Evaluator { env }
+        Evaluator { env, registry }
     }
 
     /// Create evaluator with custom environment
     pub fn with_env(env: Rc<RefCell<Environment>>) -> Self {
-        Evaluator { env }
+        let registry = BuiltInRegistry::new();
+        Evaluator { env, registry }
     }
 
     /// Evaluate a program
@@ -588,8 +600,7 @@ impl Evaluator {
 
             Value::BuiltIn { name, .. } => {
                 // Get the built-in function from the registry
-                let registry = BuiltInRegistry::new();
-                if let Some((func, _arity)) = registry.get(name) {
+                if let Some((func, _arity)) = self.registry.get(name) {
                     // Call the built-in function
                     func(&args)
                 } else {

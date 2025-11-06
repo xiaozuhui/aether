@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**A lightweight, embeddable domain-specific language (DSL)**
+## A lightweight, embeddable domain-specific language (DSL)
 
 [![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether)
 [![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether)
@@ -23,6 +23,7 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
 - 📝 **Simple Syntax**: Easy to learn and read
 - 🔍 **Enhanced Error Reporting**: Detailed error messages with line and column numbers
 - ✅ **Strict Naming Conventions**: Enforced UPPER_SNAKE_CASE for consistency
+- 🔒 **Security-First Design**: IO disabled by default in library mode, enabled in CLI mode
 
 ## 🌟 Features
 
@@ -35,6 +36,8 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
 - **Error Reporting**: Detailed error messages with line/column numbers and helpful suggestions
 - **Rich Standard Library**: 190+ built-in functions including:
   - I/O operations (PRINT, PRINTLN, INPUT)
+  - **File system operations**: READ_FILE, WRITE_FILE, LIST_DIR, etc.
+  - **Network operations**: HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
   - Type conversions and introspection
   - Array and string manipulation
   - Dictionary operations
@@ -52,6 +55,10 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
     - Salary conversion and proration (21.75 legal pay days standard)
     - Date/time calculations for payroll
     - Statistical analysis for compensation data
+- **Flexible Security Model**:
+  - **CLI mode**: IO enabled by default (convenient for direct usage)
+  - **Library mode**: IO disabled by default (secure for DSL embedding)
+  - Granular permission control for filesystem and network operations
 
 ## 📦 Installation
 
@@ -93,42 +100,58 @@ npm install @yourusername/aether
 
 ## 🚀 Quick Start
 
-### Command-Line Usage
+### Command-Line Usage (IO Enabled by Default)
+
+When you run Aether scripts from the command line, all IO capabilities are **automatically enabled** for your convenience:
 
 **Run a script file:**
 
 ```bash
-# Run an Aether script
+# Run an Aether script - IO is enabled automatically
 aether my_script.aether
 
-# Example: stats_demo.aether
-aether examples/stats_demo.aether
+# Example: File operations work out of the box
+aether examples/test_cli_io.aether
 ```
 
 **Interactive REPL:**
 
 ```bash
-# Start interactive mode (no arguments)
+# Start interactive mode - IO is enabled automatically
 aether
 
-# Then type Aether code:
-aether[1]> Set X 10
-aether[2]> Set Y 20
-aether[3]> (X + Y)
-30
-aether[4]> help      # Show help
-aether[5]> exit      # Exit REPL
+# You can use file and network operations directly:
+aether[1]> WriteFile("test.txt", "Hello, World!")
+true
+aether[2]> ReadFile("test.txt")
+"Hello, World!"
+aether[3]> HttpGet("https://api.github.com")
+"{...}"
+aether[4]> exit
 ```
 
-### Library Usage (Rust)
+### Library Usage (Rust) - Secure by Default
+
+When embedding Aether as a DSL, **IO is disabled by default** for security:
 
 ```rust
-use aether::Aether;
+use aether::{Aether, IOPermissions};
 
 fn main() {
+    // Option 1: Default (no IO) - secure for untrusted scripts
     let mut engine = Aether::new();
     
-    // Basic arithmetic
+    // Option 2: Custom permissions - granular control
+    let permissions = IOPermissions {
+        filesystem_enabled: true,   // Allow file operations
+        network_enabled: false,      // Block network operations
+    };
+    let mut engine = Aether::with_permissions(permissions);
+    
+    // Option 3: Full permissions - trust all operations
+    let mut engine = Aether::with_all_permissions();
+    
+    // Basic arithmetic (always works, no IO needed)
     let code = r#"
         Set X 10
         Set Y 20
@@ -140,15 +163,18 @@ fn main() {
         Err(e) => eprintln!("Error: {}", e),
     }
     
-    // Using built-in functions
+    // File operations require permissions
     let code = r#"
-        Set NUMBERS Range(1, 6)
-        Set TOTAL Sum(NUMBERS)
-        Println(Join(NUMBERS, ", "))
-        Println(TOTAL)
+        WriteFile("output.txt", "Result: 30")
+        ReadFile("output.txt")
     "#;
     
-    engine.eval(code).unwrap();
+    // This will fail with default Aether::new() (secure)
+    // This will work with Aether::with_all_permissions()
+    match engine.eval(code) {
+        Ok(result) => println!("File content: {}", result),
+        Err(e) => eprintln!("Error: {}", e),
+    }
 }
 ```
 
@@ -302,6 +328,79 @@ Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
 Println(TAX)    // Shows: 4.00
 ```
 
+### File System and Network Operations
+
+**CLI Mode (IO Enabled Automatically):**
+
+When running Aether from the command line, all IO operations work out of the box:
+
+```javascript
+// File operations - works in CLI mode without configuration
+WriteFile("data.txt", "Hello, World!")
+Set CONTENT ReadFile("data.txt")
+Println(CONTENT)  // Prints: Hello, World!
+
+// Check if file exists
+If FileExists("data.txt") {
+    Println("File exists!")
+    DeleteFile("data.txt")
+}
+
+// Directory operations
+CreateDir("output")
+Set FILES ListDir(".")
+For FILE In FILES {
+    Println(FILE)
+}
+
+// Network operations - works in CLI mode without configuration
+Set RESPONSE HttpGet("https://api.github.com")
+Println(RESPONSE)
+
+// POST request with custom content type
+Set DATA '{"name": "test"}'
+Set RESULT HttpPost("https://api.example.com/data", DATA, "application/json")
+Println(RESULT)
+```
+
+**Library Mode (Requires Explicit Permissions):**
+
+When embedding Aether as a DSL, you must explicitly enable IO for security:
+
+```rust
+use aether::{Aether, IOPermissions};
+
+// Option 1: Enable all IO (if you trust the scripts)
+let mut engine = Aether::with_all_permissions();
+
+// Option 2: Enable only specific operations (recommended)
+let permissions = IOPermissions {
+    filesystem_enabled: true,   // Allow file operations
+    network_enabled: false,      // Block network operations
+};
+let mut engine = Aether::with_permissions(permissions);
+
+// Option 3: No IO at all (most secure, default)
+let mut engine = Aether::new();  // IO disabled by default
+
+let code = r#"
+    WriteFile("output.txt", "Result: 42")
+    ReadFile("output.txt")
+"#;
+
+match engine.eval(code) {
+    Ok(result) => println!("{}", result),
+    Err(e) => eprintln!("Error: {}", e),
+}
+```
+
+**Security Model:**
+
+- **CLI mode**: IO enabled by default (you explicitly run the script)
+- **Library mode**: IO disabled by default (scripts may be untrusted)
+
+See [docs/IO_QUICKSTART.md](docs/IO_QUICKSTART.md) and [docs/IO_PERMISSIONS.md](docs/IO_PERMISSIONS.md) for details.
+
 ### Enhanced Error Reporting
 
 ```javascript
@@ -340,6 +439,8 @@ See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRE
 - **[User Guide](docs/USER_GUIDE.md)** - Complete reference for all built-in functions
 - **[Precision Guide](docs/PRECISION_GUIDE.md)** - Guide to precise and precision arithmetic
 - **[Error Reporting Guide](docs/ERROR_REPORTING.md)** - Error messages and naming conventions
+- **[IO Quick Start](docs/IO_QUICKSTART.md)** - File system and network operations with security
+- **[IO Permissions Guide](docs/IO_PERMISSIONS.md)** - Understanding CLI vs library security models
 - **[Changelog](CHANGELOG.md)** - Version history and roadmap
 - **[Development Guide](DEVELOPMENT.md)** - Implementation and contribution guide
 - **[Architecture](cross-language-architecture.md)** - Cross-language design

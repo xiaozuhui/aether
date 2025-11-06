@@ -8,8 +8,10 @@ use std::collections::HashMap;
 // Module declarations
 pub mod array;
 pub mod dict;
+pub mod filesystem;
 pub mod io;
 pub mod math;
+pub mod network;
 pub mod payroll;
 pub mod precise;
 pub mod string;
@@ -18,16 +20,56 @@ pub mod types;
 /// Type alias for built-in function implementations
 pub type BuiltInFn = fn(&[Value]) -> Result<Value, RuntimeError>;
 
+/// IO 权限配置
+#[derive(Debug, Clone)]
+pub struct IOPermissions {
+    /// 是否允许文件系统操作
+    pub filesystem_enabled: bool,
+    /// 是否允许网络操作
+    pub network_enabled: bool,
+}
+
+impl Default for IOPermissions {
+    fn default() -> Self {
+        Self {
+            filesystem_enabled: false, // 默认禁用，确保安全
+            network_enabled: false,    // 默认禁用，确保安全
+        }
+    }
+}
+
+impl IOPermissions {
+    /// 创建启用所有权限的配置
+    pub fn allow_all() -> Self {
+        Self {
+            filesystem_enabled: true,
+            network_enabled: true,
+        }
+    }
+
+    /// 创建禁用所有权限的配置
+    pub fn deny_all() -> Self {
+        Self::default()
+    }
+}
+
 /// Registry of all built-in functions
 pub struct BuiltInRegistry {
     functions: HashMap<String, (BuiltInFn, usize)>, // (function, arity)
+    permissions: IOPermissions,
 }
 
 impl BuiltInRegistry {
-    /// Create a new registry with all built-in functions
+    /// Create a new registry with all built-in functions (默认禁用IO)
     pub fn new() -> Self {
+        Self::with_permissions(IOPermissions::default())
+    }
+
+    /// Create a new registry with custom permissions
+    pub fn with_permissions(permissions: IOPermissions) -> Self {
         let mut registry = Self {
             functions: HashMap::new(),
+            permissions: permissions.clone(),
         };
 
         // IO functions
@@ -469,6 +511,25 @@ impl BuiltInRegistry {
             payroll::statistics::calc_salary_distribution,
             2,
         );
+
+        // Filesystem functions (根据权限注册)
+        if permissions.filesystem_enabled {
+            registry.register("READ_FILE", filesystem::read_file, 1);
+            registry.register("WRITE_FILE", filesystem::write_file, 2);
+            registry.register("APPEND_FILE", filesystem::append_file, 2);
+            registry.register("DELETE_FILE", filesystem::delete_file, 1);
+            registry.register("FILE_EXISTS", filesystem::file_exists, 1);
+            registry.register("LIST_DIR", filesystem::list_dir, 1);
+            registry.register("CREATE_DIR", filesystem::create_dir, 1);
+        }
+
+        // Network functions (根据权限注册)
+        if permissions.network_enabled {
+            registry.register("HTTP_GET", network::http_get, 1);
+            registry.register("HTTP_POST", network::http_post, 2); // Variadic: 2-3 args
+            registry.register("HTTP_PUT", network::http_put, 2); // Variadic: 2-3 args
+            registry.register("HTTP_DELETE", network::http_delete, 1);
+        }
 
         registry
     }

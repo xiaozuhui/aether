@@ -19,7 +19,8 @@ fn main() {
 fn run_file(filename: &str) {
     match fs::read_to_string(filename) {
         Ok(code) => {
-            let mut engine = Aether::new();
+            // 作为独立语言使用时，默认启用所有IO权限
+            let mut engine = Aether::with_all_permissions();
             match engine.eval(&code) {
                 Ok(result) => {
                     // 只在有显式输出时打印
@@ -47,7 +48,8 @@ fn run_repl() {
     println!("输入 'help' 查看帮助");
     println!();
 
-    let mut engine = Aether::new();
+    // REPL模式也默认启用所有IO权限
+    let mut engine = Aether::with_all_permissions();
     let mut line_number = 1;
 
     loop {

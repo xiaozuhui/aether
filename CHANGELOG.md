@@ -8,6 +8,44 @@
 
 ### 新增功能 ✨
 
+#### IO功能与安全控制 🔒
+
+新增文件系统和网络IO功能，**默认禁用以确保安全性**：
+
+**文件系统函数 (7个)**
+
+- READ_FILE, WRITE_FILE, APPEND_FILE, DELETE_FILE
+- FILE_EXISTS, LIST_DIR, CREATE_DIR
+
+**网络函数 (4个)**
+
+- HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
+
+**安全特性**
+
+- `IOPermissions` 配置结构：控制IO权限
+- 默认禁用所有IO操作（安全第一）
+- 可选择性启用文件系统或网络权限
+- 支持 `Aether::with_permissions()` 自定义配置
+- 支持 `Aether::with_all_permissions()` 启用所有IO
+
+使用示例：
+
+```rust
+use aether::{Aether, IOPermissions};
+
+// 默认：IO禁用（安全模式）
+let mut engine = Aether::new();
+
+// 选择性启用文件系统
+let mut perms = IOPermissions::default();
+perms.filesystem_enabled = true;
+let mut engine = Aether::with_permissions(perms);
+
+// 启用所有IO
+let mut engine = Aether::with_all_permissions();
+```
+
 #### 薪酬计算模块 💰
 
 新增完整的薪酬计算模块，共78个函数，涵盖：

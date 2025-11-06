@@ -5,9 +5,14 @@
 //!
 //! # Quick Start
 //!
+//! ## As a DSL (Embedded in Your Application)
+//!
+//! When embedding Aether as a DSL, IO operations are **disabled by default** for security:
+//!
 //! ```
 //! use aether::Aether;
 //!
+//! // Default: IO disabled (safe for user scripts)
 //! let mut engine = Aether::new();
 //! let code = r#"
 //!     Set X 10
@@ -19,6 +24,30 @@
 //!     Ok(result) => println!("Result: {}", result),
 //!     Err(e) => eprintln!("Error: {}", e),
 //! }
+//! ```
+//!
+//! Enable IO only when needed:
+//!
+//! ```
+//! use aether::{Aether, IOPermissions};
+//!
+//! // Enable only filesystem
+//! let mut perms = IOPermissions::default();
+//! perms.filesystem_enabled = true;
+//! let mut engine = Aether::with_permissions(perms);
+//!
+//! // Or enable all IO
+//! let mut engine = Aether::with_all_permissions();
+//! ```
+//!
+//! ## As a Standalone Language (Command-Line Tool)
+//!
+//! The `aether` command-line tool automatically enables all IO permissions,
+//! allowing scripts to freely use file and network operations:
+//!
+//! ```bash
+//! # All IO operations work in CLI mode
+//! aether script.aether
 //! ```
 
 pub mod ast;
@@ -32,7 +61,7 @@ pub mod value;
 
 // Re-export commonly used types
 pub use ast::{Expr, Program, Stmt};
-pub use builtins::BuiltInRegistry;
+pub use builtins::{BuiltInRegistry, IOPermissions};
 pub use environment::Environment;
 pub use evaluator::{EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
@@ -47,10 +76,25 @@ pub struct Aether {
 
 impl Aether {
     /// Create a new Aether engine instance
+    ///
+    /// **For DSL embedding**: IO operations are disabled by default for security.
+    /// Use `with_permissions()` or `with_all_permissions()` to enable IO.
+    ///
+    /// **For CLI usage**: The command-line tool uses `with_all_permissions()` by default.
     pub fn new() -> Self {
+        Self::with_permissions(IOPermissions::default())
+    }
+
+    /// Create a new Aether engine with custom IO permissions
+    pub fn with_permissions(permissions: IOPermissions) -> Self {
         Aether {
-            evaluator: Evaluator::new(),
+            evaluator: Evaluator::with_permissions(permissions),
         }
+    }
+
+    /// Create a new Aether engine with all IO permissions enabled
+    pub fn with_all_permissions() -> Self {
+        Self::with_permissions(IOPermissions::allow_all())
     }
 
     /// Evaluate Aether code and return the result
