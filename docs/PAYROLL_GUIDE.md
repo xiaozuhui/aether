@@ -1,0 +1,518 @@
+# 薪酬计算模块使用指南
+
+## 概述
+
+Aether 薪酬计算模块提供了78个专门的函数，用于处理各种薪酬相关的计算场景。该模块遵循中国劳动法规定，特别是基于21.75个法定计薪天数（(365-104)/12）的标准。
+
+## 模块结构
+
+薪酬模块分为9个子模块：
+
+### 1. 基本工资计算 (7个函数)
+
+**CALC_HOURLY_PAY** - 计算时薪
+
+```aether
+Let HOURLY_RATE = CALC_HOURLY_PAY(MONTHLY_SALARY, MONTHLY_HOURS)
+```
+
+**CALC_DAILY_PAY** - 计算日薪
+
+```aether
+Let DAILY_RATE = CALC_DAILY_PAY(MONTHLY_SALARY, WORKING_DAYS)
+```
+
+**CALC_MONTHLY_FROM_HOURLY** - 从时薪计算月薪
+
+```aether
+Let MONTHLY = CALC_MONTHLY_FROM_HOURLY(HOURLY_RATE)
+```
+
+**CALC_ANNUAL_SALARY** - 计算年薪
+
+```aether
+Let ANNUAL = CALC_ANNUAL_SALARY(MONTHLY_SALARY)
+```
+
+**CALC_GROSS_SALARY** - 计算应发工资
+
+```aether
+Let GROSS = CALC_GROSS_SALARY(BASE_SALARY, ALLOWANCES)
+```
+
+**CALC_NET_SALARY** - 计算实发工资
+
+```aether
+Let NET = CALC_NET_SALARY(GROSS_SALARY, DEDUCTIONS)
+```
+
+### 2. 加班费计算 (5个函数)
+
+**CALC_WEEKDAY_OVERTIME** - 工作日加班（1.5倍）
+
+```aether
+Let OVERTIME_PAY = CALC_WEEKDAY_OVERTIME(MONTHLY_SALARY, OVERTIME_HOURS)
+```
+
+**CALC_WEEKEND_OVERTIME** - 周末加班（2倍）
+
+```aether
+Let WEEKEND_PAY = CALC_WEEKEND_OVERTIME(MONTHLY_SALARY, WEEKEND_HOURS)
+```
+
+**CALC_HOLIDAY_OVERTIME** - 法定节假日加班（3倍）
+
+```aether
+Let HOLIDAY_PAY = CALC_HOLIDAY_OVERTIME(MONTHLY_SALARY, HOLIDAY_HOURS)
+```
+
+**CALC_TOTAL_OVERTIME** - 计算加班费总额
+
+```aether
+Let TOTAL_OT = CALC_TOTAL_OVERTIME(MONTHLY_SALARY, WEEKDAY_HOURS, WEEKEND_HOURS, HOLIDAY_HOURS)
+```
+
+### 3. 个人所得税 (6个函数)
+
+**CALC_PERSONAL_TAX** - 7级累进税率
+
+```aether
+Let TAX = CALC_PERSONAL_TAX(TAXABLE_INCOME)
+```
+
+税率表：
+
+- 0-36,000: 3%
+- 36,000-144,000: 10%
+- 144,000-300,000: 20%
+- 300,000-420,000: 25%
+- 420,000-660,000: 30%
+- 660,000-960,000: 35%
+- >960,000: 45%
+
+**CALC_TAXABLE_INCOME** - 计算应纳税所得额
+
+```aether
+Let TAXABLE = CALC_TAXABLE_INCOME(GROSS_SALARY)
+# 自动扣除起征点5000元
+```
+
+**CALC_ANNUAL_BONUS_TAX** - 年终奖单独计税
+
+```aether
+Let BONUS_TAX = CALC_ANNUAL_BONUS_TAX(ANNUAL_BONUS)
+```
+
+**CALC_GROSS_FROM_NET** - 税后反推税前
+
+```aether
+Let GROSS = CALC_GROSS_FROM_NET(NET_SALARY)
+```
+
+### 4. 社保公积金 (10个函数)
+
+**CALC_PENSION_INSURANCE** - 养老保险（个人8%）
+
+```aether
+Let PENSION = CALC_PENSION_INSURANCE(BASE_SALARY)
+```
+
+**CALC_MEDICAL_INSURANCE** - 医疗保险（个人2%）
+
+```aether
+Let MEDICAL = CALC_MEDICAL_INSURANCE(BASE_SALARY)
+```
+
+**CALC_UNEMPLOYMENT_INSURANCE** - 失业保险（个人0.5%）
+
+```aether
+Let UNEMPLOYMENT = CALC_UNEMPLOYMENT_INSURANCE(BASE_SALARY)
+```
+
+**CALC_HOUSING_FUND** - 住房公积金（个人12%）
+
+```aether
+Let HOUSING_FUND = CALC_HOUSING_FUND(BASE_SALARY)
+```
+
+**CALC_SOCIAL_INSURANCE** - 社保公积金总额
+
+```aether
+Let TOTAL_INSURANCE = CALC_SOCIAL_INSURANCE(BASE_SALARY)
+# 自动计算养老+医疗+失业+公积金
+```
+
+**ADJUST_SOCIAL_BASE** - 调整社保基数
+
+```aether
+Let ADJUSTED_BASE = ADJUST_SOCIAL_BASE(ACTUAL_SALARY, LOWER_LIMIT, UPPER_LIMIT)
+```
+
+### 5. 考勤扣款 (7个函数)
+
+**CALC_LATE_DEDUCTION** - 迟到扣款
+
+```aether
+Let LATE_DEDUCTION = CALC_LATE_DEDUCTION(LATE_COUNT, DEDUCTION_PER_TIME)
+```
+
+**CALC_ABSENT_DEDUCTION** - 旷工扣款
+
+```aether
+Let ABSENT_DEDUCTION = CALC_ABSENT_DEDUCTION(BASE_SALARY, ABSENT_DAYS)
+```
+
+**CALC_SICK_LEAVE_PAY** - 病假工资（按工龄计算）
+
+```aether
+Let SICK_PAY = CALC_SICK_LEAVE_PAY(BASE_SALARY, SICK_DAYS, SENIORITY)
+# 工龄 < 2年: 60%
+# 工龄 2-4年: 70%
+# 工龄 4-6年: 80%
+# 工龄 6-8年: 90%
+# 工龄 >= 8年: 100%
+```
+
+### 6. 奖金计算 (6个函数)
+
+**CALC_PERFORMANCE_PAY** - 绩效工资
+
+```aether
+Let PERFORMANCE = CALC_PERFORMANCE_PAY(BASE_SALARY, PERFORMANCE_COEFFICIENT)
+```
+
+**CALC_ANNUAL_BONUS** - 年终奖
+
+```aether
+Let BONUS = CALC_ANNUAL_BONUS(MONTHLY_SALARY, MONTHS, PERFORMANCE_COEFFICIENT)
+```
+
+**CALC_13TH_SALARY** - 13薪
+
+```aether
+Let THIRTEENTH = CALC_13TH_SALARY(MONTHLY_SALARY, WORKED_MONTHS)
+```
+
+**CALC_SALES_COMMISSION** - 销售提成
+
+```aether
+Let COMMISSION = CALC_SALES_COMMISSION(SALES_AMOUNT, COMMISSION_RATE, THRESHOLD)
+```
+
+### 7. 津贴补贴 (7个函数)
+
+**CALC_MEAL_ALLOWANCE** - 餐补
+
+```aether
+Let MEAL = CALC_MEAL_ALLOWANCE(DAILY_ALLOWANCE, ATTENDANCE_DAYS)
+```
+
+**CALC_TRANSPORT_ALLOWANCE** - 交通补贴
+
+```aether
+Let TRANSPORT = CALC_TRANSPORT_ALLOWANCE(DAILY_ALLOWANCE, ATTENDANCE_DAYS)
+```
+
+**CALC_HOUSING_ALLOWANCE** - 住房补贴
+
+```aether
+Let HOUSING = CALC_HOUSING_ALLOWANCE(MONTHLY_ALLOWANCE, WORKED_MONTHS)
+```
+
+### 8. 薪资折算转换 (12个函数)
+
+**单位转换**
+
+```aether
+# 年薪 <-> 月薪
+Let MONTHLY = ANNUAL_TO_MONTHLY(ANNUAL_SALARY)
+Let ANNUAL = MONTHLY_TO_ANNUAL(MONTHLY_SALARY)
+
+# 月薪 <-> 日薪（按21.75天）
+Let DAILY = MONTHLY_TO_DAILY(MONTHLY_SALARY)
+Let MONTHLY = DAILY_TO_MONTHLY(DAILY_SALARY)
+
+# 月薪 <-> 时薪
+Let HOURLY = MONTHLY_TO_HOURLY(MONTHLY_SALARY)
+Let MONTHLY = HOURLY_TO_MONTHLY(HOURLY_RATE)
+```
+
+**折算方式**
+
+```aether
+# 按自然天折算
+Let SALARY = PRORATE_BY_NATURAL_DAYS(MONTHLY_SALARY, WORKED_DAYS, TOTAL_DAYS)
+
+# 按21.75天折算（法定标准）
+Let SALARY = PRORATE_BY_LEGAL_DAYS(MONTHLY_SALARY, WORKED_DAYS)
+
+# 按工作日折算
+Let SALARY = PRORATE_BY_WORKDAYS(MONTHLY_SALARY, WORKED_DAYS, TOTAL_WORKDAYS)
+```
+
+**入离职场景**
+
+```aether
+# 入职当月工资（支持3种折算方式）
+# 折算方式: 0=自然天, 1=21.75天, 2=工作日
+Let SALARY = CALC_ONBOARDING_SALARY(MONTHLY_SALARY, ONBOARDING_DAY, TOTAL_DAYS, CALC_TYPE)
+
+# 离职当月工资
+Let SALARY = CALC_RESIGNATION_SALARY(MONTHLY_SALARY, RESIGNATION_DAY, TOTAL_DAYS, CALC_TYPE)
+```
+
+### 9. 日期时间计算 (12个函数)
+
+**天数计算**
+
+```aether
+# 自然天数
+Let DAYS = CALC_NATURAL_DAYS(START_DAY, END_DAY)
+
+# 法定计薪天数
+Let LEGAL_DAYS = GET_LEGAL_PAY_DAYS()  # 返回 21.75
+
+# 工作日天数
+Let WORKDAYS = CALC_WORKDAYS(TOTAL_DAYS, WEEKEND_DAYS)
+
+# 周末天数
+Let WEEKENDS = CALC_WEEKEND_DAYS(TOTAL_DAYS, START_WEEKDAY)
+```
+
+**日期判断**
+
+```aether
+# 是否工作日
+Let IS_WORK = IS_WORKDAY(WEEKDAY, IS_HOLIDAY)
+
+# 是否周末
+Let IS_WEEK_END = IS_WEEKEND(WEEKDAY)
+
+# 是否节假日
+Let IS_HOL = IS_HOLIDAY(DATE, HOLIDAY_LIST)
+```
+
+**工时计算**
+
+```aether
+# 标准工作小时数
+Let HOURS = CALC_WORK_HOURS(WORK_DAYS)  # 默认每天8小时
+
+# 月度标准工作小时
+Let MONTHLY_HOURS = CALC_MONTHLY_WORK_HOURS()  # 21.75 * 8 = 174小时
+
+# 年度工作天数
+Let ANNUAL_DAYS = CALC_ANNUAL_WORKDAYS()  # (365-104) = 261天
+```
+
+### 10. 统计分析 (6个函数)
+
+**基础统计**
+
+```aether
+# 平均薪资
+Let AVG = CALC_SALARY_AVERAGE(SALARY1, SALARY2, SALARY3, ...)
+
+# 中位数
+Let MEDIAN = CALC_SALARY_MEDIAN(SALARY1, SALARY2, SALARY3, ...)
+
+# 范围（最大-最小）
+Let RANGE = CALC_SALARY_RANGE(SALARY1, SALARY2, SALARY3, ...)
+
+# 标准差
+Let STD_DEV = CALC_SALARY_STD_DEV(SALARY1, SALARY2, SALARY3, ...)
+```
+
+**分位数**
+
+```aether
+# 计算P25, P50, P75, P90等
+Let P25 = CALC_PERCENTILE(25, SALARY1, SALARY2, SALARY3, ...)
+Let P90 = CALC_PERCENTILE(90, SALARY1, SALARY2, SALARY3, ...)
+```
+
+## 完整示例
+
+### 示例1：基础薪资计算
+
+```aether
+Function CALC_BASIC_SALARY() {
+    Let MONTHLY_SALARY = 10000
+    
+    // 计算各种薪资单位
+    Let HOURLY = MONTHLY_TO_HOURLY(MONTHLY_SALARY)
+    Let DAILY = MONTHLY_TO_DAILY(MONTHLY_SALARY)
+    Let ANNUAL = MONTHLY_TO_ANNUAL(MONTHLY_SALARY)
+    
+    PRINTLN("月薪: " + TO_STRING(MONTHLY_SALARY))
+    PRINTLN("时薪: " + TO_STRING(HOURLY))
+    PRINTLN("日薪: " + TO_STRING(DAILY))
+    PRINTLN("年薪: " + TO_STRING(ANNUAL))
+    
+    Return MONTHLY_SALARY
+}
+
+CALC_BASIC_SALARY()
+```
+
+### 示例2：完整月度工资计算
+
+```aether
+Function CALC_MONTHLY_PAYROLL(BASE_SALARY, OVERTIME_HOURS, ATTENDANCE_DAYS) {
+    PRINTLN("=== 月度工资计算 ===")
+    PRINTLN("基本工资: " + TO_STRING(BASE_SALARY))
+    
+    // 1. 加班费
+    Let OVERTIME_PAY = CALC_WEEKDAY_OVERTIME(BASE_SALARY, OVERTIME_HOURS)
+    PRINTLN("加班费: " + TO_STRING(OVERTIME_PAY))
+    
+    // 2. 餐补和交通补贴
+    Let MEAL = CALC_MEAL_ALLOWANCE(20, ATTENDANCE_DAYS)
+    Let TRANSPORT = CALC_TRANSPORT_ALLOWANCE(10, ATTENDANCE_DAYS)
+    PRINTLN("餐补: " + TO_STRING(MEAL))
+    PRINTLN("交通补贴: " + TO_STRING(TRANSPORT))
+    
+    // 3. 应发工资
+    Let GROSS_SALARY = BASE_SALARY + OVERTIME_PAY + MEAL + TRANSPORT
+    PRINTLN("应发工资: " + TO_STRING(GROSS_SALARY))
+    
+    // 4. 社保公积金
+    Let SOCIAL_INSURANCE = CALC_SOCIAL_INSURANCE(BASE_SALARY)
+    PRINTLN("社保公积金: " + TO_STRING(SOCIAL_INSURANCE))
+    
+    // 5. 个人所得税
+    Let TAXABLE = GROSS_SALARY - SOCIAL_INSURANCE - 5000
+    Let TAX = If TAXABLE > 0 Then CALC_PERSONAL_TAX(TAXABLE) Else 0
+    PRINTLN("个人所得税: " + TO_STRING(TAX))
+    
+    // 6. 实发工资
+    Let NET_SALARY = GROSS_SALARY - SOCIAL_INSURANCE - TAX
+    PRINTLN("实发工资: " + TO_STRING(NET_SALARY))
+    
+    Return NET_SALARY
+}
+
+// 调用示例
+CALC_MONTHLY_PAYROLL(12000, 20, 22)
+```
+
+### 示例3：入职员工薪资计算
+
+```aether
+Function CALC_NEW_EMPLOYEE_SALARY(MONTHLY_SALARY, ONBOARDING_DAY) {
+    Let TOTAL_DAYS = 30
+    
+    PRINTLN("=== 入职员工薪资计算 ===")
+    PRINTLN("标准月薪: " + TO_STRING(MONTHLY_SALARY))
+    PRINTLN("入职日期: " + TO_STRING(ONBOARDING_DAY) + "号")
+    
+    // 按自然天折算
+    Let SALARY_NATURAL = CALC_ONBOARDING_SALARY(
+        MONTHLY_SALARY, 
+        ONBOARDING_DAY, 
+        TOTAL_DAYS, 
+        0  // 0=自然天
+    )
+    PRINTLN("按自然天折算: " + TO_STRING(SALARY_NATURAL))
+    
+    // 按21.75天折算（推荐）
+    Let SALARY_LEGAL = CALC_ONBOARDING_SALARY(
+        MONTHLY_SALARY, 
+        ONBOARDING_DAY, 
+        TOTAL_DAYS, 
+        1  // 1=21.75天
+    )
+    PRINTLN("按21.75天折算: " + TO_STRING(SALARY_LEGAL))
+    
+    Return SALARY_LEGAL
+}
+
+// 15号入职
+CALC_NEW_EMPLOYEE_SALARY(10000, 15)
+```
+
+### 示例4：年终奖和税金计算
+
+```aether
+Function CALC_YEAR_END_BONUS(MONTHLY_SALARY, PERFORMANCE) {
+    PRINTLN("=== 年终奖计算 ===")
+    
+    // 计算年终奖
+    Let BONUS = CALC_ANNUAL_BONUS(MONTHLY_SALARY, 12, PERFORMANCE)
+    PRINTLN("年终奖: " + TO_STRING(BONUS))
+    
+    // 计算年终奖个税
+    Let BONUS_TAX = CALC_ANNUAL_BONUS_TAX(BONUS)
+    PRINTLN("年终奖个税: " + TO_STRING(BONUS_TAX))
+    
+    // 税后年终奖
+    Let NET_BONUS = BONUS - BONUS_TAX
+    PRINTLN("税后年终奖: " + TO_STRING(NET_BONUS))
+    
+    // 计算13薪
+    Let THIRTEENTH = CALC_13TH_SALARY(MONTHLY_SALARY, 12)
+    PRINTLN("13薪: " + TO_STRING(THIRTEENTH))
+    
+    Return NET_BONUS
+}
+
+// 绩效系数1.2
+CALC_YEAR_END_BONUS(15000, 1.2)
+```
+
+## 重要说明
+
+### 1. 21.75天标准
+
+中国劳动法规定的月度计薪天数为21.75天，计算方法：
+
+```
+(365天 - 104天周末) ÷ 12个月 = 21.75天
+```
+
+该标准用于：
+
+- 计算日薪和时薪
+- 月度薪资折算
+- 加班费基数计算
+
+### 2. 个人所得税
+
+- 起征点：5000元/月
+- 专项扣除：社保、公积金
+- 专项附加扣除：子女教育、继续教育、大病医疗、住房贷款利息、住房租金、赡养老人
+
+### 3. 社保缴费比例（参考）
+
+**个人缴费：**
+
+- 养老保险：8%
+- 医疗保险：2%
+- 失业保险：0.5%
+- 住房公积金：5-12%（可调整）
+
+**企业缴费：**
+
+- 养老保险：16%
+- 医疗保险：10%
+- 失业保险：0.5%
+- 工伤保险：0.2-1.9%
+- 生育保险：0.8%
+- 住房公积金：5-12%（可调整）
+
+### 4. 加班费倍数
+
+- 工作日延时：1.5倍
+- 休息日：2倍
+- 法定节假日：3倍
+
+## 更多示例
+
+查看 `examples/payroll_demo.aether` 了解更多实际应用场景。
+
+## 相关文档
+
+- [用户指南](USER_GUIDE.md)
+- [错误报告指南](ERROR_REPORTING.md)
+- [开发指南](../DEVELOPMENT.md)
+- [变更日志](../CHANGELOG.md)

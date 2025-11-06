@@ -33,7 +33,7 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
 - **Lazy Evaluation**: Deferred computation with `Lazy` keyword
 - **Naming Convention**: Enforced UPPER_SNAKE_CASE for variables, functions, and parameters
 - **Error Reporting**: Detailed error messages with line/column numbers and helpful suggestions
-- **Rich Standard Library**: 112 built-in functions including:
+- **Rich Standard Library**: 190+ built-in functions including:
   - I/O operations (PRINT, PRINTLN, INPUT)
   - Type conversions and introspection
   - Array and string manipulation
@@ -42,6 +42,16 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
   - **Precise arithmetic**: Fraction-based calculations for exact results
   - **Precision arithmetic**: Fixed decimal place calculations for financial computations
   - **Scientific computing**: Linear regression, normal/Poisson distributions, matrix inversion
+  - **Payroll calculations**: Comprehensive payroll and compensation module (78 functions)
+    - Basic salary calculations (hourly, daily, monthly, annual)
+    - Overtime pay (weekday 1.5x, weekend 2x, holiday 3x)
+    - Personal income tax (7-bracket progressive tax, annual bonus tax)
+    - Social insurance and housing fund
+    - Attendance and leave management
+    - Bonuses and allowances
+    - Salary conversion and proration (21.75 legal pay days standard)
+    - Date/time calculations for payroll
+    - Statistical analysis for compensation data
 
 ## 📦 Installation
 

@@ -282,7 +282,6 @@ fn test_matrix_inverse() {
                 Err(e) => panic!("Error in matmul: {}", e),
             }
         }
-        Ok(v) => panic!("Expected matrix, got: {:?}", v),
         Err(e) => panic!("Error: {}", e),
     }
 }

@@ -10,6 +10,7 @@ pub mod array;
 pub mod dict;
 pub mod io;
 pub mod math;
+pub mod payroll;
 pub mod precise;
 pub mod string;
 pub mod types;
@@ -162,6 +163,312 @@ impl BuiltInRegistry {
         registry.register("TYPE", types::type_of, 1);
         registry.register("TO_STRING", types::to_string, 1);
         registry.register("TO_NUMBER", types::to_number, 1);
+
+        // Payroll functions - Basic salary calculations (7个)
+        registry.register("CALC_HOURLY_PAY", payroll::basic::calc_hourly_pay, 2);
+        registry.register("CALC_DAILY_PAY", payroll::basic::calc_daily_pay, 2);
+        registry.register(
+            "CALC_MONTHLY_FROM_HOURLY",
+            payroll::basic::calc_monthly_from_hourly,
+            1,
+        );
+        registry.register("CALC_ANNUAL_SALARY", payroll::basic::calc_annual_salary, 1);
+        registry.register("CALC_BASE_SALARY", payroll::basic::calc_base_salary, 1);
+        registry.register("CALC_GROSS_SALARY", payroll::basic::calc_gross_salary, 2);
+        registry.register("CALC_NET_SALARY", payroll::basic::calc_net_salary, 2);
+
+        // Payroll functions - Overtime pay (5个)
+        registry.register("CALC_OVERTIME_PAY", payroll::overtime::calc_overtime_pay, 2);
+        registry.register(
+            "CALC_WEEKDAY_OVERTIME",
+            payroll::overtime::calc_weekday_overtime,
+            2,
+        );
+        registry.register(
+            "CALC_WEEKEND_OVERTIME",
+            payroll::overtime::calc_weekend_overtime,
+            2,
+        );
+        registry.register(
+            "CALC_HOLIDAY_OVERTIME",
+            payroll::overtime::calc_holiday_overtime,
+            2,
+        );
+        registry.register(
+            "CALC_TOTAL_OVERTIME",
+            payroll::overtime::calc_total_overtime,
+            4,
+        );
+
+        // Payroll functions - Personal income tax (6个)
+        registry.register("CALC_PERSONAL_TAX", payroll::tax::calc_personal_tax, 1);
+        registry.register("CALC_TAXABLE_INCOME", payroll::tax::calc_taxable_income, 1);
+        registry.register(
+            "CALC_ANNUAL_BONUS_TAX",
+            payroll::tax::calc_annual_bonus_tax,
+            1,
+        );
+        registry.register(
+            "CALC_EFFECTIVE_TAX_RATE",
+            payroll::tax::calc_effective_tax_rate,
+            2,
+        );
+        registry.register("CALC_GROSS_FROM_NET", payroll::tax::calc_gross_from_net, 1);
+        registry.register("CALC_TAX_REFUND", payroll::tax::calc_tax_refund, 2);
+
+        // Payroll functions - Social insurance (10个)
+        registry.register(
+            "CALC_PENSION_INSURANCE",
+            payroll::insurance::calc_pension_insurance,
+            1,
+        );
+        registry.register(
+            "CALC_MEDICAL_INSURANCE",
+            payroll::insurance::calc_medical_insurance,
+            1,
+        );
+        registry.register(
+            "CALC_UNEMPLOYMENT_INSURANCE",
+            payroll::insurance::calc_unemployment_insurance,
+            1,
+        );
+        registry.register(
+            "CALC_HOUSING_FUND",
+            payroll::insurance::calc_housing_fund,
+            1,
+        );
+        registry.register(
+            "CALC_SOCIAL_INSURANCE",
+            payroll::insurance::calc_social_insurance,
+            1,
+        );
+        registry.register(
+            "ADJUST_SOCIAL_BASE",
+            payroll::insurance::adjust_social_base,
+            3,
+        );
+        registry.register(
+            "CALC_SOCIAL_BASE_LOWER",
+            payroll::insurance::calc_social_base_lower,
+            2,
+        );
+        registry.register(
+            "CALC_SOCIAL_BASE_UPPER",
+            payroll::insurance::calc_social_base_upper,
+            2,
+        );
+        registry.register(
+            "CALC_INJURY_INSURANCE",
+            payroll::insurance::calc_injury_insurance,
+            1,
+        );
+        registry.register(
+            "CALC_MATERNITY_INSURANCE",
+            payroll::insurance::calc_maternity_insurance,
+            1,
+        );
+
+        // Payroll functions - Attendance (7个)
+        registry.register(
+            "CALC_ATTENDANCE_RATE",
+            payroll::attendance::calc_attendance_rate,
+            2,
+        );
+        registry.register(
+            "CALC_LATE_DEDUCTION",
+            payroll::attendance::calc_late_deduction,
+            1,
+        );
+        registry.register(
+            "CALC_EARLY_LEAVE_DEDUCTION",
+            payroll::attendance::calc_early_leave_deduction,
+            1,
+        );
+        registry.register(
+            "CALC_ABSENT_DEDUCTION",
+            payroll::attendance::calc_absent_deduction,
+            2,
+        );
+        registry.register(
+            "CALC_LEAVE_DEDUCTION",
+            payroll::attendance::calc_leave_deduction,
+            2,
+        );
+        registry.register(
+            "CALC_SICK_LEAVE_PAY",
+            payroll::attendance::calc_sick_leave_pay,
+            3,
+        );
+        registry.register(
+            "CALC_UNPAID_LEAVE_DEDUCTION",
+            payroll::attendance::calc_unpaid_leave_deduction,
+            2,
+        );
+
+        // Payroll functions - Bonus (6个)
+        registry.register(
+            "CALC_PERFORMANCE_PAY",
+            payroll::bonus::calc_performance_pay,
+            2,
+        );
+        registry.register("CALC_ANNUAL_BONUS", payroll::bonus::calc_annual_bonus, 1);
+        registry.register(
+            "CALC_ATTENDANCE_BONUS",
+            payroll::bonus::calc_attendance_bonus,
+            2,
+        );
+        registry.register(
+            "CALC_SALES_COMMISSION",
+            payroll::bonus::calc_sales_commission,
+            2,
+        );
+        registry.register("CALC_PROJECT_BONUS", payroll::bonus::calc_project_bonus, 2);
+        registry.register("CALC_13TH_SALARY", payroll::bonus::calc_13th_salary, 2);
+
+        // Payroll functions - Allowance (7个)
+        registry.register(
+            "CALC_MEAL_ALLOWANCE",
+            payroll::allowance::calc_meal_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_TRANSPORT_ALLOWANCE",
+            payroll::allowance::calc_transport_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_COMMUNICATION_ALLOWANCE",
+            payroll::allowance::calc_communication_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_HOUSING_ALLOWANCE",
+            payroll::allowance::calc_housing_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_HIGH_TEMP_ALLOWANCE",
+            payroll::allowance::calc_high_temp_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_NIGHT_SHIFT_ALLOWANCE",
+            payroll::allowance::calc_night_shift_allowance,
+            2,
+        );
+        registry.register(
+            "CALC_POSITION_ALLOWANCE",
+            payroll::allowance::calc_position_allowance,
+            2,
+        );
+
+        // Payroll functions - Conversion (12个)
+        registry.register(
+            "ANNUAL_TO_MONTHLY",
+            payroll::conversion::annual_to_monthly,
+            1,
+        );
+        registry.register(
+            "MONTHLY_TO_ANNUAL",
+            payroll::conversion::monthly_to_annual,
+            1,
+        );
+        registry.register("DAILY_TO_MONTHLY", payroll::conversion::daily_to_monthly, 1);
+        registry.register("MONTHLY_TO_DAILY", payroll::conversion::monthly_to_daily, 1);
+        registry.register(
+            "HOURLY_TO_MONTHLY",
+            payroll::conversion::hourly_to_monthly,
+            1,
+        );
+        registry.register(
+            "MONTHLY_TO_HOURLY",
+            payroll::conversion::monthly_to_hourly,
+            1,
+        );
+        registry.register(
+            "PRORATE_BY_NATURAL_DAYS",
+            payroll::conversion::prorate_by_natural_days,
+            3,
+        );
+        registry.register(
+            "PRORATE_BY_LEGAL_DAYS",
+            payroll::conversion::prorate_by_legal_days,
+            2,
+        );
+        registry.register(
+            "PRORATE_BY_WORKDAYS",
+            payroll::conversion::prorate_by_workdays,
+            3,
+        );
+        registry.register(
+            "CALC_ONBOARDING_SALARY",
+            payroll::conversion::calc_onboarding_salary,
+            4,
+        );
+        registry.register(
+            "CALC_RESIGNATION_SALARY",
+            payroll::conversion::calc_resignation_salary,
+            4,
+        );
+        registry.register("CALC_14TH_SALARY", payroll::conversion::calc_14th_salary, 2);
+
+        // Payroll functions - DateTime (12个)
+        registry.register("CALC_NATURAL_DAYS", payroll::datetime::calc_natural_days, 2);
+        registry.register(
+            "GET_LEGAL_PAY_DAYS",
+            payroll::datetime::get_legal_pay_days,
+            0,
+        );
+        registry.register("CALC_WORKDAYS", payroll::datetime::calc_workdays, 2);
+        registry.register("CALC_WEEKEND_DAYS", payroll::datetime::calc_weekend_days, 2);
+        registry.register("CALC_HOLIDAY_DAYS", payroll::datetime::calc_holiday_days, 1);
+        registry.register("IS_WORKDAY", payroll::datetime::is_workday, 2);
+        registry.register("IS_WEEKEND", payroll::datetime::is_weekend, 1);
+        registry.register("IS_HOLIDAY", payroll::datetime::is_holiday, 2);
+        registry.register("CALC_WORK_HOURS", payroll::datetime::calc_work_hours, 1);
+        registry.register(
+            "CALC_MONTHLY_WORK_HOURS",
+            payroll::datetime::calc_monthly_work_hours,
+            0,
+        );
+        registry.register(
+            "CALC_ANNUAL_WORKDAYS",
+            payroll::datetime::calc_annual_workdays,
+            0,
+        );
+        registry.register(
+            "CALC_ANNUAL_PAY_DAYS",
+            payroll::datetime::calc_annual_pay_days,
+            0,
+        );
+
+        // Payroll functions - Statistics (6个)
+        registry.register(
+            "CALC_SALARY_AVERAGE",
+            payroll::statistics::calc_salary_average,
+            1,
+        );
+        registry.register(
+            "CALC_SALARY_MEDIAN",
+            payroll::statistics::calc_salary_median,
+            1,
+        );
+        registry.register(
+            "CALC_SALARY_RANGE",
+            payroll::statistics::calc_salary_range,
+            1,
+        );
+        registry.register("CALC_PERCENTILE", payroll::statistics::calc_percentile, 2);
+        registry.register(
+            "CALC_SALARY_STD_DEV",
+            payroll::statistics::calc_salary_std_dev,
+            1,
+        );
+        registry.register(
+            "CALC_SALARY_DISTRIBUTION",
+            payroll::statistics::calc_salary_distribution,
+            2,
+        );
 
         registry
     }
