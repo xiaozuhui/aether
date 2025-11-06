@@ -1,0 +1,36 @@
+[package]
+name = "aether"
+version = "0.1.0"
+edition = "2021"
+authors = ["许子恒<xiaozuhui@outlook.com>"]
+description = "一个简单小型的DSL语言解释器"
+license = "Apache-2.0"
+repository = "https://github.com/yourusername/aether"
+keywords = ["dsl", "interpreter", "scripting"]
+
+[lib]
+name = "aether"
+crate-type = ["cdylib", "rlib", "staticlib"]
+
+[[bin]]
+name = "aether"
+path = "src/main.rs"
+
+[dependencies]
+
+
+[dev-dependencies]
+criterion = "0.7.0"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+
+[build-dependencies]
+cbindgen = "0.29.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

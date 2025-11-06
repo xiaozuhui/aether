@@ -1,0 +1,73 @@
+# Rust 编译输出
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo 锁文件（库项目通常不提交）
+# 如果是应用程序，可以取消注释下一行
+Cargo.lock
+
+# 编译产物
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# 可执行文件
+*.exe
+*.out
+aether
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Rust Analyzer
+.rust-analyzer/
+
+# 测试和基准
+*.profraw
+*.profdata
+
+# 文档构建
+/target/doc/
+
+# WASM 构建产物
+pkg/
+wasm-pack.log
+
+# C FFI 生成的文件
+*.h.bak
+/bindings/
+
+# 临时文件
+*.tmp
+*.aether.tmp
+test_*.aether
+
+# 日志文件
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+# 备份文件
+*.bak
+*.backup

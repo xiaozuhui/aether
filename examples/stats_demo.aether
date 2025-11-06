@@ -1,0 +1,161 @@
+// 统计与概率函数示例
+// 展示 Aether 的线性回归、概率分布、矩阵求逆等高级功能
+
+Println("=== 线性回归示例 ===")
+
+// 简单线性关系: y = 2x + 1
+Set x [1, 2, 3, 4, 5]
+Set y [3, 5, 7, 9, 11]
+Set result LinearRegression(x, y)
+
+Println("数据点:")
+Println("  x = " + ToString(x))
+Println("  y = " + ToString(y))
+Println("回归结果:")
+Println("  斜率 = " + ToString(result[0]))
+Println("  截距 = " + ToString(result[1]))
+Println("  R² = " + ToString(result[2]))
+Println("")
+
+// 带噪声的数据
+Set x2 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+Set y2 [2.1, 4.3, 5.8, 8.2, 9.7, 12.3, 14.1, 15.8, 18.2, 20.1]
+Set result2 LinearRegression(x2, y2)
+
+Println("带噪声的数据:")
+Println("  斜率 = " + ToString(result2[0]))
+Println("  截距 = " + ToString(result2[1]))
+Println("  R² = " + ToString(result2[2]) + " (< 1 表示非完美拟合)")
+Println("")
+
+Println("=== 正态分布 (Normal Distribution) ===")
+
+// 标准正态分布 (μ=0, σ=1)
+Set z0 0
+Set pdf0 NormalPDF(z0)
+Set cdf0 NormalCDF(z0)
+
+Println("标准正态分布在 x=0 处:")
+Println("  PDF(0) = " + ToString(pdf0) + " (概率密度)")
+Println("  CDF(0) = " + ToString(cdf0) + " (累积概率 = 50%)")
+Println("")
+
+// 95% 置信区间
+Set z_975 1.96
+Set cdf_975 NormalCDF(z_975)
+
+Println("95% 置信区间:")
+Println("  CDF(1.96) = " + ToString(cdf_975) + " (约 97.5%)")
+Println("  双侧区间: [-1.96, 1.96] 包含 95% 的数据")
+Println("")
+
+// 自定义正态分布: μ=100, σ=15 (如智商分布)
+Set iq_mean 100
+Set iq_std 15
+Set iq_120 120
+
+Set pdf_120 NormalPDF(iq_120, iq_mean, iq_std)
+Set cdf_120 NormalCDF(iq_120, iq_mean, iq_std)
+
+Println("智商分布 (μ=100, σ=15):")
+Println("  IQ=120 的 PDF = " + ToString(pdf_120))
+Println("  IQ≤120 的概率 = " + ToString(cdf_120) + " (约 90.9%)")
+Println("")
+
+Println("=== 泊松分布 (Poisson Distribution) ===")
+
+// 网站每小时平均访问3次 (λ=3)
+Set lambda 3
+Set k0 PoissonPMF(0, lambda)
+Set k1 PoissonPMF(1, lambda)
+Set k2 PoissonPMF(2, lambda)
+Set k3 PoissonPMF(3, lambda)
+Set k5 PoissonPMF(5, lambda)
+
+Println("网站访问量 (λ=3 次/小时):")
+Println("  P(访问0次) = " + ToString(k0))
+Println("  P(访问1次) = " + ToString(k1))
+Println("  P(访问2次) = " + ToString(k2))
+Println("  P(访问3次) = " + ToString(k3) + " (最可能)")
+Println("  P(访问5次) = " + ToString(k5))
+Println("")
+
+Println("=== 矩阵求逆 (Matrix Inverse) ===")
+
+// 2x2 矩阵求逆
+Set A [[4, 7], [2, 6]]
+Set invA Inverse(A)
+
+Println("原矩阵 A:")
+Println("  " + ToString(A[0]))
+Println("  " + ToString(A[1]))
+Println("逆矩阵 A⁻¹:")
+Println("  " + ToString(invA[0]))
+Println("  " + ToString(invA[1]))
+
+// 验证 A * A⁻¹ = I
+Set I Matmul(A, invA)
+Println("验证 A * A⁻¹ = I:")
+Println("  " + ToString(I[0]))
+Println("  " + ToString(I[1]))
+Println("")
+
+// 3x3 矩阵求逆
+Set B [[1, 2, 3], [0, 1, 4], [5, 6, 0]]
+Set invB Inverse(B)
+
+Println("3x3 矩阵 B:")
+Println("  " + ToString(B[0]))
+Println("  " + ToString(B[1]))
+Println("  " + ToString(B[2]))
+Println("逆矩阵 B⁻¹:")
+Println("  " + ToString(invB[0]))
+Println("  " + ToString(invB[1]))
+Println("  " + ToString(invB[2]))
+Println("")
+
+Println("=== 大矩阵行列式 (Large Determinant) ===")
+
+// 4x4 矩阵
+Set M4 [[1, 2, 3, 4], [2, 1, 2, 3], [3, 2, 1, 2], [4, 3, 2, 1]]
+Set det4 Determinant(M4)
+
+Println("4x4 矩阵:")
+Println("  " + ToString(M4[0]))
+Println("  " + ToString(M4[1]))
+Println("  " + ToString(M4[2]))
+Println("  " + ToString(M4[3]))
+Println("行列式 = " + ToString(det4))
+Println("")
+
+// 5x5 单位矩阵
+Set I5 [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0], [0,0,0,1,0], [0,0,0,0,1]]
+Set det5 Determinant(I5)
+
+Println("5x5 单位矩阵:")
+Println("行列式 = " + ToString(det5) + " (单位矩阵的行列式为1)")
+Println("")
+
+Println("=== 组合应用示例 ===")
+
+// 使用线性回归预测，然后计算预测区间
+Set sales_month [1, 2, 3, 4, 5, 6]
+Set sales_amount [120, 135, 158, 172, 195, 210]
+Set sales_model LinearRegression(sales_month, sales_amount)
+
+Set slope sales_model[0]
+Set intercept sales_model[1]
+Set r2 sales_model[2]
+
+Println("销售预测模型:")
+Println("  月份: " + ToString(sales_month))
+Println("  销量: " + ToString(sales_amount))
+Println("  模型: 销量 = " + ToString(slope) + " * 月份 + " + ToString(intercept))
+Println("  拟合优度 R² = " + ToString(r2))
+
+// 预测第7个月
+Set month7_pred slope * 7 + intercept
+Println("  预测第7个月销量: " + ToString(month7_pred))
+Println("")
+
+Println("所有新功能测试完成！")
