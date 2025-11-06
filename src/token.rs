@@ -1,6 +1,41 @@
 // src/token.rs
 //! Token definitions for the Aether lexer
 
+/// Position information for tokens
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Position {
+    pub line: usize,
+    pub column: usize,
+}
+
+impl Position {
+    pub fn new(line: usize, column: usize) -> Self {
+        Position { line, column }
+    }
+}
+
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "line {}, column {}", self.line, self.column)
+    }
+}
+
+/// Token with position information
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenWithPos {
+    pub token: Token,
+    pub pos: Position,
+}
+
+impl TokenWithPos {
+    pub fn new(token: Token, line: usize, column: usize) -> Self {
+        TokenWithPos {
+            token,
+            pos: Position::new(line, column),
+        }
+    }
+}
+
 /// Represents all possible tokens in the Aether language
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {

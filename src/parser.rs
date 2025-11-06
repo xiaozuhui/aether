@@ -7,26 +7,95 @@ use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
-/// Parse errors
+/// Parse errors with location information
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
-    UnexpectedToken { expected: String, found: Token },
-    UnexpectedEOF,
+    UnexpectedToken {
+        expected: String,
+        found: Token,
+        line: usize,
+        column: usize,
+    },
+    UnexpectedEOF {
+        line: usize,
+        column: usize,
+    },
     InvalidNumber(String),
-    InvalidExpression,
-    InvalidStatement,
+    InvalidExpression {
+        message: String,
+        line: usize,
+        column: usize,
+    },
+    InvalidStatement {
+        message: String,
+        line: usize,
+        column: usize,
+    },
+    InvalidIdentifier {
+        name: String,
+        reason: String,
+        line: usize,
+        column: usize,
+    },
 }
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ParseError::UnexpectedToken { expected, found } => {
-                write!(f, "Expected {}, found {:?}", expected, found)
+            ParseError::UnexpectedToken {
+                expected,
+                found,
+                line,
+                column,
+            } => {
+                write!(
+                    f,
+                    "Parse error at line {}, column {}: Expected {}, found {:?}",
+                    line, column, expected, found
+                )
             }
-            ParseError::UnexpectedEOF => write!(f, "Unexpected end of file"),
-            ParseError::InvalidNumber(s) => write!(f, "Invalid number: {}", s),
-            ParseError::InvalidExpression => write!(f, "Invalid expression"),
-            ParseError::InvalidStatement => write!(f, "Invalid statement"),
+            ParseError::UnexpectedEOF { line, column } => {
+                write!(
+                    f,
+                    "Parse error at line {}, column {}: Unexpected end of file",
+                    line, column
+                )
+            }
+            ParseError::InvalidNumber(s) => write!(f, "Parse error: Invalid number: {}", s),
+            ParseError::InvalidExpression {
+                message,
+                line,
+                column,
+            } => {
+                write!(
+                    f,
+                    "Parse error at line {}, column {}: Invalid expression - {}",
+                    line, column, message
+                )
+            }
+            ParseError::InvalidStatement {
+                message,
+                line,
+                column,
+            } => {
+                write!(
+                    f,
+                    "Parse error at line {}, column {}: Invalid statement - {}",
+                    line, column, message
+                )
+            }
+            ParseError::InvalidIdentifier {
+                name,
+                reason,
+                line,
+                column,
+            } => {
+                write!(
+                    f,
+                    "Parse error at line {}, column {}: Invalid identifier '{}' - {}",
+                    line, column, name, reason
+                )
+            }
         }
     }
 }
@@ -53,6 +122,8 @@ pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peek_token: Token,
+    current_line: usize,
+    current_column: usize,
 }
 
 impl Parser {
@@ -61,11 +132,15 @@ impl Parser {
         let mut lexer = Lexer::new(input);
         let current = lexer.next_token();
         let peek = lexer.next_token();
+        let line = lexer.line();
+        let column = lexer.column();
 
         Parser {
             lexer,
             current_token: current,
             peek_token: peek,
+            current_line: line,
+            current_column: column,
         }
     }
 
@@ -73,6 +148,8 @@ impl Parser {
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
+        self.current_line = self.lexer.line();
+        self.current_column = self.lexer.column();
     }
 
     /// Skip newline tokens (they're optional in many places)
@@ -91,8 +168,40 @@ impl Parser {
             Err(ParseError::UnexpectedToken {
                 expected: format!("{:?}", expected),
                 found: self.current_token.clone(),
+                line: self.current_line,
+                column: self.current_column,
             })
         }
+    }
+
+    /// Helper to check if identifier follows naming convention (UPPER_SNAKE_CASE)
+    fn validate_identifier(&self, name: &str) -> Result<(), ParseError> {
+        // Check if it's all uppercase with underscores
+        let is_valid = name
+            .chars()
+            .all(|c| c.is_uppercase() || c.is_numeric() || c == '_');
+
+        if !is_valid {
+            return Err(ParseError::InvalidIdentifier {
+                name: name.to_string(),
+                reason: "变量名和函数名必须使用全大写字母和下划线（例如：MY_VAR, CALCULATE_SUM）"
+                    .to_string(),
+                line: self.current_line,
+                column: self.current_column,
+            });
+        }
+
+        // Check it doesn't start with a number
+        if name.chars().next().map_or(false, |c| c.is_numeric()) {
+            return Err(ParseError::InvalidIdentifier {
+                name: name.to_string(),
+                reason: "标识符不能以数字开头".to_string(),
+                line: self.current_line,
+                column: self.current_column,
+            });
+        }
+
+        Ok(())
     }
 
     /// Get precedence of current token
@@ -162,11 +271,17 @@ impl Parser {
         self.next_token(); // skip 'Set'
 
         let name = match &self.current_token {
-            Token::Identifier(name) => name.clone(),
+            Token::Identifier(name) => {
+                // Validate identifier naming convention
+                self.validate_identifier(name)?;
+                name.clone()
+            }
             _ => {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -188,11 +303,17 @@ impl Parser {
         self.next_token(); // skip 'Func'
 
         let name = match &self.current_token {
-            Token::Identifier(name) => name.clone(),
+            Token::Identifier(name) => {
+                // Validate function name
+                self.validate_identifier(name)?;
+                name.clone()
+            }
             _ => {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -223,6 +344,8 @@ impl Parser {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -253,6 +376,8 @@ impl Parser {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -330,6 +455,8 @@ impl Parser {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -346,6 +473,8 @@ impl Parser {
                     return Err(ParseError::UnexpectedToken {
                         expected: "identifier".to_string(),
                         found: self.current_token.clone(),
+                        line: self.current_line,
+                        column: self.current_column,
                     })
                 }
             };
@@ -468,6 +597,8 @@ impl Parser {
                         return Err(ParseError::UnexpectedToken {
                             expected: "identifier".to_string(),
                             found: self.current_token.clone(),
+                            line: self.current_line,
+                            column: self.current_column,
                         })
                     }
                 };
@@ -508,6 +639,8 @@ impl Parser {
                     return Err(ParseError::UnexpectedToken {
                         expected: "identifier".to_string(),
                         found: self.current_token.clone(),
+                        line: self.current_line,
+                        column: self.current_column,
                     })
                 }
             };
@@ -538,6 +671,8 @@ impl Parser {
                 return Err(ParseError::UnexpectedToken {
                     expected: "string".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -565,6 +700,8 @@ impl Parser {
                 return Err(ParseError::UnexpectedToken {
                     expected: "identifier".to_string(),
                     found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
                 })
             }
         };
@@ -613,6 +750,8 @@ impl Parser {
         loop {
             match &self.current_token {
                 Token::Identifier(name) => {
+                    // Validate parameter name
+                    self.validate_identifier(name)?;
                     params.push(name.clone());
                     self.next_token();
 
@@ -697,7 +836,11 @@ impl Parser {
             Token::Minus => self.parse_unary_expression(UnaryOp::Minus),
             Token::Not => self.parse_unary_expression(UnaryOp::Not),
             Token::If => self.parse_if_expression(),
-            _ => Err(ParseError::InvalidExpression),
+            _ => Err(ParseError::InvalidExpression {
+                message: "Unexpected token in expression".to_string(),
+                line: self.current_line,
+                column: self.current_column,
+            }),
         }
     }
 
@@ -738,6 +881,8 @@ impl Parser {
             Err(ParseError::UnexpectedToken {
                 expected: "RightParen".to_string(),
                 found: self.current_token.clone(),
+                line: self.current_line,
+                column: self.current_column,
             })
         }
     }
@@ -781,6 +926,8 @@ impl Parser {
                     return Err(ParseError::UnexpectedToken {
                         expected: "identifier or string".to_string(),
                         found: self.current_token.clone(),
+                        line: self.current_line,
+                        column: self.current_column,
                     })
                 }
             };
@@ -830,7 +977,13 @@ impl Parser {
             Token::GreaterEqual => BinOp::GreaterEqual,
             Token::And => BinOp::And,
             Token::Or => BinOp::Or,
-            _ => return Err(ParseError::InvalidExpression),
+            _ => {
+                return Err(ParseError::InvalidExpression {
+                    message: "Invalid binary operator".to_string(),
+                    line: self.current_line,
+                    column: self.current_column,
+                })
+            }
         };
 
         let precedence = self.current_precedence();

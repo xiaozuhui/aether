@@ -21,6 +21,8 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
 - 🌍 **Cross-Platform**: Supports x86_64, ARM64, and WebAssembly
 - ✨ **Modern Features**: Generators, lazy evaluation, and functional programming
 - 📝 **Simple Syntax**: Easy to learn and read
+- 🔍 **Enhanced Error Reporting**: Detailed error messages with line and column numbers
+- ✅ **Strict Naming Conventions**: Enforced UPPER_SNAKE_CASE for consistency
 
 ## 🌟 Features
 
@@ -29,8 +31,10 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
 - **Control Flow**: If/Else, While, For loops
 - **Generators**: Lazy sequences with `Generator` keyword
 - **Lazy Evaluation**: Deferred computation with `Lazy` keyword
-- **Rich Standard Library**: 95 built-in functions including:
-  - I/O operations (Print, Println, Input)
+- **Naming Convention**: Enforced UPPER_SNAKE_CASE for variables, functions, and parameters
+- **Error Reporting**: Detailed error messages with line/column numbers and helpful suggestions
+- **Rich Standard Library**: 112 built-in functions including:
+  - I/O operations (PRINT, PRINTLN, INPUT)
   - Type conversions and introspection
   - Array and string manipulation
   - Dictionary operations
@@ -288,12 +292,30 @@ Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
 Println(TAX)    // Shows: 4.00
 ```
 
+### Enhanced Error Reporting
+
+```javascript
+// Invalid variable name (not UPPER_SNAKE_CASE)
+Set myVar 10
+// Error: Parse error at line 1, column 4: Invalid identifier 'myVar' - 
+// 变量名和函数名必须使用全大写字母和下划线（例如：MY_VAR, CALCULATE_SUM）
+
+// Correct variable name
+Set MY_VAR 10  // ✅ Correct
+
+// Syntax error with location
+Set RESULT (X + Y
+// Error: Parse error at line 1, column 18: Expected RightParen, found Newline
+```
+
 ## 🛠️ Development Status
 
 Aether is currently in **version 0.1.0**. Current features:
 
 - ✅ Complete interpreter (Lexer, Parser, Evaluator)
 - ✅ **112 built-in functions** across all categories (including 17 new precision/fraction functions)
+- ✅ **Enhanced error reporting** with line/column numbers and detailed messages
+- ✅ **Strict naming conventions** (UPPER_SNAKE_CASE enforcement)
 - ✅ **114 tests passing** (100% pass rate)
 - ✅ Advanced math library (linear regression, probability distributions, matrix operations)
 - ✅ Precise arithmetic (fraction-based calculations)
@@ -301,12 +323,13 @@ Aether is currently in **version 0.1.0**. Current features:
 - 🔄 Go bindings (planned)
 - 🔄 TypeScript/WASM bindings (planned)
 
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) and [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md) for complete function reference and [CHANGELOG.md](CHANGELOG.md) for version history.
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md), and [docs/ERROR_REPORTING.md](docs/ERROR_REPORTING.md) for complete documentation and [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## 📖 Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete reference for all built-in functions
 - **[Precision Guide](docs/PRECISION_GUIDE.md)** - Guide to precise and precision arithmetic
+- **[Error Reporting Guide](docs/ERROR_REPORTING.md)** - Error messages and naming conventions
 - **[Changelog](CHANGELOG.md)** - Version history and roadmap
 - **[Development Guide](DEVELOPMENT.md)** - Implementation and contribution guide
 - **[Architecture](cross-language-architecture.md)** - Cross-language design

@@ -40,15 +40,36 @@
 - **num-bigint 0.4** - 大整数支持
 - **num-traits 0.2** - 数值特性
 
+#### 增强的错误报告系统
+
+- **位置信息**: 所有解析错误现在包含行号和列号
+- **详细错误消息**: 提供清晰的错误原因和建议
+- **错误类型**:
+  - `ParseError::UnexpectedToken` - 包含期望和实际的标记，以及位置
+  - `ParseError::InvalidIdentifier` - 标识符命名规范错误
+  - `ParseError::InvalidExpression` - 表达式语法错误
+  - `ParseError::UnexpectedEOF` - 文件意外结束
+
+#### 强制命名规范
+
+- **UPPER_SNAKE_CASE**: 变量名、函数名、参数名必须全部使用大写字母和下划线
+- **编译时检查**: 在解析阶段就检查命名规范，立即报错
+- **清晰提示**: 错误信息包含正确的命名示例
+
 ### 改进 🔧
 
 - **Value 类型扩展**: 添加 `Fraction(Ratio<BigInt>)` 变体
-- **命名规范**: 所有函数名统一为 UPPER_SNAKE_CASE
-- **文档完善**: 新增 `docs/PRECISION_GUIDE.md` 精度计算指南
+- **词法分析器**: 添加行号和列号跟踪
+- **解析器**: 增强的位置跟踪和错误处理
+- **文档完善**:
+  - `docs/PRECISION_GUIDE.md` - 精度计算指南
+  - `docs/ERROR_REPORTING.md` - 错误报告和命名规范指南
 - **示例程序**:
   - `examples/precision_simple.aether` - 基础示例
   - `examples/precision_complete.aether` - 完整示例
   - `examples/precision_demo.aether` - 综合演示
+  - `examples/test_error_reporting.aether` - 错误报告测试
+  - `examples/test_correct_naming.aether` - 正确命名示例
 - **函数总数**: 从 95 个增加到 112 个
 
 ---

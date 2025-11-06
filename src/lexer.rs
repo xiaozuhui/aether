@@ -30,6 +30,16 @@ impl Lexer {
         lexer
     }
 
+    /// Get current line number
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// Get current column number
+    pub fn column(&self) -> usize {
+        self.column
+    }
+
     /// Read the next character and advance position
     fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
@@ -37,9 +47,17 @@ impl Lexer {
         } else {
             self.ch = self.input[self.read_position];
         }
+
+        // Update line and column tracking
+        if self.ch == '\n' {
+            self.line += 1;
+            self.column = 0;
+        } else {
+            self.column += 1;
+        }
+
         self.position = self.read_position;
         self.read_position += 1;
-        self.column += 1;
     }
 
     /// Peek at the next character without advancing
@@ -298,16 +316,6 @@ impl Lexer {
         }
 
         result
-    }
-
-    /// Get current line number
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    /// Get current column number
-    pub fn column(&self) -> usize {
-        self.column
     }
 }
 
