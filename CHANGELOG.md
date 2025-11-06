@@ -4,6 +4,55 @@
 
 ---
 
+## [Unreleased]
+
+### 新增功能 ✨
+
+#### 精确计算（分数运算）
+
+- **TO_FRACTION(number)** - 将浮点数转换为分数
+- **TO_FLOAT(fraction)** - 将分数转换回浮点数
+- **SIMPLIFY(fraction)** - 简化分数到最简形式
+- **FRAC_ADD(frac1, frac2)** - 分数加法
+- **FRAC_SUB(frac1, frac2)** - 分数减法
+- **FRAC_MUL(frac1, frac2)** - 分数乘法
+- **FRAC_DIV(frac1, frac2)** - 分数除法
+- **NUMERATOR(fraction)** - 获取分子
+- **DENOMINATOR(fraction)** - 获取分母
+
+#### 数论函数
+
+- **GCD(a, b)** - 计算最大公约数
+- **LCM(a, b)** - 计算最小公倍数
+
+#### 精度计算
+
+- **ROUND_TO(number, precision)** - 四舍五入到指定小数位
+- **ADD_WITH_PRECISION(a, b, precision)** - 带精度的加法
+- **SUB_WITH_PRECISION(a, b, precision)** - 带精度的减法
+- **MUL_WITH_PRECISION(a, b, precision)** - 带精度的乘法
+- **DIV_WITH_PRECISION(a, b, precision)** - 带精度的除法
+- **SET_PRECISION(number, precision)** - 设置数字精度
+
+#### 新增依赖
+
+- **num-rational 0.4** - 有理数运算支持
+- **num-bigint 0.4** - 大整数支持
+- **num-traits 0.2** - 数值特性
+
+### 改进 🔧
+
+- **Value 类型扩展**: 添加 `Fraction(Ratio<BigInt>)` 变体
+- **命名规范**: 所有函数名统一为 UPPER_SNAKE_CASE
+- **文档完善**: 新增 `docs/PRECISION_GUIDE.md` 精度计算指南
+- **示例程序**:
+  - `examples/precision_simple.aether` - 基础示例
+  - `examples/precision_complete.aether` - 完整示例
+  - `examples/precision_demo.aether` - 综合演示
+- **函数总数**: 从 95 个增加到 112 个
+
+---
+
 ## [0.1.0] - 2025-11-06
 
 ### 新增功能 ✨

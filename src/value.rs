@@ -3,6 +3,9 @@
 
 use crate::ast::{Expr, Stmt};
 use crate::environment::Environment;
+use num_bigint::BigInt;
+use num_rational::Ratio;
+use num_traits::Zero;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
@@ -13,6 +16,9 @@ use std::rc::Rc;
 pub enum Value {
     /// Numeric value (f64)
     Number(f64),
+
+    /// Rational number (exact fraction)
+    Fraction(Ratio<BigInt>),
 
     /// String value
     String(String),
@@ -75,6 +81,7 @@ impl Value {
             Value::Boolean(b) => *b,
             Value::Null => false,
             Value::Number(n) => *n != 0.0,
+            Value::Fraction(f) => !f.is_zero(),
             Value::String(s) => !s.is_empty(),
             Value::Array(arr) => !arr.is_empty(),
             Value::Dict(dict) => !dict.is_empty(),
@@ -86,6 +93,7 @@ impl Value {
     pub fn type_name(&self) -> &'static str {
         match self {
             Value::Number(_) => "Number",
+            Value::Fraction(_) => "Fraction",
             Value::String(_) => "String",
             Value::Boolean(_) => "Boolean",
             Value::Null => "Null",
@@ -102,6 +110,10 @@ impl Value {
     pub fn to_number(&self) -> Option<f64> {
         match self {
             Value::Number(n) => Some(*n),
+            Value::Fraction(f) => Some(
+                f.numer().to_string().parse::<f64>().ok()?
+                    / f.denom().to_string().parse::<f64>().ok()?,
+            ),
             Value::Boolean(true) => Some(1.0),
             Value::Boolean(false) => Some(0.0),
             Value::String(s) => s.parse().ok(),
@@ -118,6 +130,13 @@ impl Value {
                     format!("{:.0}", n)
                 } else {
                     format!("{}", n)
+                }
+            }
+            Value::Fraction(f) => {
+                if f.is_integer() {
+                    format!("{}", f.numer())
+                } else {
+                    format!("{}/{}", f.numer(), f.denom())
                 }
             }
             Value::String(s) => s.clone(),
@@ -151,6 +170,7 @@ impl Value {
     pub fn equals(&self, other: &Value) -> bool {
         match (self, other) {
             (Value::Number(a), Value::Number(b)) => (a - b).abs() < f64::EPSILON,
+            (Value::Fraction(a), Value::Fraction(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Boolean(a), Value::Boolean(b)) => a == b,
             (Value::Null, Value::Null) => true,
@@ -165,6 +185,7 @@ impl Value {
     pub fn compare(&self, other: &Value) -> Option<std::cmp::Ordering> {
         match (self, other) {
             (Value::Number(a), Value::Number(b)) => a.partial_cmp(b),
+            (Value::Fraction(a), Value::Fraction(b)) => Some(a.cmp(b)),
             (Value::String(a), Value::String(b)) => Some(a.cmp(b)),
             (Value::Boolean(a), Value::Boolean(b)) => Some(a.cmp(b)),
             _ => None,

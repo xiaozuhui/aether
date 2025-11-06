@@ -35,6 +35,8 @@ Aether is a modern, lightweight scripting language designed to be embedded in Ru
   - Array and string manipulation
   - Dictionary operations
   - **Advanced mathematics**: Linear algebra, statistics, probability distributions
+  - **Precise arithmetic**: Fraction-based calculations for exact results
+  - **Precision arithmetic**: Fixed decimal place calculations for financial computations
   - **Scientific computing**: Linear regression, normal/Poisson distributions, matrix inversion
 
 ## 📦 Installation
@@ -260,22 +262,51 @@ If (NEEDS_ANALYSIS) {
 }
 ```
 
+### Precise and Precision Arithmetic
+
+```javascript
+// Avoid floating-point precision issues with fractions
+Set A 0.1
+Set B 0.2
+Println(A + B)  // May show: 0.30000000000000004
+
+// Use fraction arithmetic for exact results
+Set FA TO_FRACTION(0.1)
+Set FB TO_FRACTION(0.2)
+Set FC FRAC_ADD(FA, FB)
+Println(FC)           // Shows: 3/10
+Println(TO_FLOAT(FC)) // Shows: 0.3
+
+// Financial calculations with fixed precision
+Set PRICE1 19.99
+Set PRICE2 29.99
+Set TOTAL ADD_WITH_PRECISION(PRICE1, PRICE2, 2)
+Println(TOTAL)  // Shows: 49.98
+
+// Calculate tax with 2 decimal places
+Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
+Println(TAX)    // Shows: 4.00
+```
+
 ## 🛠️ Development Status
 
 Aether is currently in **version 0.1.0**. Current features:
 
 - ✅ Complete interpreter (Lexer, Parser, Evaluator)
-- ✅ **95 built-in functions** across all categories
+- ✅ **112 built-in functions** across all categories (including 17 new precision/fraction functions)
 - ✅ **114 tests passing** (100% pass rate)
 - ✅ Advanced math library (linear regression, probability distributions, matrix operations)
+- ✅ Precise arithmetic (fraction-based calculations)
+- ✅ Precision arithmetic (fixed decimal place calculations)
 - 🔄 Go bindings (planned)
 - 🔄 TypeScript/WASM bindings (planned)
 
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for complete function reference and [CHANGELOG.md](CHANGELOG.md) for version history.
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) and [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md) for complete function reference and [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## 📖 Documentation
 
-- **[User Guide](docs/USER_GUIDE.md)** - Complete reference for all 95 built-in functions
+- **[User Guide](docs/USER_GUIDE.md)** - Complete reference for all built-in functions
+- **[Precision Guide](docs/PRECISION_GUIDE.md)** - Guide to precise and precision arithmetic
 - **[Changelog](CHANGELOG.md)** - Version history and roadmap
 - **[Development Guide](DEVELOPMENT.md)** - Implementation and contribution guide
 - **[Architecture](cross-language-architecture.md)** - Cross-language design

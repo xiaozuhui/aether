@@ -10,6 +10,7 @@ pub mod array;
 pub mod dict;
 pub mod io;
 pub mod math;
+pub mod precise;
 pub mod string;
 pub mod types;
 
@@ -29,106 +30,106 @@ impl BuiltInRegistry {
         };
 
         // IO functions
-        registry.register("Print", io::print, 1);
-        registry.register("Println", io::println, 1);
-        registry.register("Input", io::input, 1);
+        registry.register("PRINT", io::print, 1);
+        registry.register("PRINTLN", io::println, 1);
+        registry.register("INPUT", io::input, 1);
 
         // Array functions
-        registry.register("Range", array::range, 1); // Variadic: 1-3 args
-        registry.register("Len", types::len, 1);
-        registry.register("Push", array::push, 2);
-        registry.register("Pop", array::pop, 1);
-        registry.register("Map", array::map, 2);
-        registry.register("Filter", array::filter, 2);
-        registry.register("Reduce", array::reduce, 3);
-        registry.register("Join", array::join, 2);
-        registry.register("Reverse", array::reverse, 1);
-        registry.register("Sort", array::sort, 1);
-        registry.register("Sum", array::sum, 1);
-        registry.register("Max", array::max, 1);
-        registry.register("Min", array::min, 1);
+        registry.register("RANGE", array::range, 1); // Variadic: 1-3 args
+        registry.register("LEN", types::len, 1);
+        registry.register("PUSH", array::push, 2);
+        registry.register("POP", array::pop, 1);
+        registry.register("MAP", array::map, 2);
+        registry.register("FILTER", array::filter, 2);
+        registry.register("REDUCE", array::reduce, 3);
+        registry.register("JOIN", array::join, 2);
+        registry.register("REVERSE", array::reverse, 1);
+        registry.register("SORT", array::sort, 1);
+        registry.register("SUM", array::sum, 1);
+        registry.register("MAX", array::max, 1);
+        registry.register("MIN", array::min, 1);
 
         // Dict functions
-        registry.register("Keys", dict::keys, 1);
-        registry.register("Values", dict::values, 1);
-        registry.register("Has", dict::has, 2);
-        registry.register("Merge", dict::merge, 2);
+        registry.register("KEYS", dict::keys, 1);
+        registry.register("VALUES", dict::values, 1);
+        registry.register("HAS", dict::has, 2);
+        registry.register("MERGE", dict::merge, 2);
 
         // String functions
-        registry.register("Split", string::split, 2);
-        registry.register("Upper", string::upper, 1);
-        registry.register("Lower", string::lower, 1);
-        registry.register("Trim", string::trim, 1);
-        registry.register("Contains", string::contains, 2);
-        registry.register("StartsWith", string::starts_with, 2);
-        registry.register("EndsWith", string::ends_with, 2);
-        registry.register("Replace", string::replace, 3);
-        registry.register("Repeat", string::repeat, 2);
+        registry.register("SPLIT", string::split, 2);
+        registry.register("UPPER", string::upper, 1);
+        registry.register("LOWER", string::lower, 1);
+        registry.register("TRIM", string::trim, 1);
+        registry.register("CONTAINS", string::contains, 2);
+        registry.register("STARTS_WITH", string::starts_with, 2);
+        registry.register("ENDS_WITH", string::ends_with, 2);
+        registry.register("REPLACE", string::replace, 3);
+        registry.register("REPEAT", string::repeat, 2);
 
         // Math functions - Basic
-        registry.register("Abs", math::abs, 1);
-        registry.register("Floor", math::floor, 1);
-        registry.register("Ceil", math::ceil, 1);
-        registry.register("Round", math::round, 1);
-        registry.register("Sqrt", math::sqrt, 1);
-        registry.register("Pow", math::pow, 2);
+        registry.register("ABS", math::abs, 1);
+        registry.register("FLOOR", math::floor, 1);
+        registry.register("CEIL", math::ceil, 1);
+        registry.register("ROUND", math::round, 1);
+        registry.register("SQRT", math::sqrt, 1);
+        registry.register("POW", math::pow, 2);
 
         // Math functions - Trigonometry
-        registry.register("Sin", math::sin, 1);
-        registry.register("Cos", math::cos, 1);
-        registry.register("Tan", math::tan, 1);
-        registry.register("Asin", math::asin, 1);
-        registry.register("Acos", math::acos, 1);
-        registry.register("Atan", math::atan, 1);
-        registry.register("Atan2", math::atan2, 2);
-        registry.register("Sinh", math::sinh, 1);
-        registry.register("Cosh", math::cosh, 1);
-        registry.register("Tanh", math::tanh, 1);
+        registry.register("SIN", math::sin, 1);
+        registry.register("COS", math::cos, 1);
+        registry.register("TAN", math::tan, 1);
+        registry.register("ASIN", math::asin, 1);
+        registry.register("ACOS", math::acos, 1);
+        registry.register("ATAN", math::atan, 1);
+        registry.register("ATAN2", math::atan2, 2);
+        registry.register("SINH", math::sinh, 1);
+        registry.register("COSH", math::cosh, 1);
+        registry.register("TANH", math::tanh, 1);
 
         // Math functions - Logarithms & Exponentials
-        registry.register("Log", math::log, 1);
-        registry.register("Ln", math::ln, 1);
-        registry.register("Log2", math::log2, 1);
-        registry.register("Exp", math::exp, 1);
-        registry.register("Exp2", math::exp2, 1);
-        registry.register("Expm1", math::expm1, 1);
-        registry.register("Log1p", math::log1p, 1);
+        registry.register("LOG", math::log, 1);
+        registry.register("LN", math::ln, 1);
+        registry.register("LOG2", math::log2, 1);
+        registry.register("EXP", math::exp, 1);
+        registry.register("EXP2", math::exp2, 1);
+        registry.register("EXPM1", math::expm1, 1);
+        registry.register("LOG1P", math::log1p, 1);
 
         // Math functions - Special
-        registry.register("Factorial", math::factorial, 1);
-        registry.register("Gamma", math::gamma, 1);
-        registry.register("Erf", math::erf, 1);
-        registry.register("Hypot", math::hypot, 2);
-        registry.register("Sign", math::sign, 1);
-        registry.register("Clamp", math::clamp, 3);
+        registry.register("FACTORIAL", math::factorial, 1);
+        registry.register("GAMMA", math::gamma, 1);
+        registry.register("ERF", math::erf, 1);
+        registry.register("HYPOT", math::hypot, 2);
+        registry.register("SIGN", math::sign, 1);
+        registry.register("CLAMP", math::clamp, 3);
 
         // Math functions - Statistics
-        registry.register("Mean", math::mean, 1);
-        registry.register("Median", math::median, 1);
-        registry.register("Variance", math::variance, 1);
-        registry.register("Std", math::std, 1);
-        registry.register("Quantile", math::quantile, 2);
+        registry.register("MEAN", math::mean, 1);
+        registry.register("MEDIAN", math::median, 1);
+        registry.register("VARIANCE", math::variance, 1);
+        registry.register("STD", math::std, 1);
+        registry.register("QUANTILE", math::quantile, 2);
 
         // Math functions - Vector Operations
-        registry.register("Dot", math::dot, 2);
-        registry.register("Norm", math::norm, 1);
-        registry.register("Cross", math::cross, 2);
-        registry.register("Distance", math::distance, 2);
-        registry.register("Normalize", math::normalize, 1);
+        registry.register("DOT", math::dot, 2);
+        registry.register("NORM", math::norm, 1);
+        registry.register("CROSS", math::cross, 2);
+        registry.register("DISTANCE", math::distance, 2);
+        registry.register("NORMALIZE", math::normalize, 1);
 
         // Math functions - Matrix Operations
-        registry.register("Matmul", math::matmul, 2);
-        registry.register("Transpose", math::transpose, 1);
-        registry.register("Determinant", math::determinant, 1);
-        registry.register("Inverse", math::matrix_inverse, 1);
+        registry.register("MATMUL", math::matmul, 2);
+        registry.register("TRANSPOSE", math::transpose, 1);
+        registry.register("DETERMINANT", math::determinant, 1);
+        registry.register("INVERSE", math::matrix_inverse, 1);
 
         // Math functions - Statistics & Regression
-        registry.register("LinearRegression", math::linear_regression, 2);
+        registry.register("LINEAR_REGRESSION", math::linear_regression, 2);
 
         // Math functions - Probability Distributions
-        registry.register("NormalPDF", math::normal_pdf, 1); // Variadic: 1 or 3
-        registry.register("NormalCDF", math::normal_cdf, 1); // Variadic: 1 or 3
-        registry.register("PoissonPMF", math::poisson_pmf, 2);
+        registry.register("NORMAL_PDF", math::normal_pdf, 1); // Variadic: 1 or 3
+        registry.register("NORMAL_CDF", math::normal_cdf, 1); // Variadic: 1 or 3
+        registry.register("POISSON_PMF", math::poisson_pmf, 2);
 
         // Math constants
         registry.register("PI", math::pi, 0);
@@ -136,10 +137,31 @@ impl BuiltInRegistry {
         registry.register("TAU", math::tau, 0);
         registry.register("PHI", math::phi, 0);
 
+        // Precision arithmetic functions
+        registry.register("ROUND_TO", math::round_to, 2);
+        registry.register("ADD_WITH_PRECISION", math::add_with_precision, 3);
+        registry.register("SUB_WITH_PRECISION", math::sub_with_precision, 3);
+        registry.register("MUL_WITH_PRECISION", math::mul_with_precision, 3);
+        registry.register("DIV_WITH_PRECISION", math::div_with_precision, 3);
+        registry.register("SET_PRECISION", math::set_precision, 2);
+
+        // Precise (Fraction) arithmetic functions
+        registry.register("TO_FRACTION", precise::to_fraction, 1);
+        registry.register("TO_FLOAT", precise::to_float, 1);
+        registry.register("SIMPLIFY", precise::simplify, 1);
+        registry.register("FRAC_ADD", precise::frac_add, 2);
+        registry.register("FRAC_SUB", precise::frac_sub, 2);
+        registry.register("FRAC_MUL", precise::frac_mul, 2);
+        registry.register("FRAC_DIV", precise::frac_div, 2);
+        registry.register("NUMERATOR", precise::numerator, 1);
+        registry.register("DENOMINATOR", precise::denominator, 1);
+        registry.register("GCD", precise::gcd, 2);
+        registry.register("LCM", precise::lcm, 2);
+
         // Type functions
-        registry.register("Type", types::type_of, 1);
-        registry.register("ToString", types::to_string, 1);
-        registry.register("ToNumber", types::to_number, 1);
+        registry.register("TYPE", types::type_of, 1);
+        registry.register("TO_STRING", types::to_string, 1);
+        registry.register("TO_NUMBER", types::to_number, 1);
 
         registry
     }

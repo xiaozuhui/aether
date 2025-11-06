@@ -3025,3 +3025,316 @@ pub fn poisson_pmf(args: &[Value]) -> Result<Value, RuntimeError> {
         }),
     }
 }
+
+// ============================================================================
+// 带精度计算函数
+// ============================================================================
+
+/// 四舍五入到指定小数位数
+///
+/// # 功能
+/// 将数字四舍五入到指定的小数位数。
+///
+/// # 参数
+/// - `x`: Number - 输入数字
+/// - `digits`: Number - 小数位数（非负整数）
+///
+/// # 返回值
+/// Number - 四舍五入后的数字
+///
+/// # 示例
+/// ```aether
+/// Set a RoundTo(3.14159, 2)       # 3.14
+/// Set b RoundTo(123.456, 1)       # 123.5
+/// Set c RoundTo(0.666666, 4)      # 0.6667
+/// ```
+pub fn round_to(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::WrongArity {
+            expected: 2,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1]) {
+        (Value::Number(x), Value::Number(digits)) => {
+            if *digits < 0.0 || digits.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Digits must be a non-negative integer, got {}",
+                    digits
+                )));
+            }
+
+            let multiplier = 10_f64.powi(*digits as i32);
+            let result = (x * multiplier).round() / multiplier;
+            Ok(Value::Number(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Number, Number".to_string(),
+            got: format!("{:?}, {:?}", args[0], args[1]),
+        }),
+    }
+}
+
+/// 带精度加法
+///
+/// # 功能
+/// 先将两个数字按指定精度四舍五入，然后进行加法运算。
+///
+/// # 参数
+/// - `a`: Number - 第一个加数
+/// - `b`: Number - 第二个加数
+/// - `precision`: Number - 精度（小数位数）
+///
+/// # 返回值
+/// Number - 结果（按精度四舍五入）
+///
+/// # 示例
+/// ```aether
+/// Set result AddWithPrecision(0.1, 0.2, 2)    # 0.30
+/// Set result AddWithPrecision(1.235, 2.346, 2) # 3.58
+/// ```
+pub fn add_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::WrongArity {
+            expected: 3,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1], &args[2]) {
+        (Value::Number(a), Value::Number(b), Value::Number(precision)) => {
+            if *precision < 0.0 || precision.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Precision must be a non-negative integer, got {}",
+                    precision
+                )));
+            }
+
+            let multiplier = 10_f64.powi(*precision as i32);
+            let a_rounded = (a * multiplier).round() / multiplier;
+            let b_rounded = (b * multiplier).round() / multiplier;
+            let result = ((a_rounded + b_rounded) * multiplier).round() / multiplier;
+
+            Ok(Value::Number(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Number, Number, Number".to_string(),
+            got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
+        }),
+    }
+}
+
+/// 带精度减法
+///
+/// # 功能
+/// 先将两个数字按指定精度四舍五入，然后进行减法运算。
+///
+/// # 参数
+/// - `a`: Number - 被减数
+/// - `b`: Number - 减数
+/// - `precision`: Number - 精度（小数位数）
+///
+/// # 返回值
+/// Number - 结果（按精度四舍五入）
+///
+/// # 示例
+/// ```aether
+/// Set result SubWithPrecision(1.5, 0.3, 1)    # 1.2
+/// Set result SubWithPrecision(5.678, 2.345, 2) # 3.33
+/// ```
+pub fn sub_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::WrongArity {
+            expected: 3,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1], &args[2]) {
+        (Value::Number(a), Value::Number(b), Value::Number(precision)) => {
+            if *precision < 0.0 || precision.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Precision must be a non-negative integer, got {}",
+                    precision
+                )));
+            }
+
+            let multiplier = 10_f64.powi(*precision as i32);
+            let a_rounded = (a * multiplier).round() / multiplier;
+            let b_rounded = (b * multiplier).round() / multiplier;
+            let result = ((a_rounded - b_rounded) * multiplier).round() / multiplier;
+
+            Ok(Value::Number(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Number, Number, Number".to_string(),
+            got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
+        }),
+    }
+}
+
+/// 带精度乘法
+///
+/// # 功能
+/// 先将两个数字按指定精度四舍五入，然后进行乘法运算。
+///
+/// # 参数
+/// - `a`: Number - 第一个乘数
+/// - `b`: Number - 第二个乘数
+/// - `precision`: Number - 精度（小数位数）
+///
+/// # 返回值
+/// Number - 结果（按精度四舍五入）
+///
+/// # 示例
+/// ```aether
+/// Set result MulWithPrecision(0.1, 0.2, 3)    # 0.02
+/// Set result MulWithPrecision(3.456, 2.5, 2)  # 8.64
+/// ```
+pub fn mul_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::WrongArity {
+            expected: 3,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1], &args[2]) {
+        (Value::Number(a), Value::Number(b), Value::Number(precision)) => {
+            if *precision < 0.0 || precision.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Precision must be a non-negative integer, got {}",
+                    precision
+                )));
+            }
+
+            let multiplier = 10_f64.powi(*precision as i32);
+            let a_rounded = (a * multiplier).round() / multiplier;
+            let b_rounded = (b * multiplier).round() / multiplier;
+            let result = ((a_rounded * b_rounded) * multiplier).round() / multiplier;
+
+            Ok(Value::Number(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Number, Number, Number".to_string(),
+            got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
+        }),
+    }
+}
+
+/// 带精度除法
+///
+/// # 功能
+/// 先将两个数字按指定精度四舍五入，然后进行除法运算。
+///
+/// # 参数
+/// - `a`: Number - 被除数
+/// - `b`: Number - 除数（不能为0）
+/// - `precision`: Number - 精度（小数位数）
+///
+/// # 返回值
+/// Number - 结果（按精度四舍五入）
+///
+/// # 示例
+/// ```aether
+/// Set result DivWithPrecision(1.0, 3.0, 2)    # 0.33
+/// Set result DivWithPrecision(10.0, 3.0, 4)   # 3.3333
+/// ```
+pub fn div_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::WrongArity {
+            expected: 3,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1], &args[2]) {
+        (Value::Number(a), Value::Number(b), Value::Number(precision)) => {
+            if *precision < 0.0 || precision.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Precision must be a non-negative integer, got {}",
+                    precision
+                )));
+            }
+
+            if *b == 0.0 {
+                return Err(RuntimeError::InvalidOperation(
+                    "Division by zero".to_string(),
+                ));
+            }
+
+            let multiplier = 10_f64.powi(*precision as i32);
+            let a_rounded = (a * multiplier).round() / multiplier;
+            let b_rounded = (b * multiplier).round() / multiplier;
+            let result = ((a_rounded / b_rounded) * multiplier).round() / multiplier;
+
+            Ok(Value::Number(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Number, Number, Number".to_string(),
+            got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
+        }),
+    }
+}
+
+/// 设置全局计算精度
+///
+/// # 功能
+/// 对数组中的所有数字应用指定精度的四舍五入。
+///
+/// # 参数
+/// - `array`: Array - 数字数组
+/// - `precision`: Number - 精度（小数位数）
+///
+/// # 返回值
+/// Array - 应用精度后的数组
+///
+/// # 示例
+/// ```aether
+/// Set nums [3.14159, 2.71828, 1.41421]
+/// Set rounded SetPrecision(nums, 2)   # [3.14, 2.72, 1.41]
+/// ```
+pub fn set_precision(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::WrongArity {
+            expected: 2,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1]) {
+        (Value::Array(arr), Value::Number(precision)) => {
+            if *precision < 0.0 || precision.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "Precision must be a non-negative integer, got {}",
+                    precision
+                )));
+            }
+
+            let multiplier = 10_f64.powi(*precision as i32);
+            let mut result = Vec::new();
+
+            for val in arr {
+                match val {
+                    Value::Number(n) => {
+                        let rounded = (n * multiplier).round() / multiplier;
+                        result.push(Value::Number(rounded));
+                    }
+                    _ => {
+                        return Err(RuntimeError::TypeErrorDetailed {
+                            expected: "Array of Numbers".to_string(),
+                            got: format!("Array containing {:?}", val),
+                        })
+                    }
+                }
+            }
+
+            Ok(Value::Array(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "Array, Number".to_string(),
+            got: format!("{:?}, {:?}", args[0], args[1]),
+        }),
+    }
+}

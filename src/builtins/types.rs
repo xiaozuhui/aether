@@ -34,6 +34,7 @@ pub fn type_of(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let type_name = match &args[0] {
         Value::Number(_) => "Number",
+        Value::Fraction(_) => "Fraction",
         Value::String(_) => "String",
         Value::Boolean(_) => "Boolean",
         Value::Null => "Null",

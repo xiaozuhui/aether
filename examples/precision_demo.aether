@@ -1,0 +1,72 @@
+// 综合测试：分数和精度计算
+
+PRINTLN("=== 精确分数计算演示 ===")
+
+// 展示浮点数精度问题
+Set A 0.1
+Set B 0.2
+Set C A + B
+PRINTLN("浮点数运算: 0.1 + 0.2 =")
+PRINTLN(C)
+
+// 使用分数进行精确计算
+Set FA TO_FRACTION(0.1)
+Set FB TO_FRACTION(0.2)
+Set FC FRAC_ADD(FA, FB)
+PRINTLN("分数运算: 1/10 + 1/5 =")
+PRINTLN(FC)
+PRINTLN("转换为浮点数:")
+PRINTLN(TO_FLOAT(FC))
+
+PRINTLN("=== 复杂分数运算 ===")
+
+// 1/3 + 1/6 = 1/2
+Set F1 TO_FRACTION(0.333333)
+Set F2 TO_FRACTION(0.166666)
+Set F3 FRAC_ADD(F1, F2)
+PRINTLN("1/3 + 1/6 ≈")
+PRINTLN(F3)
+
+// 3/4 * 2/3 = 1/2
+Set F4 TO_FRACTION(0.75)
+Set F5 TO_FRACTION(0.666666)
+Set F6 FRAC_MUL(F4, F5)
+PRINTLN("3/4 * 2/3 ≈")
+PRINTLN(F6)
+
+PRINTLN("=== 带精度的金融计算 ===")
+
+// 计算购物总价
+Set ITEM1 12.99
+Set ITEM2 23.49
+Set ITEM3 8.95
+
+Set SUBTOTAL ADD_WITH_PRECISION(ITEM1, ITEM2, 2)
+Set SUBTOTAL ADD_WITH_PRECISION(SUBTOTAL, ITEM3, 2)
+PRINTLN("小计:")
+PRINTLN(SUBTOTAL)
+
+// 计算税金 (8%)
+Set TAX_RATE 0.08
+Set TAX MUL_WITH_PRECISION(SUBTOTAL, TAX_RATE, 2)
+PRINTLN("税金 (8%):")
+PRINTLN(TAX)
+
+// 计算总价
+Set TOTAL ADD_WITH_PRECISION(SUBTOTAL, TAX, 2)
+PRINTLN("总计:")
+PRINTLN(TOTAL)
+
+PRINTLN("=== 数学工具函数 ===")
+
+// 最大公约数
+Set GCD_RESULT GCD(48, 18)
+PRINTLN("GCD(48, 18) =")
+PRINTLN(GCD_RESULT)
+
+// 最小公倍数
+Set LCM_RESULT LCM(12, 8)
+PRINTLN("LCM(12, 8) =")
+PRINTLN(LCM_RESULT)
+
+PRINTLN("=== 测试完成 ===")

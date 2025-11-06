@@ -17,7 +17,9 @@ name = "aether"
 path = "src/main.rs"
 
 [dependencies]
-
+num-rational = "0.4"
+num-traits = "0.2"
+num-bigint = "0.4"
 
 [dev-dependencies]
 criterion = "0.7.0"
