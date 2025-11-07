@@ -164,11 +164,7 @@ impl Lexer {
             '"' => return self.read_string(),
 
             // Newline (statement separator)
-            '\n' => {
-                self.line += 1;
-                self.column = 0;
-                Token::Newline
-            }
+            '\n' => Token::Newline,
 
             // EOF
             '\0' => Token::EOF,

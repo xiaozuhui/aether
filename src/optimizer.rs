@@ -325,20 +325,58 @@ impl Optimizer {
             return false;
         }
 
-        // 检查最后一条语句
-        if let Some(last_stmt) = body.last() {
-            match last_stmt {
-                Stmt::Return(expr) => self.is_tail_call(func_name, expr),
-                _ => false,
-            }
-        } else {
-            false
+        // 递归检查所有可能的返回路径
+        self.has_tail_recursion_in_body(func_name, body)
+    }
+
+    /// 检查函数体中是否包含尾递归
+    fn has_tail_recursion_in_body(&self, func_name: &str, body: &[Stmt]) -> bool {
+        // 至少需要有一条return语句包含尾递归调用
+        body.iter()
+            .any(|stmt| self.stmt_has_tail_recursion(func_name, stmt))
+    }
+
+    /// 检查语句是否包含尾递归
+    fn stmt_has_tail_recursion(&self, func_name: &str, stmt: &Stmt) -> bool {
+        match stmt {
+            Stmt::Return(expr) => self.is_tail_call(func_name, expr),
+            Stmt::Expression(expr) => self.expr_has_tail_recursion(func_name, expr),
+            Stmt::While { body, .. } => self.has_tail_recursion_in_body(func_name, body),
+            Stmt::For { body, .. } => self.has_tail_recursion_in_body(func_name, body),
+            Stmt::ForIndexed { body, .. } => self.has_tail_recursion_in_body(func_name, body),
+            _ => false,
         }
     }
 
-    /// 检查表达式是否为尾调用
+    /// 检查表达式是否包含尾递归
+    fn expr_has_tail_recursion(&self, func_name: &str, expr: &Expr) -> bool {
+        match expr {
+            Expr::If {
+                then_branch,
+                elif_branches,
+                else_branch,
+                ..
+            } => {
+                // 检查所有分支
+                let then_tail = self.has_tail_recursion_in_body(func_name, then_branch);
+                let elif_tail = elif_branches
+                    .iter()
+                    .any(|(_, body)| self.has_tail_recursion_in_body(func_name, body));
+                let else_tail = else_branch
+                    .as_ref()
+                    .map(|body| self.has_tail_recursion_in_body(func_name, body))
+                    .unwrap_or(false);
+
+                then_tail || elif_tail || else_tail
+            }
+            _ => false,
+        }
+    }
+
+    /// 检查表达式是否为尾调用（增强版）
     fn is_tail_call(&self, func_name: &str, expr: &Expr) -> bool {
         match expr {
+            // 直接的递归调用
             Expr::Call { func, .. } => {
                 if let Expr::Identifier(name) = &**func {
                     name == func_name
@@ -346,50 +384,207 @@ impl Optimizer {
                     false
                 }
             }
-            // 如果if表达式的所有分支都是尾调用,也算尾递归
+            // 条件表达式中的尾调用
             Expr::If {
                 then_branch,
                 elif_branches,
                 else_branch,
                 ..
             } => {
-                let then_is_tail = then_branch
-                    .last()
-                    .map(|s| matches!(s, Stmt::Return(e) if self.is_tail_call(func_name, e)))
-                    .unwrap_or(false);
+                // 所有分支都必须是尾调用或没有返回值
+                let then_is_tail = self.branch_ends_with_tail_call(func_name, then_branch);
 
-                let elif_is_tail = elif_branches.iter().all(|(_, body)| {
-                    body.last()
-                        .map(|s| matches!(s, Stmt::Return(e) if self.is_tail_call(func_name, e)))
-                        .unwrap_or(false)
-                });
+                let elif_all_tail = elif_branches
+                    .iter()
+                    .all(|(_, body)| self.branch_ends_with_tail_call(func_name, body));
 
                 let else_is_tail = else_branch
                     .as_ref()
-                    .and_then(|b| b.last())
-                    .map(|s| matches!(s, Stmt::Return(e) if self.is_tail_call(func_name, e)))
-                    .unwrap_or(true); // 没有else分支也算
+                    .map(|body| self.branch_ends_with_tail_call(func_name, body))
+                    .unwrap_or(true);
 
-                then_is_tail && elif_is_tail && else_is_tail
+                then_is_tail && elif_all_tail && else_is_tail
             }
             _ => false,
         }
     }
 
-    /// 将尾递归转换为循环 (简化实现)
+    /// 检查分支是否以尾调用结束
+    fn branch_ends_with_tail_call(&self, func_name: &str, branch: &[Stmt]) -> bool {
+        if let Some(last_stmt) = branch.last() {
+            match last_stmt {
+                Stmt::Return(expr) => self.is_tail_call(func_name, expr),
+                Stmt::Expression(expr) => {
+                    // 表达式可能是If表达式
+                    self.is_tail_call(func_name, expr)
+                }
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    /// 将尾递归转换为循环 (完整实现)
     fn convert_tail_recursion_to_loop(
         &self,
-        _func_name: &str,
-        _params: &[String],
+        func_name: &str,
+        params: &[String],
         body: Vec<Stmt>,
     ) -> Vec<Stmt> {
-        // 这是一个简化的实现
-        // 完整的尾递归优化需要更复杂的转换逻辑
-        // 包括识别递归调用点,提取参数更新逻辑等
+        // 步骤1: 为每个参数创建临时变量
+        let mut new_body = Vec::new();
 
-        // 当前先保持原样,标记为已优化
-        // TODO: 完整实现尾递归到循环的转换
-        body
+        // 初始化临时变量
+        for param in params {
+            new_body.push(Stmt::Set {
+                name: format!("_loop_{}", param),
+                value: Expr::Identifier(param.clone()),
+            });
+        }
+
+        // 步骤2: 创建循环标志
+        new_body.push(Stmt::Set {
+            name: "_loop_continue".to_string(),
+            value: Expr::Boolean(true),
+        });
+
+        // 步骤3: 转换函数体为while循环
+        let loop_body = self.transform_body_to_loop(func_name, params, body);
+
+        // 步骤4: 创建while循环
+        new_body.push(Stmt::While {
+            condition: Expr::Identifier("_loop_continue".to_string()),
+            body: loop_body,
+        });
+
+        new_body
+    }
+
+    /// 转换函数体为循环体
+    fn transform_body_to_loop(
+        &self,
+        func_name: &str,
+        params: &[String],
+        body: Vec<Stmt>,
+    ) -> Vec<Stmt> {
+        let mut loop_body = Vec::new();
+
+        for stmt in body {
+            match stmt {
+                Stmt::Return(expr) => {
+                    // 检查是否为尾递归调用
+                    if let Some(new_args) = self.extract_tail_call_args(func_name, &expr) {
+                        // 这是尾递归调用，转换为参数更新
+                        for (i, param) in params.iter().enumerate() {
+                            if let Some(arg) = new_args.get(i) {
+                                loop_body.push(Stmt::Set {
+                                    name: format!("_loop_{}", param),
+                                    value: arg.clone(),
+                                });
+                            }
+                        }
+
+                        // 更新参数值
+                        for param in params {
+                            loop_body.push(Stmt::Set {
+                                name: param.clone(),
+                                value: Expr::Identifier(format!("_loop_{}", param)),
+                            });
+                        }
+
+                        // 继续循环
+                    } else {
+                        // 这不是尾递归调用，正常返回
+                        loop_body.push(Stmt::Set {
+                            name: "_loop_continue".to_string(),
+                            value: Expr::Boolean(false),
+                        });
+                        loop_body.push(Stmt::Return(expr));
+                    }
+                }
+                _ => {
+                    // 其他语句递归转换
+                    loop_body.push(self.transform_stmt_for_loop(func_name, params, stmt));
+                }
+            }
+        }
+
+        loop_body
+    }
+
+    /// 提取尾调用的参数
+    fn extract_tail_call_args(&self, func_name: &str, expr: &Expr) -> Option<Vec<Expr>> {
+        match expr {
+            Expr::Call { func, args } => {
+                if let Expr::Identifier(name) = &**func {
+                    if name == func_name {
+                        return Some(args.clone());
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// 转换语句以适应循环结构
+    fn transform_stmt_for_loop(&self, func_name: &str, params: &[String], stmt: Stmt) -> Stmt {
+        match stmt {
+            Stmt::Expression(expr) => {
+                // 处理If表达式
+                Stmt::Expression(self.transform_expr_for_loop(func_name, params, expr))
+            }
+            Stmt::While { condition, body } => Stmt::While {
+                condition,
+                body: self.transform_body_to_loop(func_name, params, body),
+            },
+            Stmt::For {
+                var,
+                iterable,
+                body,
+            } => Stmt::For {
+                var,
+                iterable,
+                body: self.transform_body_to_loop(func_name, params, body),
+            },
+            Stmt::ForIndexed {
+                index_var,
+                value_var,
+                iterable,
+                body,
+            } => Stmt::ForIndexed {
+                index_var,
+                value_var,
+                iterable,
+                body: self.transform_body_to_loop(func_name, params, body),
+            },
+            other => other,
+        }
+    }
+
+    /// 转换表达式以适应循环结构
+    fn transform_expr_for_loop(&self, func_name: &str, params: &[String], expr: Expr) -> Expr {
+        match expr {
+            Expr::If {
+                condition,
+                then_branch,
+                elif_branches,
+                else_branch,
+            } => Expr::If {
+                condition,
+                then_branch: self.transform_body_to_loop(func_name, params, then_branch),
+                elif_branches: elif_branches
+                    .into_iter()
+                    .map(|(cond, body)| {
+                        (cond, self.transform_body_to_loop(func_name, params, body))
+                    })
+                    .collect(),
+                else_branch: else_branch
+                    .map(|body| self.transform_body_to_loop(func_name, params, body)),
+            },
+            other => other,
+        }
     }
 }
 
@@ -453,6 +648,134 @@ mod tests {
         // 验证常量折叠
         if let Some(Stmt::Set { value, .. }) = optimized.first() {
             assert_eq!(*value, Expr::Number(5.0));
+        }
+    }
+
+    #[test]
+    fn test_tail_recursion_detection() {
+        let optimizer = Optimizer::new();
+
+        // 测试简单的尾递归
+        let body = vec![Stmt::Return(Expr::Call {
+            func: Box::new(Expr::Identifier("factorial".to_string())),
+            args: vec![
+                Expr::Binary {
+                    left: Box::new(Expr::Identifier("n".to_string())),
+                    op: BinOp::Subtract,
+                    right: Box::new(Expr::Number(1.0)),
+                },
+                Expr::Binary {
+                    left: Box::new(Expr::Identifier("acc".to_string())),
+                    op: BinOp::Multiply,
+                    right: Box::new(Expr::Identifier("n".to_string())),
+                },
+            ],
+        })];
+
+        assert!(optimizer.is_tail_recursive("factorial", &body));
+    }
+
+    #[test]
+    fn test_non_tail_recursion_detection() {
+        let optimizer = Optimizer::new();
+
+        // 测试非尾递归（递归调用后还有操作）
+        let body = vec![Stmt::Return(Expr::Binary {
+            left: Box::new(Expr::Identifier("n".to_string())),
+            op: BinOp::Multiply,
+            right: Box::new(Expr::Call {
+                func: Box::new(Expr::Identifier("factorial".to_string())),
+                args: vec![Expr::Binary {
+                    left: Box::new(Expr::Identifier("n".to_string())),
+                    op: BinOp::Subtract,
+                    right: Box::new(Expr::Number(1.0)),
+                }],
+            }),
+        })];
+
+        assert!(!optimizer.is_tail_recursive("factorial", &body));
+    }
+
+    #[test]
+    fn test_tail_recursion_in_if() {
+        let optimizer = Optimizer::new();
+
+        // 测试If表达式中的尾递归
+        // 实际上Aether中Return语句后面跟的是表达式，而If是表达式
+        // 所以我们需要Return一个If表达式
+        let body = vec![Stmt::Expression(Expr::If {
+            condition: Box::new(Expr::Binary {
+                left: Box::new(Expr::Identifier("n".to_string())),
+                op: BinOp::LessEqual,
+                right: Box::new(Expr::Number(0.0)),
+            }),
+            then_branch: vec![Stmt::Return(Expr::Identifier("acc".to_string()))],
+            elif_branches: vec![],
+            else_branch: Some(vec![Stmt::Return(Expr::Call {
+                func: Box::new(Expr::Identifier("sum".to_string())),
+                args: vec![
+                    Expr::Binary {
+                        left: Box::new(Expr::Identifier("n".to_string())),
+                        op: BinOp::Subtract,
+                        right: Box::new(Expr::Number(1.0)),
+                    },
+                    Expr::Binary {
+                        left: Box::new(Expr::Identifier("acc".to_string())),
+                        op: BinOp::Add,
+                        right: Box::new(Expr::Identifier("n".to_string())),
+                    },
+                ],
+            })]),
+        })];
+
+        assert!(optimizer.is_tail_recursive("sum", &body));
+    }
+
+    #[test]
+    fn test_tail_recursion_optimization_transform() {
+        let optimizer = Optimizer::new();
+
+        // 创建一个简单的尾递归函数
+        let func_def = Stmt::FuncDef {
+            name: "factorial".to_string(),
+            params: vec!["n".to_string(), "acc".to_string()],
+            body: vec![Stmt::Return(Expr::Call {
+                func: Box::new(Expr::Identifier("factorial".to_string())),
+                args: vec![
+                    Expr::Binary {
+                        left: Box::new(Expr::Identifier("n".to_string())),
+                        op: BinOp::Subtract,
+                        right: Box::new(Expr::Number(1.0)),
+                    },
+                    Expr::Binary {
+                        left: Box::new(Expr::Identifier("acc".to_string())),
+                        op: BinOp::Multiply,
+                        right: Box::new(Expr::Identifier("n".to_string())),
+                    },
+                ],
+            })],
+        };
+
+        let optimized = optimizer.optimize_tail_recursive_stmt(func_def);
+
+        // 验证转换后包含While循环
+        if let Stmt::FuncDef { body, .. } = optimized {
+            // 应该包含临时变量初始化、循环标志和while循环
+            // 2个参数 = 2个临时变量 + 1个循环标志 + 1个while循环 = 4个语句
+            assert!(
+                body.len() >= 3,
+                "Expected at least 3 statements, got {}",
+                body.len()
+            );
+
+            // 最后一个语句应该是While循环
+            if let Some(Stmt::While { .. }) = body.last() {
+                // 成功转换为循环
+            } else {
+                panic!("Expected While loop at the end of optimized function body");
+            }
+        } else {
+            panic!("Expected FuncDef");
         }
     }
 }
