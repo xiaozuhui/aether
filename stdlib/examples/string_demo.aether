@@ -1,0 +1,143 @@
+// stdlib/examples/string_demo.aether
+// 字符串工具库使用示例
+
+// 加载字符串工具库
+// 注意：需要先运行 ../string_utils.aether
+
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("String Utils Library Demo")
+PRINTLN("═══════════════════════════════════════════════")
+
+// ==================== 字符串修剪 ====================
+PRINTLN("")
+PRINTLN("▶ String Trimming:")
+
+Set STR1 "   Hello World   "
+Set TRIMMED STR_TRIM(STR1)
+PRINTLN("Original: '" + STR1 + "'")
+PRINTLN("Trimmed:  '" + TRIMMED + "'")
+
+Set STR2 "   Left spaces"
+Set LEFT_TRIMMED STR_TRIM_LEFT(STR2)
+PRINTLN("Left trim: '" + LEFT_TRIMMED + "'")
+
+// ==================== 字符串填充 ====================
+PRINTLN("")
+PRINTLN("▶ String Padding:")
+
+Set NUM "42"
+Set PADDED_LEFT STR_PAD_LEFT(NUM, 5, "0")
+PRINTLN("Pad left:   '" + PADDED_LEFT + "'")
+
+Set NAME "Alice"
+Set PADDED_RIGHT STR_PAD_RIGHT(NAME, 10, " ")
+PRINTLN("Pad right:  '" + PADDED_RIGHT + "'")
+
+Set TITLE "Hello"
+Set CENTERED STR_PAD_CENTER(TITLE, 15, "-")
+PRINTLN("Centered:   '" + CENTERED + "'")
+
+// ==================== 字符串重复 ====================
+PRINTLN("")
+PRINTLN("▶ String Repeat:")
+
+Set PATTERN "=*="
+Set REPEATED STR_REPEAT(PATTERN, 5)
+PRINTLN("Repeat 5 times: " + REPEATED)
+
+// ==================== 字符串反转 ====================
+PRINTLN("")
+PRINTLN("▶ String Reverse:")
+
+Set ORIGINAL "Aether"
+Set REVERSED STR_REVERSE(ORIGINAL)
+PRINTLN("Original: " + ORIGINAL)
+PRINTLN("Reversed: " + REVERSED)
+
+// ==================== 字符串查询 ====================
+PRINTLN("")
+PRINTLN("▶ String Search:")
+
+Set TEXT "The quick brown fox jumps over the lazy dog"
+Set CONTAINS_FOX STR_CONTAINS(TEXT, "fox")
+PRINTLN("Contains 'fox': " + TO_STRING(CONTAINS_FOX))
+
+Set STARTS STR_STARTS_WITH(TEXT, "The")
+PRINTLN("Starts with 'The': " + TO_STRING(STARTS))
+
+Set ENDS STR_ENDS_WITH(TEXT, "dog")
+PRINTLN("Ends with 'dog': " + TO_STRING(ENDS))
+
+Set INDEX STR_INDEX_OF(TEXT, "fox")
+PRINTLN("Index of 'fox': " + TO_STRING(INDEX))
+
+// ==================== 字符串替换 ====================
+PRINTLN("")
+PRINTLN("▶ String Replace:")
+
+Set MESSAGE "Hello World, World is beautiful"
+Set REPLACED STR_REPLACE_ALL(MESSAGE, "World", "Aether")
+PRINTLN("Original: " + MESSAGE)
+PRINTLN("Replaced: " + REPLACED)
+
+Set MSG2 "Hello World, World is great"
+Set REPLACED_FIRST STR_REPLACE_FIRST(MSG2, "World", "Aether")
+PRINTLN("Replace first: " + REPLACED_FIRST)
+
+// ==================== 字符串分割和连接 ====================
+PRINTLN("")
+PRINTLN("▶ String Split & Join:")
+
+Set CSV "apple,banana,cherry,date"
+Set FRUITS STR_SPLIT(CSV, ",")
+PRINTLN("Split by comma:")
+Set I 0
+Set LEN_ LEN(FRUITS)
+While (I < LEN_) {
+    PRINTLN("  " + TO_STRING(I) + ": " + FRUITS[I])
+    Set I (I + 1)
+}
+
+Set JOINED STR_JOIN(FRUITS, " | ")
+PRINTLN("Joined: " + JOINED)
+
+// ==================== 字符串检查 ====================
+PRINTLN("")
+PRINTLN("▶ String Validation:")
+
+Set EMPTY_STR ""
+Set IS_EMPTY STR_IS_EMPTY(EMPTY_STR)
+PRINTLN("Empty string check: " + TO_STRING(IS_EMPTY))
+
+Set BLANK_STR "   "
+Set IS_BLANK STR_IS_BLANK(BLANK_STR)
+PRINTLN("Blank string check: " + TO_STRING(IS_BLANK))
+
+Set NUM_STR "12345"
+Set IS_NUMERIC STR_IS_NUMERIC(NUM_STR)
+PRINTLN("Is numeric '12345': " + TO_STRING(IS_NUMERIC))
+
+Set ALPHA_STR "Hello"
+Set IS_ALPHA STR_IS_ALPHA(ALPHA_STR)
+PRINTLN("Is alpha 'Hello': " + TO_STRING(IS_ALPHA))
+
+Set ALPHANUM_STR "Hello123"
+Set IS_ALPHANUM STR_IS_ALPHANUMERIC(ALPHANUM_STR)
+PRINTLN("Is alphanumeric 'Hello123': " + TO_STRING(IS_ALPHANUM))
+
+// ==================== 大小写转换 ====================
+PRINTLN("")
+PRINTLN("▶ Case Conversion:")
+
+Set LOWER_TEXT "hello world"
+Set UPPER_TEXT STR_TO_UPPER(LOWER_TEXT)
+PRINTLN("Uppercase: " + UPPER_TEXT)
+
+Set UPPER_TEXT2 "HELLO WORLD"
+Set LOWER_TEXT2 STR_TO_LOWER(UPPER_TEXT2)
+PRINTLN("Lowercase: " + LOWER_TEXT2)
+
+PRINTLN("")
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("String Utils Demo Complete!")
+PRINTLN("═══════════════════════════════════════════════")

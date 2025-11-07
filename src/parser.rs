@@ -124,6 +124,8 @@ pub struct Parser {
     peek_token: Token,
     current_line: usize,
     current_column: usize,
+    current_had_whitespace: bool, // whether whitespace preceded current_token
+    peek_had_whitespace: bool,    // whether whitespace preceded peek_token
 }
 
 impl Parser {
@@ -131,7 +133,9 @@ impl Parser {
     pub fn new(input: &str) -> Self {
         let mut lexer = Lexer::new(input);
         let current = lexer.next_token();
+        let current_ws = lexer.had_whitespace();
         let peek = lexer.next_token();
+        let peek_ws = lexer.had_whitespace();
         let line = lexer.line();
         let column = lexer.column();
 
@@ -141,13 +145,17 @@ impl Parser {
             peek_token: peek,
             current_line: line,
             current_column: column,
+            current_had_whitespace: current_ws,
+            peek_had_whitespace: peek_ws,
         }
     }
 
     /// Advance to the next token
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
+        self.current_had_whitespace = self.peek_had_whitespace;
         self.peek_token = self.lexer.next_token();
+        self.peek_had_whitespace = self.lexer.had_whitespace();
         self.current_line = self.lexer.line();
         self.current_column = self.lexer.column();
     }
@@ -176,21 +184,12 @@ impl Parser {
 
     /// Helper to check if identifier follows naming convention (UPPER_SNAKE_CASE)
     fn validate_identifier(&self, name: &str) -> Result<(), ParseError> {
-        // Check if it's all uppercase with underscores
-        let is_valid = name
-            .chars()
-            .all(|c| c.is_uppercase() || c.is_numeric() || c == '_');
+        self.validate_identifier_internal(name, false)
+    }
 
-        if !is_valid {
-            return Err(ParseError::InvalidIdentifier {
-                name: name.to_string(),
-                reason: "变量名和函数名必须使用全大写字母和下划线（例如：MY_VAR, CALCULATE_SUM）"
-                    .to_string(),
-                line: self.current_line,
-                column: self.current_column,
-            });
-        }
-
+    /// Helper to check if identifier follows naming convention
+    /// For function parameters, we allow more flexible naming (can use lowercase)
+    fn validate_identifier_internal(&self, name: &str, is_param: bool) -> Result<(), ParseError> {
         // Check it doesn't start with a number
         if name.chars().next().map_or(false, |c| c.is_numeric()) {
             return Err(ParseError::InvalidIdentifier {
@@ -199,6 +198,38 @@ impl Parser {
                 line: self.current_line,
                 column: self.current_column,
             });
+        }
+
+        // For function parameters, allow lowercase letters
+        if is_param {
+            let is_valid = name
+                .chars()
+                .all(|c| c.is_alphabetic() || c.is_numeric() || c == '_');
+
+            if !is_valid {
+                return Err(ParseError::InvalidIdentifier {
+                    name: name.to_string(),
+                    reason: "参数名只能包含字母、数字和下划线".to_string(),
+                    line: self.current_line,
+                    column: self.current_column,
+                });
+            }
+        } else {
+            // For variables and function names, require uppercase
+            let is_valid = name
+                .chars()
+                .all(|c| c.is_uppercase() || c.is_numeric() || c == '_');
+
+            if !is_valid {
+                return Err(ParseError::InvalidIdentifier {
+                    name: name.to_string(),
+                    reason:
+                        "变量名和函数名必须使用全大写字母和下划线（例如：MY_VAR, CALCULATE_SUM）"
+                            .to_string(),
+                    line: self.current_line,
+                    column: self.current_column,
+                });
+            }
         }
 
         Ok(())
@@ -256,6 +287,8 @@ impl Parser {
             Token::Lazy => self.parse_lazy_definition(),
             Token::Return => self.parse_return_statement(),
             Token::Yield => self.parse_yield_statement(),
+            Token::Break => self.parse_break_statement(),
+            Token::Continue => self.parse_continue_statement(),
             Token::While => self.parse_while_statement(),
             Token::For => self.parse_for_statement(),
             Token::Switch => self.parse_switch_statement(),
@@ -270,11 +303,14 @@ impl Parser {
     fn parse_set_statement(&mut self) -> Result<Stmt, ParseError> {
         self.next_token(); // skip 'Set'
 
+        // Parse the left-hand side (target)
+        // This can be either an identifier or an index expression
+        // We manually parse this to avoid consuming array literals as part of the target
+
         let name = match &self.current_token {
-            Token::Identifier(name) => {
-                // Validate identifier naming convention
-                self.validate_identifier(name)?;
-                name.clone()
+            Token::Identifier(n) => {
+                self.validate_identifier(n)?;
+                n.clone()
             }
             _ => {
                 return Err(ParseError::UnexpectedToken {
@@ -286,11 +322,63 @@ impl Parser {
             }
         };
 
-        self.next_token(); // move to value
+        self.next_token(); // move past identifier
 
+        // Check if followed by '[' for index access
+        // CRITICAL: Distinguish between:
+        // 1. Set NAME[index] value  -> index assignment (NO space before '[')
+        // 2. Set NAME [array]       -> array literal assignment (space before '[')
+        //
+        // We check if there was whitespace before the '[' token
+        if self.current_token == Token::LeftBracket {
+            // IMPORTANT: Check whitespace BEFORE calling next_token()
+            // because had_whitespace() reflects the whitespace before current_token
+            let has_space_before_bracket = self.current_had_whitespace;
+
+            if has_space_before_bracket {
+                // Space before '[' means this is: Set NAME [array_literal]
+                // Parse the whole thing as a value expression
+                let value = self.parse_expression(Precedence::Lowest)?;
+                if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
+                    self.next_token();
+                }
+                return Ok(Stmt::Set { name, value });
+            }
+
+            // No space before '[' means this is: Set NAME[index] value
+            // This is an index assignment
+            self.next_token(); // skip '['            // Parse the index expression
+            let index = self.parse_expression(Precedence::Lowest)?;
+
+            // Expect ']'
+            if self.current_token != Token::RightBracket {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "']' for index access".to_string(),
+                    found: self.current_token.clone(),
+                    line: self.current_line,
+                    column: self.current_column,
+                });
+            }
+
+            self.next_token(); // skip ']'
+
+            // Now parse the value to assign
+            let value = self.parse_expression(Precedence::Lowest)?;
+
+            if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
+                self.next_token();
+            }
+
+            return Ok(Stmt::SetIndex {
+                object: Box::new(Expr::Identifier(name)),
+                index: Box::new(index),
+                value,
+            });
+        }
+
+        // Regular Set statement: Set NAME value
         let value = self.parse_expression(Precedence::Lowest)?;
 
-        // Consume optional newline or semicolon
         if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
             self.next_token();
         }
@@ -418,13 +506,40 @@ impl Parser {
     fn parse_yield_statement(&mut self) -> Result<Stmt, ParseError> {
         self.next_token(); // skip 'Yield'
 
-        let expr = self.parse_expression(Precedence::Lowest)?;
+        let expr =
+            if self.current_token == Token::Newline || self.current_token == Token::RightBrace {
+                Expr::Null
+            } else {
+                self.parse_expression(Precedence::Lowest)?
+            };
 
         if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
             self.next_token();
         }
 
         Ok(Stmt::Yield(expr))
+    }
+
+    /// Parse: Break
+    fn parse_break_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.next_token(); // skip 'Break'
+
+        if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
+            self.next_token();
+        }
+
+        Ok(Stmt::Break)
+    }
+
+    /// Parse: Continue
+    fn parse_continue_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.next_token(); // skip 'Continue'
+
+        if self.current_token == Token::Newline || self.current_token == Token::Semicolon {
+            self.next_token();
+        }
+
+        Ok(Stmt::Continue)
     }
 
     /// Parse: While (condition) { body }
@@ -750,8 +865,8 @@ impl Parser {
         loop {
             match &self.current_token {
                 Token::Identifier(name) => {
-                    // Validate parameter name
-                    self.validate_identifier(name)?;
+                    // Validate parameter name (allow flexible naming)
+                    self.validate_identifier_internal(name, true)?;
                     params.push(name.clone());
                     self.next_token();
 

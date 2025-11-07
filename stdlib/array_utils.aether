@@ -1,0 +1,637 @@
+// stdlib/array_utils.aether
+// Aether 数组工具库
+// 提供丰富的数组操作函数
+
+// ==================== 数组去重 ====================
+
+// 移除数组中的重复元素
+Func ARR_UNIQUE(ARR) {
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM ARR[I]
+        Set FOUND False
+        Set J 0
+        Set RESULT_LEN LEN(RESULT)
+        
+        While (J < RESULT_LEN) {
+            If (RESULT[J] == ITEM) {
+                Set FOUND True
+                Break
+            }
+            Set J (J + 1)
+        }
+        
+        If (!FOUND) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组扁平化 ====================
+
+// 将嵌套数组扁平化一层
+Func ARR_FLATTEN(ARR) {
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM ARR[I]
+        Set ITEM_TYPE TYPE(ITEM)
+        
+        If (ITEM_TYPE == "Array") {
+            // 如果是数组，展开一层
+            Set INNER_LEN LEN(ITEM)
+            Set J 0
+            While (J < INNER_LEN) {
+                Set RESULT PUSH(RESULT, ITEM[J])
+                Set J (J + 1)
+            }
+        } Else {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 递归扁平化数组（所有层级）
+Func ARR_FLATTEN_DEEP(ARR) {
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM ARR[I]
+        Set ITEM_TYPE TYPE(ITEM)
+        
+        If (ITEM_TYPE == "Array") {
+            // 递归扁平化
+            Set FLATTENED ARR_FLATTEN_DEEP(ITEM)
+            Set FLAT_LEN LEN(FLATTENED)
+            Set J 0
+            While (J < FLAT_LEN) {
+                Set RESULT PUSH(RESULT, FLATTENED[J])
+                Set J (J + 1)
+            }
+        } Else {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组分块 ====================
+
+// 将数组分割成指定大小的块
+Func ARR_CHUNK(ARR, size) {
+    If (size <= 0) {
+        Return []
+    }
+    
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set CHUNK []
+        Set J 0
+        
+        While (J < size && (I + J) < LEN_) {
+            Set CHUNK PUSH(CHUNK, ARR[I + J])
+            Set J (J + 1)
+        }
+        
+        Set RESULT PUSH(RESULT, CHUNK)
+        Set I (I + size)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组压缩 ====================
+
+// 将多个数组的对应元素组合成元组数组
+Func ARR_ZIP(ARR_1, ARR_2) {
+    Set RESULT []
+    Set LEN_1 LEN(ARR_1)
+    Set LEN_2 LEN(ARR_2)
+    Set MIN_LEN LEN_1
+    
+    If (LEN_2 < MIN_LEN) {
+        Set MIN_LEN LEN_2
+    }
+    
+    Set I 0
+    While (I < MIN_LEN) {
+        Set PAIR []
+        Set PAIR PUSH(PAIR, ARR_1[I])
+        Set PAIR PUSH(PAIR, ARR_2[I])
+        Set RESULT PUSH(RESULT, PAIR)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组分区 ====================
+
+// 根据条件将数组分为两部分
+// 条件为字符串比较操作，例如 "> 5"
+Func ARR_PARTITION(ARR, CONDITION_OP, condition_value) {
+    Set TRUE_PART []
+    Set FALSE_PART []
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set ITEM ARR[I]
+        Set MATCHES False
+        
+        If (CONDITION_OP == ">") {
+            Set MATCHES (ITEM > condition_value)
+        } Elif (CONDITION_OP == ">=") {
+            Set MATCHES (ITEM >= condition_value)
+        } Elif (CONDITION_OP == "<") {
+            Set MATCHES (ITEM < condition_value)
+        } Elif (CONDITION_OP == "<=") {
+            Set MATCHES (ITEM <= condition_value)
+        } Elif (CONDITION_OP == "==") {
+            Set MATCHES (ITEM == condition_value)
+        } Elif (CONDITION_OP == "!=") {
+            Set MATCHES (ITEM != condition_value)
+        }
+        
+        If (MATCHES) {
+            Set TRUE_PART PUSH(TRUE_PART, ITEM)
+        } Else {
+            Set FALSE_PART PUSH(FALSE_PART, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Set RESULT []
+    Set RESULT PUSH(RESULT, TRUE_PART)
+    Set RESULT PUSH(RESULT, FALSE_PART)
+    Return RESULT
+}
+
+// ==================== 数组查找 ====================
+
+// 查找元素在数组中的索引，未找到返回 -1
+Func ARR_INDEX_OF(ARR, VALUE) {
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        If (ARR[I] == VALUE) {
+            Return I
+        }
+        Set I (I + 1)
+    }
+    
+    Return -1
+}
+
+// 查找元素在数组中最后一次出现的索引
+Func ARR_LAST_INDEX_OF(ARR, VALUE) {
+    Set LEN LEN(ARR)
+    Set I (LEN - 1)
+    
+    While (I >= 0) {
+        If (ARR[I] == VALUE) {
+            Return I
+        }
+        Set I (I - 1)
+    }
+    
+    Return -1
+}
+
+// 检查数组是否包含某个值
+Func ARR_CONTAINS(ARR, VALUE) {
+    Set INDEX ARR_INDEX_OF(ARR, VALUE)
+    Return (INDEX != -1)
+}
+
+// ==================== 数组操作 ====================
+
+// 反转数组
+Func ARR_REVERSE(ARR) {
+    Set RESULT []
+    Set LEN LEN(ARR)
+    Set I (LEN - 1)
+    
+    While (I >= 0) {
+        Set RESULT PUSH(RESULT, ARR[I])
+        Set I (I - 1)
+    }
+    
+    Return RESULT
+}
+
+// 数组切片（类似 Python 的 SLICE）
+Func ARR_SLICE(ARR, START, END) {
+    Set RESULT []
+    Set LEN LEN(ARR)
+    
+    // 处理负数索引
+    If (START < 0) {
+        Set START (LEN + START)
+    }
+    If (END < 0) {
+        Set END (LEN + END)
+    }
+    
+    // 边界检查
+    If (START < 0) {
+        Set START 0
+    }
+    If (END > LEN) {
+        Set END LEN
+    }
+    If (START >= END) {
+        Return RESULT
+    }
+    
+    Set I START
+    While (I < END) {
+        Set RESULT PUSH(RESULT, ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取数组的前 n 个元素
+Func ARR_TAKE(ARR, n) {
+    Return ARR_SLICE(ARR, 0, n)
+}
+
+// 跳过数组的前 n 个元素
+Func ARR_SKIP(ARR, n) {
+    Set LEN LEN(ARR)
+    Return ARR_SLICE(ARR, n, LEN)
+}
+
+// ==================== 数组聚合 ====================
+
+// 计算数组元素的总和
+Func ARR_SUM(ARR) {
+    Set SUM 0
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set SUM (SUM + ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return SUM
+}
+
+// 计算数组元素的乘积
+Func ARR_PRODUCT(ARR) {
+    Set LEN LEN(ARR)
+    
+    If (LEN == 0) {
+        Return 0
+    }
+    
+    Set PRODUCT ARR[0]
+    Set I 1
+    
+    While (I < LEN) {
+        Set PRODUCT (PRODUCT * ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return PRODUCT
+}
+
+// 查找数组中的最大值
+Func ARR_MAX(ARR) {
+    Set LEN LEN(ARR)
+    
+    If (LEN == 0) {
+        Return Null
+    }
+    
+    Set MAX_VAL ARR[0]
+    Set I 1
+    
+    While (I < LEN) {
+        Set CURRENT ARR[I]
+        If (CURRENT > MAX_VAL) {
+            Set MAX_VAL CURRENT
+        }
+        Set I (I + 1)
+    }
+    
+    Return MAX_VAL
+}
+
+// 查找数组中的最小值
+Func ARR_MIN(ARR) {
+    Set LEN LEN(ARR)
+    
+    If (LEN == 0) {
+        Return Null
+    }
+    
+    Set MIN_VAL ARR[0]
+    Set I 1
+    
+    While (I < LEN) {
+        Set CURRENT ARR[I]
+        If (CURRENT < MIN_VAL) {
+            Set MIN_VAL CURRENT
+        }
+        Set I (I + 1)
+    }
+    
+    Return MIN_VAL
+}
+
+// 计算数组的平均值
+Func ARR_AVERAGE(ARR) {
+    Set LEN LEN(ARR)
+    
+    If (LEN == 0) {
+        Return 0
+    }
+    
+    Set SUM ARR_SUM(ARR)
+    Return (SUM / LEN)
+}
+
+// ==================== 数组过滤 ====================
+
+// 移除数组中的 null 值
+Func ARR_COMPACT(ARR) {
+    Set RESULT []
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set ITEM ARR[I]
+        If (ITEM != Null) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 过滤出数组中的数字
+Func ARR_FILTER_NUMBERS(ARR) {
+    Set RESULT []
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set ITEM ARR[I]
+        Set ITEM_TYPE TYPE(ITEM)
+        If (ITEM_TYPE == "Number" || ITEM_TYPE == "Fraction") {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 过滤出数组中的字符串
+Func ARR_FILTER_STRINGS(ARR) {
+    Set RESULT []
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set ITEM ARR[I]
+        Set ITEM_TYPE TYPE(ITEM)
+        If (ITEM_TYPE == "String") {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组比较 ====================
+
+// 检查两个数组是否相等
+Func ARR_EQUALS(ARR_1, ARR_2) {
+    Set LEN_1 LEN(ARR_1)
+    Set LEN_2 LEN(ARR_2)
+    
+    If (LEN_1 != LEN_2) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN_1) {
+        If (ARR_1[I] != ARR_2[I]) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 获取两个数组的交集
+Func ARR_INTERSECTION(ARR_1, ARR_2) {
+    Set RESULT []
+    Set LEN_1 LEN(ARR_1)
+    Set I 0
+    
+    While (I < LEN_1) {
+        Set ITEM ARR_1[I]
+        If (ARR_CONTAINS(ARR_2, ITEM) && !ARR_CONTAINS(RESULT, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取两个数组的并集
+Func ARR_UNION(ARR_1, ARR_2) {
+    Set RESULT []
+    
+    // 添加 ARR_1 的所有唯一元素
+    Set LEN_1 LEN(ARR_1)
+    Set I 0
+    While (I < LEN_1) {
+        Set ITEM ARR_1[I]
+        If (!ARR_CONTAINS(RESULT, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    // 添加 ARR_2 的所有唯一元素
+    Set LEN_2 LEN(ARR_2)
+    Set I 0
+    While (I < LEN_2) {
+        Set ITEM ARR_2[I]
+        If (!ARR_CONTAINS(RESULT, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取两个数组的差集（在 ARR_1 中但不在 ARR_2 中）
+Func ARR_DIFFERENCE(ARR_1, ARR_2) {
+    Set RESULT []
+    Set LEN_1 LEN(ARR_1)
+    Set I 0
+    
+    While (I < LEN_1) {
+        Set ITEM ARR_1[I]
+        If (!ARR_CONTAINS(ARR_2, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组排序辅助 ====================
+
+// 检查数组是否已排序（升序）
+Func ARR_IS_SORTED(ARR) {
+    Set LEN LEN(ARR)
+    
+    If (LEN <= 1) {
+        Return True
+    }
+    
+    Set I 1
+    While (I < LEN) {
+        If (ARR[I] < ARR[I - 1]) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 数组转换 ====================
+
+// 将数组转换为字典（索引作为键）
+Func ARR_TO_DICT(ARR) {
+    Set RESULT {}
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set KEY TO_STRING(I)
+        Set RESULT[KEY] ARR[I]
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 创建指定范围的数组
+Func ARR_RANGE(START, END, step) {
+    Set RESULT []
+    
+    If (step == 0) {
+        Return RESULT
+    }
+    
+    If (step > 0) {
+        Set I START
+        While (I < END) {
+            Set RESULT PUSH(RESULT, I)
+            Set I (I + step)
+        }
+    } Else {
+        Set I START
+        While (I > END) {
+            Set RESULT PUSH(RESULT, I)
+            Set I (I + step)
+        }
+    }
+    
+    Return RESULT
+}
+
+// 创建填充指定值的数组
+Func ARR_FILL(VALUE, COUNT) {
+    Set RESULT []
+    Set I 0
+    
+    While (I < COUNT) {
+        Set RESULT PUSH(RESULT, VALUE)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 数组统计 ====================
+
+// 统计某个值在数组中出现的次数
+Func ARR_COUNT(ARR, VALUE) {
+    Set COUNT 0
+    Set LEN LEN(ARR)
+    Set I 0
+    
+    While (I < LEN) {
+        If (ARR[I] == VALUE) {
+            Set COUNT (COUNT + 1)
+        }
+        Set I (I + 1)
+    }
+    
+    Return COUNT
+}
+
+// 统计数组中每个元素的出现次数（返回字典）
+Func ARR_FREQUENCY(ARR) {
+    Set FREQ {}
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM ARR[I]
+        Set KEY TO_STRING(ITEM)
+        
+        If (HAS(FREQ, KEY)) {
+            Set CURRENT FREQ[KEY]
+            Set FREQ[KEY] (CURRENT + 1)
+        } Else {
+            Set FREQ[KEY] 1
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return FREQ
+}
+

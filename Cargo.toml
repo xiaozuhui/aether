@@ -1,6 +1,6 @@
 [package]
 name = "aether"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["xiaozuhui<xiaozuhui@outlook.com>"]
 description = "一个简单小型的DSL语言解释器"
@@ -20,10 +20,10 @@ path = "src/main.rs"
 num-rational = "0.4"
 num-traits = "0.2"
 num-bigint = "0.4"
-ureq = "2.10"
+ureq = "3.1.2"
 
 # 报表生成依赖
-calamine = "0.24"        # Excel 读取
+calamine = "0.31.0"      # Excel 读取
 rust_xlsxwriter = "0.68" # Excel 写入
 chrono = "0.4"           # 日期时间格式化
 lazy_static = "1.4"      # 全局句柄存储

@@ -13,6 +13,7 @@ pub struct Lexer {
     ch: char,             // current char under examination
     line: usize,          // current line number (for error reporting)
     column: usize,        // current column number (for error reporting)
+    had_whitespace_before_token: bool, // whether whitespace was skipped before current token
 }
 
 impl Lexer {
@@ -25,6 +26,7 @@ impl Lexer {
             ch: '\0',
             line: 1,
             column: 0,
+            had_whitespace_before_token: false,
         };
         lexer.read_char(); // Initialize by reading the first character
         lexer
@@ -38,6 +40,11 @@ impl Lexer {
     /// Get current column number
     pub fn column(&self) -> usize {
         self.column
+    }
+
+    /// Check if whitespace was skipped before the last token
+    pub fn had_whitespace(&self) -> bool {
+        self.had_whitespace_before_token
     }
 
     /// Read the next character and advance position
@@ -71,7 +78,8 @@ impl Lexer {
 
     /// Get the next token
     pub fn next_token(&mut self) -> Token {
-        self.skip_whitespace();
+        let had_ws = self.skip_whitespace();
+        self.had_whitespace_before_token = had_ws;
 
         let token = match self.ch {
             // Operators
@@ -186,10 +194,14 @@ impl Lexer {
     }
 
     /// Skip whitespace (except newlines, which are significant)
-    fn skip_whitespace(&mut self) {
+    /// Returns true if any whitespace was skipped
+    fn skip_whitespace(&mut self) -> bool {
+        let mut skipped = false;
         while self.ch == ' ' || self.ch == '\t' || self.ch == '\r' {
+            skipped = true;
             self.read_char();
         }
+        skipped
     }
 
     /// Skip single-line comment (// ...)

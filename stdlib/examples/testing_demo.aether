@@ -1,0 +1,153 @@
+// stdlib/examples/testing_demo.aether
+// 测试框架使用示例
+
+// 加载测试框架
+// 注意：需要先运行 ../testing.aether
+
+// ==================== 测试套件 1: 基本断言 ====================
+
+TEST_SUITE("Basic Assertions")
+
+TEST_CASE("Boolean Assertions")
+ASSERT_TRUE(True, "True should be True")
+ASSERT_FALSE(False, "False should be False")
+ASSERT_TRUE((5 > 3), "5 > 3 should be True")
+ASSERT_FALSE((5 < 3), "5 < 3 should be False")
+
+TEST_CASE("Equality Assertions")
+ASSERT_EQUAL(42, 42, "42 equals 42")
+ASSERT_EQUAL("hello", "hello", "Strings are equal")
+ASSERT_NOT_EQUAL(1, 2, "1 is not equal to 2")
+ASSERT_NOT_EQUAL("a", "b", "Different strings")
+
+TEST_CASE("Comparison Assertions")
+ASSERT_GREATER(10, 5, "10 > 5")
+ASSERT_LESS(3, 7, "3 < 7")
+ASSERT_GREATER_EQUAL(5, 5, "5 >= 5")
+ASSERT_LESS_EQUAL(4, 4, "4 <= 4")
+
+// ==================== 测试套件 2: 数组测试 ====================
+
+TEST_SUITE("Array Tests")
+
+TEST_CASE("Array Length")
+Set TEST_ARR [1, 2, 3, 4, 5]
+ASSERT_LENGTH(TEST_ARR, 5, "Array has 5 elements")
+
+Set EMPTY_ARR []
+ASSERT_EMPTY(EMPTY_ARR, "Array is empty")
+ASSERT_NOT_EMPTY(TEST_ARR, "Array is not empty")
+
+TEST_CASE("Array Contains")
+Set FRUITS ["apple", "banana", "cherry"]
+ASSERT_CONTAINS(FRUITS, "banana", "Array contains banana")
+
+// ==================== 测试套件 3: Null 检查 ====================
+
+TEST_SUITE("Null Checks")
+
+TEST_CASE("Null Values")
+Set NULL_VAL Null
+Set NON_NULL 42
+
+ASSERT_NULL(NULL_VAL, "Value is null")
+ASSERT_NOT_NULL(NON_NULL, "Value is not null")
+
+// ==================== 测试套件 4: 类型检查 ====================
+
+TEST_SUITE("TYPE Checks")
+
+TEST_CASE("TYPE Validation")
+Set NUM 123
+Set STR "hello"
+Set ARR [1, 2, 3]
+
+ASSERT_TYPE(NUM, "Number", "123 is a Number")
+ASSERT_TYPE(STR, "String", "hello is a string")
+ASSERT_TYPE(ARR, "Array", "[1,2,3] is an array")
+
+// ==================== 测试套件 5: 范围测试 ====================
+
+TEST_SUITE("Range Tests")
+
+TEST_CASE("Value in Range")
+Set SCORE 85
+ASSERT_IN_RANGE(SCORE, 0, 100, "Score is in valid range")
+
+Set AGE 25
+ASSERT_IN_RANGE(AGE, 18, 65, "Age is in working range")
+
+// ==================== 测试套件 6: 实际功能测试 ====================
+
+TEST_SUITE("Practical Function Tests")
+
+TEST_CASE("Math Operations")
+Set SUM (10 + 20)
+ASSERT_EQUAL(SUM, 30, "10 + 20 = 30")
+
+Set PRODUCT (5 * 6)
+ASSERT_EQUAL(PRODUCT, 30, "5 * 6 = 30")
+
+Set DIFF (100 - 42)
+ASSERT_EQUAL(DIFF, 58, "100 - 42 = 58")
+
+TEST_CASE("String Operations")
+Set TEXT "Hello"
+Set LEN_ LEN(TEXT)
+ASSERT_EQUAL(LEN_, 5, "Length of 'Hello' is 5")
+
+Set SLICE STRSLICE(TEXT, 0, 2)
+ASSERT_EQUAL(SLICE, "He", "Slice gives 'He'")
+
+// ==================== 测试套件 7: Mock 对象测试 ====================
+
+TEST_SUITE("Mock Object Tests")
+
+TEST_CASE("Mock Creation and Usage")
+Set MY_MOCK MOCK_CREATE()
+ASSERT_FALSE(MOCK_WAS_CALLED(MY_MOCK), "Mock not called initially")
+
+Set ARGS [1, 2, 3]
+Set MY_MOCK MOCK_CALL(MY_MOCK, ARGS)
+ASSERT_TRUE(MOCK_WAS_CALLED(MY_MOCK), "Mock was called")
+
+Set CALL_COUNT MOCK_CALL_COUNT(MY_MOCK)
+ASSERT_EQUAL(CALL_COUNT, 1, "Mock called once")
+
+// ==================== 测试套件 8: 测试数据生成 ====================
+
+TEST_SUITE("Test Data Generation")
+
+TEST_CASE("Integer Array Generation")
+Set INT_ARR TEST_DATA_INT_ARRAY(5, 10)
+ASSERT_LENGTH(INT_ARR, 5, "Generated 5 integers")
+Set FIRST INT_ARR[0]
+ASSERT_EQUAL(FIRST, 10, "First element is 10")
+
+TEST_CASE("String Array Generation")
+Set STR_ARR TEST_DATA_STR_ARRAY(3, "test_")
+ASSERT_LENGTH(STR_ARR, 3, "Generated 3 strings")
+Set FIRST_STR STR_ARR[0]
+ASSERT_EQUAL(FIRST_STR, "test_0", "First string is 'test_0'")
+
+// ==================== 故意失败的测试（演示）====================
+
+TEST_SUITE("Intentional Failures (Demo)")
+
+TEST_CASE("This test will fail")
+TEST_INFO("The following assertion is designed to fail for demonstration")
+ASSERT_EQUAL(1, 2, "1 should equal 2 (intentional fail)")
+
+TEST_CASE("This will also fail")
+ASSERT_TRUE(False, "False should be True (intentional fail)")
+
+// ==================== 跳过的测试 ====================
+
+TEST_SUITE("Skipped Tests (Demo)")
+
+TEST_CASE("Feature not implemented")
+TEST_SKIP("This feature is not yet implemented")
+
+// ==================== 打印测试摘要 ====================
+
+TEST_SUMMARY()

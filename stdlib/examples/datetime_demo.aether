@@ -1,0 +1,199 @@
+// stdlib/examples/datetime_demo.aether
+// 日期时间工具库使用示例
+
+// 加载日期时间库
+// 注意：需要先运行 ../datetime.aether
+
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("DateTime Library Demo")
+PRINTLN("═══════════════════════════════════════════════")
+
+// ==================== 闰年判断 ====================
+PRINTLN("")
+PRINTLN("▶ Leap Year Check:")
+
+Set YEAR_2024 2024
+Set YEAR_2023 2023
+Set YEAR_2000 2000
+Set YEAR_1900 1900
+
+Set IS_LEAP_2024 DT_IS_LEAP_YEAR(YEAR_2024)
+PRINTLN("2024 is leap year: " + TO_STRING(IS_LEAP_2024))
+
+Set IS_LEAP_2023 DT_IS_LEAP_YEAR(YEAR_2023)
+PRINTLN("2023 is leap year: " + TO_STRING(IS_LEAP_2023))
+
+Set IS_LEAP_2000 DT_IS_LEAP_YEAR(YEAR_2000)
+PRINTLN("2000 is leap year: " + TO_STRING(IS_LEAP_2000))
+
+Set IS_LEAP_1900 DT_IS_LEAP_YEAR(YEAR_1900)
+PRINTLN("1900 is leap year: " + TO_STRING(IS_LEAP_1900))
+
+// ==================== 月份天数 ====================
+PRINTLN("")
+PRINTLN("▶ Days in Month:")
+
+Set DAYS_FEB_2024 DT_DAYS_IN_MONTH(2024, 2)
+PRINTLN("February 2024 has " + TO_STRING(DAYS_FEB_2024) + " days")
+
+Set DAYS_FEB_2023 DT_DAYS_IN_MONTH(2023, 2)
+PRINTLN("February 2023 has " + TO_STRING(DAYS_FEB_2023) + " days")
+
+Set DAYS_APR DT_DAYS_IN_MONTH(2024, 4)
+PRINTLN("April 2024 has " + TO_STRING(DAYS_APR) + " days")
+
+// ==================== 日期验证 ====================
+PRINTLN("")
+PRINTLN("▶ Date Validation:")
+
+Set VALID_1 DT_IS_VALID_DATE(2024, 2, 29)
+PRINTLN("2024-02-29 is valid: " + TO_STRING(VALID_1))
+
+Set VALID_2 DT_IS_VALID_DATE(2023, 2, 29)
+PRINTLN("2023-02-29 is valid: " + TO_STRING(VALID_2))
+
+Set VALID_3 DT_IS_VALID_DATE(2024, 13, 1)
+PRINTLN("2024-13-01 is valid: " + TO_STRING(VALID_3))
+
+// ==================== 时间验证 ====================
+PRINTLN("")
+PRINTLN("▶ Time Validation:")
+
+Set TIME_VALID_1 DT_IS_VALID_TIME(14, 30, 45)
+PRINTLN("14:30:45 is valid: " + TO_STRING(TIME_VALID_1))
+
+Set TIME_VALID_2 DT_IS_VALID_TIME(25, 30, 45)
+PRINTLN("25:30:45 is valid: " + TO_STRING(TIME_VALID_2))
+
+// ==================== 日期格式化 ====================
+PRINTLN("")
+PRINTLN("▶ Date Formatting:")
+
+Set FORMATTED_DATE DT_FORMAT_DATE(2024, 12, 25)
+PRINTLN("Formatted date: " + FORMATTED_DATE)
+
+Set FORMATTED_TIME DT_FORMAT_TIME(14, 30, 45)
+PRINTLN("Formatted time: " + FORMATTED_TIME)
+
+Set FORMATTED_DATETIME DT_FORMAT_DATETIME(2024, 12, 25, 14, 30, 45)
+PRINTLN("Formatted datetime: " + FORMATTED_DATETIME)
+
+// ==================== 星期计算 ====================
+PRINTLN("")
+PRINTLN("▶ Day of Week Calculation:")
+
+Set DOW_2024_JAN_1 DT_DAY_OF_WEEK(2024, 1, 1)
+PRINTLN("2024-01-01 is day: " + TO_STRING(DOW_2024_JAN_1))
+
+Set WEEKDAY_NAME DT_WEEKDAY_NAME(2024, 1, 1)
+PRINTLN("Weekday name: " + WEEKDAY_NAME)
+
+Set WEEKDAY_NAME_CN DT_WEEKDAY_NAME_CN(2024, 1, 1)
+PRINTLN("Weekday name (CN): " + WEEKDAY_NAME_CN)
+
+// ==================== 月份名称 ====================
+PRINTLN("")
+PRINTLN("▶ Month Names:")
+
+Set MONTH_1 DT_MONTH_NAME(1)
+PRINTLN("Month 1: " + MONTH_1)
+
+Set MONTH_12 DT_MONTH_NAME(12)
+PRINTLN("Month 12: " + MONTH_12)
+
+Set MONTH_1_CN DT_MONTH_NAME_CN(1)
+PRINTLN("Month 1 (CN): " + MONTH_1_CN)
+
+// ==================== 日期比较 ====================
+PRINTLN("")
+PRINTLN("▶ Date Comparison:")
+
+Set CMP_1 DT_COMPARE_DATE(2024, 1, 1, 2024, 12, 31)
+PRINTLN("Compare 2024-01-01 with 2024-12-31: " + TO_STRING(CMP_1))
+
+Set CMP_2 DT_COMPARE_DATE(2024, 6, 15, 2024, 6, 15)
+PRINTLN("Compare 2024-06-15 with 2024-06-15: " + TO_STRING(CMP_2))
+
+// ==================== 天数差值 ====================
+PRINTLN("")
+PRINTLN("▶ Days Between Dates:")
+
+Set DAYS_DIFF_1 DT_DAYS_BETWEEN(2024, 1, 1, 2024, 12, 31)
+PRINTLN("Days from 2024-01-01 to 2024-12-31: " + TO_STRING(DAYS_DIFF_1))
+
+Set DAYS_DIFF_2 DT_DAYS_BETWEEN(2024, 1, 1, 2024, 1, 31)
+PRINTLN("Days from 2024-01-01 to 2024-01-31: " + TO_STRING(DAYS_DIFF_2))
+
+// ==================== 日期加减 ====================
+PRINTLN("")
+PRINTLN("▶ Date Arithmetic:")
+
+Set NEW_DATE_1 DT_ADD_DAYS(2024, 1, 28, 5)
+PRINTLN("2024-01-28 + 5 days = " + TO_STRING(NEW_DATE_1))
+
+Set NEW_DATE_2 DT_ADD_MONTHS(2024, 1, 31, 1)
+PRINTLN("2024-01-31 + 1 month = " + TO_STRING(NEW_DATE_2))
+
+Set NEW_DATE_3 DT_ADD_YEARS(2024, 2, 29, 1)
+PRINTLN("2024-02-29 + 1 year = " + TO_STRING(NEW_DATE_3))
+
+// ==================== 年龄计算 ====================
+PRINTLN("")
+PRINTLN("▶ Age Calculation:")
+
+Set AGE_1 DT_CALCULATE_AGE(1990, 6, 15, 2024, 12, 1)
+PRINTLN("Born 1990-06-15, now 2024-12-01, age: " + TO_STRING(AGE_1))
+
+Set AGE_2 DT_CALCULATE_AGE(2000, 12, 25, 2024, 12, 20)
+PRINTLN("Born 2000-12-25, now 2024-12-20, age: " + TO_STRING(AGE_2))
+
+// ==================== 季度计算 ====================
+PRINTLN("")
+PRINTLN("▶ Quarter Calculation:")
+
+Set Q1 DT_GET_QUARTER(2)
+PRINTLN("Month 2 is in quarter: " + TO_STRING(Q1))
+
+Set Q2 DT_GET_QUARTER(7)
+PRINTLN("Month 7 is in quarter: " + TO_STRING(Q2))
+
+Set Q_START DT_QUARTER_START(2024, 2)
+PRINTLN("Q2 2024 starts at: " + TO_STRING(Q_START))
+
+// ==================== 工作日判断 ====================
+PRINTLN("")
+PRINTLN("▶ Weekday/Weekend Check:")
+
+Set IS_WEEKEND_1 DT_IS_WEEKEND(2024, 1, 6)
+PRINTLN("2024-01-06 is weekend: " + TO_STRING(IS_WEEKEND_1))
+
+Set IS_WEEKDAY_1 DT_IS_WEEKDAY(2024, 1, 6)
+PRINTLN("2024-01-06 is weekday: " + TO_STRING(IS_WEEKDAY_1))
+
+Set IS_WEEKEND_2 DT_IS_WEEKEND(2024, 1, 8)
+PRINTLN("2024-01-08 is weekend: " + TO_STRING(IS_WEEKEND_2))
+
+// ==================== 时间计算 ====================
+PRINTLN("")
+PRINTLN("▶ Time Calculations:")
+
+Set TIME_DIFF DT_SECONDS_BETWEEN(9, 0, 0, 17, 30, 0)
+PRINTLN("Seconds from 09:00:00 to 17:30:00: " + TO_STRING(TIME_DIFF))
+
+Set HOURS DT_SECONDS_TO_HOURS(TIME_DIFF)
+PRINTLN("That's " + TO_STRING(HOURS) + " hours")
+
+// ==================== 年内天数 ====================
+PRINTLN("")
+PRINTLN("▶ Day of Year:")
+
+Set DAY_OF_YEAR_1 DT_DAY_OF_YEAR(2024, 3, 1)
+PRINTLN("2024-03-01 is day " + TO_STRING(DAY_OF_YEAR_1) + " of the year")
+
+Set DAY_OF_YEAR_2 DT_DAY_OF_YEAR(2024, 12, 31)
+PRINTLN("2024-12-31 is day " + TO_STRING(DAY_OF_YEAR_2) + " of the year")
+
+PRINTLN("")
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("DateTime Demo Complete!")
+PRINTLN("═══════════════════════════════════════════════")

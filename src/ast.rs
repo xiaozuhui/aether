@@ -101,6 +101,13 @@ pub enum Stmt {
         value: Expr,
     },
 
+    // Index assignment: Set OBJECT[INDEX] value (for arrays and dicts)
+    SetIndex {
+        object: Box<Expr>,
+        index: Box<Expr>,
+        value: Expr,
+    },
+
     // Function definition: Func NAME (params) { body }
     FuncDef {
         name: String,
@@ -126,6 +133,12 @@ pub enum Stmt {
 
     // Yield statement (for generators): Yield expr
     Yield(Expr),
+
+    // Break statement: Break (exit loop)
+    Break,
+
+    // Continue statement: Continue (skip to next iteration)
+    Continue,
 
     // While loop: While (condition) { body }
     While {

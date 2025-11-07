@@ -1,0 +1,162 @@
+// stdlib/examples/stdlib_test.aether
+// 测试标准库是否正确加载和工作
+
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Aether Standard Library Integration Test")
+PRINTLN("═══════════════════════════════════════════════")
+
+// ==================== 测试字符串工具 ====================
+PRINTLN("")
+PRINTLN("▶ Testing String Utils...")
+
+Set TEST_STR "  hello world  "
+Set TRIMMED STR_TRIM(TEST_STR)
+If (TRIMMED == "hello world") {
+    PRINTLN("  ✓ STR_TRIM works")
+} Else {
+    PRINTLN("  ✗ STR_TRIM failed")
+}
+
+Set UPPER STR_TO_UPPER("hello")
+If (UPPER == "HELLO") {
+    PRINTLN("  ✓ STR_TO_UPPER works")
+} Else {
+    PRINTLN("  ✗ STR_TO_UPPER failed")
+}
+
+Set PARTS STR_SPLIT("a,b,c", ",")
+Set LEN_ LEN(PARTS)
+If (LEN_ == 3) {
+    PRINTLN("  ✓ STR_SPLIT works")
+} Else {
+    PRINTLN("  ✗ STR_SPLIT failed")
+}
+
+// ==================== 测试数组工具 ====================
+PRINTLN("")
+PRINTLN("▶ Testing Array Utils...")
+
+Set ARR [1, 2, 2, 3, 3, 3]
+Set UNIQUE ARR_UNIQUE(ARR)
+Set UNIQUE_LEN LEN(UNIQUE)
+If (UNIQUE_LEN == 3) {
+    PRINTLN("  ✓ ARR_UNIQUE works")
+} Else {
+    PRINTLN("  ✗ ARR_UNIQUE failed")
+}
+
+Set NUMS [1, 2, 3, 4, 5]
+Set SUM ARR_SUM(NUMS)
+If (SUM == 15) {
+    PRINTLN("  ✓ ARR_SUM works")
+} Else {
+    PRINTLN("  ✗ ARR_SUM failed")
+}
+
+Set MAX ARR_MAX(NUMS)
+If (MAX == 5) {
+    PRINTLN("  ✓ ARR_MAX works")
+} Else {
+    PRINTLN("  ✗ ARR_MAX failed")
+}
+
+// ==================== 测试验证库 ====================
+PRINTLN("")
+PRINTLN("▶ Testing Validation...")
+
+Set VALID_EMAIL VALIDATE_EMAIL("test@example.com")
+If (VALID_EMAIL) {
+    PRINTLN("  ✓ VALIDATE_EMAIL works")
+} Else {
+    PRINTLN("  ✗ VALIDATE_EMAIL failed")
+}
+
+Set VALID_RANGE VALIDATE_RANGE(50, 0, 100)
+If (VALID_RANGE) {
+    PRINTLN("  ✓ VALIDATE_RANGE works")
+} Else {
+    PRINTLN("  ✗ VALIDATE_RANGE failed")
+}
+
+Set IS_NUMERIC VALIDATE_NUMERIC("12345")
+If (IS_NUMERIC) {
+    PRINTLN("  ✓ VALIDATE_NUMERIC works")
+} Else {
+    PRINTLN("  ✗ VALIDATE_NUMERIC failed")
+}
+
+// ==================== 测试日期时间 ====================
+PRINTLN("")
+PRINTLN("▶ Testing DateTime...")
+
+Set IS_LEAP DT_IS_LEAP_YEAR(2024)
+If (IS_LEAP) {
+    PRINTLN("  ✓ DT_IS_LEAP_YEAR works")
+} Else {
+    PRINTLN("  ✗ DT_IS_LEAP_YEAR failed")
+}
+
+Set DAYS DT_DAYS_IN_MONTH(2024, 2)
+If (DAYS == 29) {
+    PRINTLN("  ✓ DT_DAYS_IN_MONTH works")
+} Else {
+    PRINTLN("  ✗ DT_DAYS_IN_MONTH failed")
+}
+
+Set DATE_STR DT_FORMAT_DATE(2024, 12, 25)
+If (DATE_STR == "2024-12-25") {
+    PRINTLN("  ✓ DT_FORMAT_DATE works")
+} Else {
+    PRINTLN("  ✗ DT_FORMAT_DATE failed")
+}
+
+// ==================== 测试测试框架 ====================
+PRINTLN("")
+PRINTLN("▶ Testing Testing Framework...")
+
+Set MOCK MOCK_CREATE()
+Set WAS_CALLED MOCK_WAS_CALLED(MOCK)
+If (!WAS_CALLED) {
+    PRINTLN("  ✓ MOCK_CREATE works")
+} Else {
+    PRINTLN("  ✗ MOCK_CREATE failed")
+}
+
+Set TEST_ARR2 TEST_DATA_INT_ARRAY(5, 0)
+Set TEST_LEN LEN(TEST_ARR2)
+If (TEST_LEN == 5) {
+    PRINTLN("  ✓ TEST_DATA_INT_ARRAY works")
+} Else {
+    PRINTLN("  ✗ TEST_DATA_INT_ARRAY failed")
+}
+
+// ==================== 综合测试 ====================
+PRINTLN("")
+PRINTLN("▶ Integration Test...")
+
+// 使用多个库函数组合
+Set EMAIL_INPUT "  user@example.com  "
+Set EMAIL_CLEAN STR_TRIM(EMAIL_INPUT)
+Set EMAIL_VALID VALIDATE_EMAIL(EMAIL_CLEAN)
+
+If (EMAIL_VALID) {
+    PRINTLN("  ✓ Combined string + validation works")
+} Else {
+    PRINTLN("  ✗ Combined test failed")
+}
+
+// 数组处理链
+Set RAW_DATA [5, 3, 8, 3, 9, 1, 5]
+Set UNIQUE_DATA ARR_UNIQUE(RAW_DATA)
+Set AVG ARR_AVERAGE(UNIQUE_DATA)
+
+If (AVG > 0) {
+    PRINTLN("  ✓ Combined array processing works")
+} Else {
+    PRINTLN("  ✗ Combined array test failed")
+}
+
+PRINTLN("")
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Standard Library Integration Test Complete!")
+PRINTLN("═══════════════════════════════════════════════")

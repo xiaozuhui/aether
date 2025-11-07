@@ -38,6 +38,12 @@ pub enum RuntimeError {
     /// Yield statement (used for generators)
     Yield(Value),
 
+    /// Break statement (used for loop control)
+    Break,
+
+    /// Continue statement (used for loop control)
+    Continue,
+
     /// Throw statement (user-thrown error)
     Throw(Value),
 
@@ -65,6 +71,8 @@ impl std::fmt::Display for RuntimeError {
             }
             RuntimeError::Return(val) => write!(f, "Return: {}", val),
             RuntimeError::Yield(val) => write!(f, "Yield: {}", val),
+            RuntimeError::Break => write!(f, "Break outside of loop"),
+            RuntimeError::Continue => write!(f, "Continue outside of loop"),
             RuntimeError::Throw(val) => write!(f, "Throw: {}", val),
             RuntimeError::CustomError(msg) => write!(f, "{}", msg),
         }
@@ -129,6 +137,65 @@ impl Evaluator {
                 Ok(val)
             }
 
+            Stmt::SetIndex {
+                object,
+                index,
+                value,
+            } => {
+                // Evaluate the value to be assigned
+                let val = self.eval_expression(value)?;
+
+                // For simple identifier objects, we can modify in place
+                if let Expr::Identifier(name) = object.as_ref() {
+                    // Get the object from environment
+                    let obj = self
+                        .env
+                        .borrow()
+                        .get(name)
+                        .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))?;
+
+                    // Evaluate the index
+                    let idx_val = self.eval_expression(index)?;
+
+                    // Modify based on object type
+                    let new_obj = match (obj, idx_val) {
+                        (Value::Array(mut arr), Value::Number(n)) => {
+                            let idx = n as usize;
+                            if idx >= arr.len() {
+                                return Err(RuntimeError::InvalidOperation(format!(
+                                    "Index {} out of bounds (array length: {})",
+                                    idx,
+                                    arr.len()
+                                )));
+                            }
+                            arr[idx] = val.clone();
+                            Value::Array(arr)
+                        }
+                        (Value::Dict(mut dict), Value::String(key)) => {
+                            dict.insert(key, val.clone());
+                            Value::Dict(dict)
+                        }
+                        (obj, idx) => {
+                            return Err(RuntimeError::TypeError(format!(
+                                "Cannot index {} with {}",
+                                obj.type_name(),
+                                idx.type_name()
+                            )))
+                        }
+                    };
+
+                    // Update the variable in environment
+                    self.env.borrow_mut().set(name.clone(), new_obj);
+                    Ok(val)
+                } else {
+                    // For complex expressions, we can't modify in place
+                    Err(RuntimeError::InvalidOperation(
+                        "Can only assign to simple variable indices (e.g., dict[key], not expr[key])"
+                            .to_string(),
+                    ))
+                }
+            }
+
             Stmt::FuncDef { name, params, body } => {
                 let func = Value::Function {
                     params: params.clone(),
@@ -170,6 +237,10 @@ impl Evaluator {
                 Err(RuntimeError::Yield(val))
             }
 
+            Stmt::Break => Err(RuntimeError::Break),
+
+            Stmt::Continue => Err(RuntimeError::Continue),
+
             Stmt::While { condition, body } => {
                 let mut result = Value::Null;
 
@@ -179,8 +250,21 @@ impl Evaluator {
                         break;
                     }
 
+                    let mut should_break = false;
                     for stmt in body {
-                        result = self.eval_statement(stmt)?;
+                        match self.eval_statement(stmt) {
+                            Ok(val) => result = val,
+                            Err(RuntimeError::Break) => {
+                                should_break = true;
+                                break;
+                            }
+                            Err(RuntimeError::Continue) => break,
+                            Err(e) => return Err(e),
+                        }
+                    }
+
+                    if should_break {
+                        break;
                     }
                 }
 
@@ -197,10 +281,22 @@ impl Evaluator {
 
                 match iter_val {
                     Value::Array(arr) => {
+                        let mut should_break = false;
                         for item in arr {
                             self.env.borrow_mut().set(var.clone(), item);
                             for stmt in body {
-                                result = self.eval_statement(stmt)?;
+                                match self.eval_statement(stmt) {
+                                    Ok(val) => result = val,
+                                    Err(RuntimeError::Break) => {
+                                        should_break = true;
+                                        break;
+                                    }
+                                    Err(RuntimeError::Continue) => break,
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                            if should_break {
+                                break;
                             }
                         }
                     }
@@ -226,13 +322,25 @@ impl Evaluator {
 
                 match iter_val {
                     Value::Array(arr) => {
+                        let mut should_break = false;
                         for (idx, item) in arr.iter().enumerate() {
                             self.env
                                 .borrow_mut()
                                 .set(index_var.clone(), Value::Number(idx as f64));
                             self.env.borrow_mut().set(value_var.clone(), item.clone());
                             for stmt in body {
-                                result = self.eval_statement(stmt)?;
+                                match self.eval_statement(stmt) {
+                                    Ok(val) => result = val,
+                                    Err(RuntimeError::Break) => {
+                                        should_break = true;
+                                        break;
+                                    }
+                                    Err(RuntimeError::Continue) => break,
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                            if should_break {
+                                break;
                             }
                         }
                     }

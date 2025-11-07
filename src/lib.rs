@@ -58,6 +58,7 @@ pub mod evaluator;
 pub mod lexer;
 pub mod optimizer;
 pub mod parser;
+pub mod stdlib;
 pub mod token;
 pub mod value;
 
@@ -109,6 +110,33 @@ impl Aether {
     /// Create a new Aether engine with all IO permissions enabled
     pub fn with_all_permissions() -> Self {
         Self::with_permissions(IOPermissions::allow_all())
+    }
+
+    /// Create a new Aether engine with standard library preloaded
+    ///
+    /// This creates an engine with all permissions and automatically loads
+    /// all standard library modules (string_utils, array_utils, validation, datetime, testing).
+    pub fn with_stdlib() -> Result<Self, String> {
+        let mut engine = Self::with_all_permissions();
+        stdlib::preload_stdlib(&mut engine)?;
+        Ok(engine)
+    }
+
+    /// Load a specific standard library module
+    ///
+    /// Available modules: "string_utils", "array_utils", "validation", "datetime", "testing"
+    pub fn load_stdlib_module(&mut self, module_name: &str) -> Result<(), String> {
+        if let Some(code) = stdlib::get_module(module_name) {
+            self.eval(code)?;
+            Ok(())
+        } else {
+            Err(format!("Unknown stdlib module: {}", module_name))
+        }
+    }
+
+    /// Load all standard library modules
+    pub fn load_all_stdlib(&mut self) -> Result<(), String> {
+        stdlib::preload_stdlib(self)
     }
 
     /// Evaluate Aether code and return the result

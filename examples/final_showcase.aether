@@ -1,31 +1,31 @@
-Println("=== Math Library Showcase ===")
+PRINTLN("=== Math Library Showcase ===")
 
 Set DATA [1, 2, 3, 4, 5]
 Set MEAN_VAL Mean(DATA)
-Println("Mean:")
-Println(MEAN_VAL)
+PRINTLN("Mean:")
+PRINTLN(MEAN_VAL)
 
 Set MEDIAN_VAL Median(DATA)
-Println("Median:")
-Println(MEDIAN_VAL)
+PRINTLN("Median:")
+PRINTLN(MEDIAN_VAL)
 
 Set STD_VAL Std(DATA)
-Println("Standard Deviation:")
-Println(STD_VAL)
+PRINTLN("Standard Deviation:")
+PRINTLN(STD_VAL)
 
 Set V1 [1, 2, 3]
 Set V2 [4, 5, 6]
 Set DOT_PROD Dot(V1, V2)
-Println("Dot product:")
-Println(DOT_PROD)
+PRINTLN("Dot product:")
+PRINTLN(DOT_PROD)
 
 Set M [[1, 2], [3, 4]]
 Set DET Determinant(M)
-Println("Determinant:")
-Println(DET)
+PRINTLN("Determinant:")
+PRINTLN(DET)
 
 Set PI_VAL PI()
-Println("PI:")
-Println(PI_VAL)
+PRINTLN("PI:")
+PRINTLN(PI_VAL)
 
-Println("=== Complete! ===")
+PRINTLN("=== Complete! ===")

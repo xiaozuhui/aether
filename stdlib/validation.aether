@@ -1,0 +1,588 @@
+// stdlib/validation.aether
+// Aether 数据验证库
+// 提供常用的数据验证函数
+
+// ==================== 邮箱验证 ====================
+
+// 验证邮箱地址格式
+Func VALIDATE_EMAIL(EMAIL) {
+    Set LEN STRLEN(EMAIL)
+    
+    If (LEN < 3) {
+        Return False
+    }
+    
+    // 检查是否包含 @
+    Set HAS_AT False
+    Set AT_POS -1
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(EMAIL, I, I + 1)
+        If (CHAR == "@") {
+            If (HAS_AT) {
+                // 多个 @ 符号
+                Return False
+            }
+            Set HAS_AT True
+            Set AT_POS I
+        }
+        Set I (I + 1)
+    }
+    
+    If (!HAS_AT || AT_POS == 0 || AT_POS == (LEN - 1)) {
+        Return False
+    }
+    
+    // 检查是否包含点号，且在 @ 之后
+    Set HAS_DOT_AFTER_AT False
+    Set I (AT_POS + 1)
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(EMAIL, I, I + 1)
+        If (CHAR == ".") {
+            If (I != (LEN - 1) && I != (AT_POS + 1)) {
+                Set HAS_DOT_AFTER_AT True
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return HAS_DOT_AFTER_AT
+}
+
+// ==================== 电话号码验证 ====================
+
+// 验证中国大陆手机号码（11位，1开头）
+Func VALIDATE_PHONE_CN(PHONE) {
+    Set PHONE_STR TO_STRING(PHONE)
+    Set LEN STRLEN(PHONE_STR)
+    
+    // 必须是11位
+    If (LEN != 11) {
+        Return False
+    }
+    
+    // 第一位必须是1
+    Set FIRST_CHAR STRSLICE(PHONE_STR, 0, 1)
+    If (FIRST_CHAR != "1") {
+        Return False
+    }
+    
+    // 所有字符必须是数字
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(PHONE_STR, I, I + 1)
+        If (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证通用电话号码（只包含数字、空格、短横线、括号、加号）
+Func VALIDATE_PHONE_GENERAL(PHONE) {
+    Set PHONE_STR TO_STRING(PHONE)
+    Set LEN STRLEN(PHONE_STR)
+    
+    If (LEN < 3) {
+        Return False
+    }
+    
+    Set DIGIT_COUNT 0
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(PHONE_STR, I, I + 1)
+        Set IS_DIGIT (CHAR >= "0" && CHAR <= "9")
+        Set IS_VALID (IS_DIGIT || CHAR == " " || CHAR == "-" || CHAR == "(" || CHAR == ")" || CHAR == "+")
+        
+        If (!IS_VALID) {
+            Return False
+        }
+        
+        If (IS_DIGIT) {
+            Set DIGIT_COUNT (DIGIT_COUNT + 1)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    // 至少要有7个数字
+    Return (DIGIT_COUNT >= 7)
+}
+
+// ==================== 身份证号验证 ====================
+
+// 验证中国大陆身份证号（18位）
+Func VALIDATE_ID_CARD_CN(ID_CARD) {
+    Set ID_STR TO_STRING(ID_CARD)
+    Set LEN STRLEN(ID_STR)
+    
+    // 必须是18位
+    If (LEN != 18) {
+        Return False
+    }
+    
+    // 前17位必须是数字
+    Set I 0
+    While (I < 17) {
+        Set CHAR STRSLICE(ID_STR, I, I + 1)
+        If (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    // 最后一位可以是数字或X
+    Set LAST_CHAR STRSLICE(ID_STR, 17, 18)
+    Set VALID_LAST ((LAST_CHAR >= "0" && LAST_CHAR <= "9") || LAST_CHAR == "X" || LAST_CHAR == "x")
+    
+    If (!VALID_LAST) {
+        Return False
+    }
+    
+    // 验证出生日期（简单检查）
+    Set YEAR_STR STRSLICE(ID_STR, 6, 10)
+    Set MONTH_STR STRSLICE(ID_STR, 10, 12)
+    Set DAY_STR STRSLICE(ID_STR, 12, 14)
+    
+    // 这里简化处理，实际应该转换为数字进行更严格的验证
+    // 月份应该在 01-12 之间
+    Set MONTH_FIRST STRSLICE(MONTH_STR, 0, 1)
+    Set MONTH_SECOND STRSLICE(MONTH_STR, 1, 2)
+    
+    If (MONTH_FIRST == "0") {
+        If (MONTH_SECOND < "1" || MONTH_SECOND > "9") {
+            Return False
+        }
+    } Elif (MONTH_FIRST == "1") {
+        If (MONTH_SECOND < "0" || MONTH_SECOND > "2") {
+            Return False
+        }
+    } Else {
+        Return False
+    }
+    
+    Return True
+}
+
+// ==================== URL 验证 ====================
+
+// 验证 URL 格式
+Func VALIDATE_URL(URL) {
+    Set LEN STRLEN(URL)
+    
+    If (LEN < 10) {
+        Return False
+    }
+    
+    // 检查是否以 http:// 或 https:// 开头
+    Set HTTP_PREFIX "http://"
+    Set HTTPS_PREFIX "https://"
+    
+    Set HAS_HTTP False
+    Set HAS_HTTPS False
+    
+    If (LEN >= 7) {
+        Set PREFIX7 STRSLICE(URL, 0, 7)
+        If (PREFIX7 == HTTP_PREFIX) {
+            Set HAS_HTTP True
+        }
+    }
+    
+    If (LEN >= 8) {
+        Set PREFIX8 STRSLICE(URL, 0, 8)
+        If (PREFIX8 == HTTPS_PREFIX) {
+            Set HAS_HTTPS True
+        }
+    }
+    
+    If (!HAS_HTTP && !HAS_HTTPS) {
+        Return False
+    }
+    
+    // 检查是否包含域名（至少有一个点）
+    Set START_POS 7
+    If (HAS_HTTPS) {
+        Set START_POS 8
+    }
+    
+    Set HAS_DOT False
+    Set I START_POS
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(URL, I, I + 1)
+        If (CHAR == ".") {
+            Set HAS_DOT True
+            Break
+        }
+        Set I (I + 1)
+    }
+    
+    Return HAS_DOT
+}
+
+// 验证简单的域名格式
+Func VALIDATE_DOMAIN(DOMAIN) {
+    Set LEN STRLEN(DOMAIN)
+    
+    If (LEN < 3) {
+        Return False
+    }
+    
+    // 不能以点开头或结束
+    Set FIRST_CHAR STRSLICE(DOMAIN, 0, 1)
+    Set LAST_CHAR STRSLICE(DOMAIN, LEN - 1, LEN)
+    
+    If (FIRST_CHAR == "." || LAST_CHAR == ".") {
+        Return False
+    }
+    
+    // 必须至少包含一个点
+    Set HAS_DOT False
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(DOMAIN, I, I + 1)
+        If (CHAR == ".") {
+            Set HAS_DOT True
+        }
+        Set I (I + 1)
+    }
+    
+    Return HAS_DOT
+}
+
+// ==================== 数值范围验证 ====================
+
+// 验证数值是否在指定范围内（包含边界）
+Func VALIDATE_RANGE(VALUE, MIN, MAX) {
+    Return (VALUE >= MIN && VALUE <= MAX)
+}
+
+// 验证数值是否为正数
+Func VALIDATE_POSITIVE(VALUE) {
+    Return (VALUE > 0)
+}
+
+// 验证数值是否为非负数
+Func VALIDATE_NON_NEGATIVE(VALUE) {
+    Return (VALUE >= 0)
+}
+
+// 验证数值是否为整数
+Func VALIDATE_INTEGER(VALUE) {
+    Set VALUE_STR TO_STRING(VALUE)
+    Set LEN STRLEN(VALUE_STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    Set FIRST_CHAR STRSLICE(VALUE_STR, 0, 1)
+    
+    // 可以以负号开头
+    If (FIRST_CHAR == "-" || FIRST_CHAR == "+") {
+        Set I 1
+    }
+    
+    If (I == LEN) {
+        Return False
+    }
+    
+    // 其余必须都是数字，不能有小数点
+    While (I < LEN) {
+        Set CHAR STRSLICE(VALUE_STR, I, I + 1)
+        If (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 字符串内容验证 ====================
+
+// 验证字符串长度是否在指定范围内
+Func VALIDATE_LENGTH(STR, MIN_LEN, MAX_LEN) {
+    Set LEN STRLEN(STR)
+    Return (LEN >= MIN_LEN && LEN <= MAX_LEN)
+}
+
+// 验证字符串是否非空
+Func VALIDATE_NOT_EMPTY(STR) {
+    Set LEN STRLEN(STR)
+    Return (LEN > 0)
+}
+
+// 验证字符串是否只包含字母
+Func VALIDATE_ALPHA(STR) {
+    Set LEN STRLEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        Set IS_ALPHA ((CHAR >= "a" && CHAR <= "z") || (CHAR >= "A" && CHAR <= "Z"))
+        If (!IS_ALPHA) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证字符串是否只包含数字
+Func VALIDATE_NUMERIC(STR) {
+    Set LEN STRLEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        If (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证字符串是否只包含字母和数字
+Func VALIDATE_ALPHANUMERIC(STR) {
+    Set LEN STRLEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        Set IS_ALPHA ((CHAR >= "a" && CHAR <= "z") || (CHAR >= "A" && CHAR <= "Z"))
+        Set IS_DIGIT (CHAR >= "0" && CHAR <= "9")
+        If (!IS_ALPHA && !IS_DIGIT) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 密码强度验证 ====================
+
+// 验证密码强度（至少8位，包含大小写字母和数字）
+Func VALIDATE_PASSWORD_STRONG(PASSWORD) {
+    Set LEN STRLEN(PASSWORD)
+    
+    If (LEN < 8) {
+        Return False
+    }
+    
+    Set HAS_UPPER False
+    Set HAS_LOWER False
+    Set HAS_DIGIT False
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(PASSWORD, I, I + 1)
+        
+        If (CHAR >= "A" && CHAR <= "Z") {
+            Set HAS_UPPER True
+        } Elif (CHAR >= "a" && CHAR <= "z") {
+            Set HAS_LOWER True
+        } Elif (CHAR >= "0" && CHAR <= "9") {
+            Set HAS_DIGIT True
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return (HAS_UPPER && HAS_LOWER && HAS_DIGIT)
+}
+
+// 验证密码强度（中等：至少6位，包含字母和数字）
+Func VALIDATE_PASSWORD_MEDIUM(PASSWORD) {
+    Set LEN STRLEN(PASSWORD)
+    
+    If (LEN < 6) {
+        Return False
+    }
+    
+    Set HAS_LETTER False
+    Set HAS_DIGIT False
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(PASSWORD, I, I + 1)
+        
+        If ((CHAR >= "A" && CHAR <= "Z") || (CHAR >= "a" && CHAR <= "z")) {
+            Set HAS_LETTER True
+        } Elif (CHAR >= "0" && CHAR <= "9") {
+            Set HAS_DIGIT True
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return (HAS_LETTER && HAS_DIGIT)
+}
+
+// ==================== IP 地址验证 ====================
+
+// 验证 IPv4 地址格式（简单版本）
+Func VALIDATE_IPV4(IP) {
+    Set LEN STRLEN(IP)
+    
+    If (LEN < 7 || LEN > 15) {
+        Return False
+    }
+    
+    // 计算点号数量
+    Set DOT_COUNT 0
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(IP, I, I + 1)
+        If (CHAR == ".") {
+            Set DOT_COUNT (DOT_COUNT + 1)
+        } Elif (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    // 必须有3个点
+    Return (DOT_COUNT == 3)
+}
+
+// ==================== 信用卡号验证 ====================
+
+// 验证信用卡号格式（Luhn 算法的简化版本）
+Func VALIDATE_CREDIT_CARD(CARD_NUMBER) {
+    Set CARD_STR TO_STRING(CARD_NUMBER)
+    Set LEN STRLEN(CARD_STR)
+    
+    // 信用卡号通常是13-19位
+    If (LEN < 13 || LEN > 19) {
+        Return False
+    }
+    
+    // 所有字符必须是数字
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(CARD_STR, I, I + 1)
+        If (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 日期格式验证 ====================
+
+// 验证日期格式 YYYY-MM-DD
+Func VALIDATE_DATE_FORMAT(DATE_STR) {
+    Set LEN STRLEN(DATE_STR)
+    
+    If (LEN != 10) {
+        Return False
+    }
+    
+    // 检查短横线位置
+    Set DASH1 STRSLICE(DATE_STR, 4, 5)
+    Set DASH2 STRSLICE(DATE_STR, 7, 8)
+    
+    If (DASH1 != "-" || DASH2 != "-") {
+        Return False
+    }
+    
+    // 检查年月日是否都是数字
+    Set I 0
+    While (I < LEN) {
+        If (I != 4 && I != 7) {
+            Set CHAR STRSLICE(DATE_STR, I, I + 1)
+            If (CHAR < "0" || CHAR > "9") {
+                Return False
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证时间格式 HH:MM:SS
+Func VALIDATE_TIME_FORMAT(TIME_STR) {
+    Set LEN STRLEN(TIME_STR)
+    
+    If (LEN != 8) {
+        Return False
+    }
+    
+    // 检查冒号位置
+    Set COLON1 STRSLICE(TIME_STR, 2, 3)
+    Set COLON2 STRSLICE(TIME_STR, 5, 6)
+    
+    If (COLON1 != ":" || COLON2 != ":") {
+        Return False
+    }
+    
+    // 检查时分秒是否都是数字
+    Set I 0
+    While (I < LEN) {
+        If (I != 2 && I != 5) {
+            Set CHAR STRSLICE(TIME_STR, I, I + 1)
+            If (CHAR < "0" || CHAR > "9") {
+                Return False
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 用户名验证 ====================
+
+// 验证用户名（3-20位，字母数字下划线）
+Func VALIDATE_USERNAME(USERNAME) {
+    Set LEN STRLEN(USERNAME)
+    
+    If (LEN < 3 || LEN > 20) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(USERNAME, I, I + 1)
+        Set IS_ALPHA ((CHAR >= "a" && CHAR <= "z") || (CHAR >= "A" && CHAR <= "Z"))
+        Set IS_DIGIT (CHAR >= "0" && CHAR <= "9")
+        Set IS_UNDERSCORE (CHAR == "_")
+        
+        If (!IS_ALPHA && !IS_DIGIT && !IS_UNDERSCORE) {
+            Return False
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+

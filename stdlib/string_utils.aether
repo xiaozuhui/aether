@@ -1,0 +1,596 @@
+// stdlib/string_utils.aether
+// Aether 字符串工具库
+// 提供丰富的字符串操作函数
+
+// ==================== 字符串修剪 ====================
+
+// 移除字符串两端的空白字符
+Func STR_TRIM(STR) {
+    Set RESULT STR
+    Set LEN LEN(STR)
+    
+    If (LEN == 0) {
+        Return RESULT
+    }
+    
+    // 查找第一个非空白字符
+    Set START 0
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        If (CHAR != " " && CHAR != "\t" && CHAR != "\n" && CHAR != "\r") {
+            Set START I
+            Break
+        }
+        Set I (I + 1)
+    }
+    
+    // 如果全是空白字符
+    If (I == LEN) {
+        Return ""
+    }
+    
+    // 查找最后一个非空白字符
+    Set END (LEN - 1)
+    Set J (LEN - 1)
+    While (J >= 0) {
+        Set CHAR STRSLICE(STR, J, J + 1)
+        If (CHAR != " " && CHAR != "\t" && CHAR != "\n" && CHAR != "\r") {
+            Set END J
+            Break
+        }
+        Set J (J - 1)
+    }
+    
+    Return STRSLICE(STR, START, END + 1)
+}
+
+// 移除字符串左侧空白字符
+Func STR_TRIM_LEFT(STR) {
+    Set LEN LEN(STR)
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        If (CHAR != " " && CHAR != "\t" && CHAR != "\n" && CHAR != "\r") {
+            Break
+        }
+        Set I (I + 1)
+    }
+    
+    Return STRSLICE(STR, I, LEN)
+}
+
+// 移除字符串右侧空白字符
+Func STR_TRIM_RIGHT(STR) {
+    Set LEN LEN(STR)
+    Set I (LEN - 1)
+    
+    While (I >= 0) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        If (CHAR != " " && CHAR != "\t" && CHAR != "\n" && CHAR != "\r") {
+            Break
+        }
+        Set I (I - 1)
+    }
+    
+    Return STRSLICE(STR, 0, I + 1)
+}
+
+// ==================== 字符串填充 ====================
+
+// 在字符串左侧填充字符到指定长度
+Func STR_PAD_LEFT(STR, length, pad_char) {
+    Set CURRENT_LEN LEN(STR)
+    
+    If (CURRENT_LEN >= length) {
+        Return STR
+    }
+    
+    Set PAD_COUNT (length - CURRENT_LEN)
+    Set RESULT ""
+    Set I 0
+    
+    While (I < PAD_COUNT) {
+        Set RESULT (RESULT + pad_char)
+        Set I (I + 1)
+    }
+    
+    Return (RESULT + STR)
+}
+
+// 在字符串右侧填充字符到指定长度
+Func STR_PAD_RIGHT(STR, length, pad_char) {
+    Set CURRENT_LEN LEN(STR)
+    
+    If (CURRENT_LEN >= length) {
+        Return STR
+    }
+    
+    Set PAD_COUNT (length - CURRENT_LEN)
+    Set RESULT STR
+    Set I 0
+    
+    While (I < PAD_COUNT) {
+        Set RESULT (RESULT + pad_char)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 在字符串两侧填充字符到指定长度（居中）
+Func STR_PAD_CENTER(STR, length, pad_char) {
+    Set CURRENT_LEN LEN(STR)
+    
+    If (CURRENT_LEN >= length) {
+        Return STR
+    }
+    
+    Set TOTAL_PAD (length - CURRENT_LEN)
+    Set LEFT_PAD (TOTAL_PAD / 2)
+    Set RIGHT_PAD (TOTAL_PAD - LEFT_PAD)
+    
+    Set RESULT ""
+    Set I 0
+    
+    // 左侧填充
+    While (I < LEFT_PAD) {
+        Set RESULT (RESULT + pad_char)
+        Set I (I + 1)
+    }
+    
+    Set RESULT (RESULT + STR)
+    Set I 0
+    
+    // 右侧填充
+    While (I < RIGHT_PAD) {
+        Set RESULT (RESULT + pad_char)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 字符串重复 ====================
+
+// 重复字符串 n 次
+Func STR_REPEAT(STR, COUNT) {
+    If (COUNT <= 0) {
+        Return ""
+    }
+    
+    Set RESULT ""
+    Set I 0
+    
+    While (I < COUNT) {
+        Set RESULT (RESULT + STR)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 字符串反转 ====================
+
+// 反转字符串
+Func STR_REVERSE(STR) {
+    Set LEN LEN(STR)
+    Set RESULT ""
+    Set I (LEN - 1)
+    
+    While (I >= 0) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        Set RESULT (RESULT + CHAR)
+        Set I (I - 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 字符串查询 ====================
+
+// 检查字符串是否包含子串
+Func STR_CONTAINS(STR, substr) {
+    Set STR_LEN LEN(STR)
+    Set SUB_LEN LEN(substr)
+    
+    If (SUB_LEN == 0) {
+        Return True
+    }
+    
+    If (SUB_LEN > STR_LEN) {
+        Return False
+    }
+    
+    Set MAX_POS (STR_LEN - SUB_LEN)
+    Set I 0
+    
+    While (I <= MAX_POS) {
+        Set SLICE STRSLICE(STR, I, I + SUB_LEN)
+        If (SLICE == substr) {
+            Return True
+        }
+        Set I (I + 1)
+    }
+    
+    Return False
+}
+
+// 检查字符串是否以指定前缀开始
+Func STR_STARTS_WITH(STR, prefix) {
+    Set STR_LEN LEN(STR)
+    Set PREFIX_LEN LEN(prefix)
+    
+    If (PREFIX_LEN > STR_LEN) {
+        Return False
+    }
+    
+    Set SLICE STRSLICE(STR, 0, PREFIX_LEN)
+    Return (SLICE == prefix)
+}
+
+// 检查字符串是否以指定后缀结束
+Func STR_ENDS_WITH(STR, suffix) {
+    Set STR_LEN LEN(STR)
+    Set SUFFIX_LEN LEN(suffix)
+    
+    If (SUFFIX_LEN > STR_LEN) {
+        Return False
+    }
+    
+    Set START (STR_LEN - SUFFIX_LEN)
+    Set SLICE STRSLICE(STR, START, STR_LEN)
+    Return (SLICE == suffix)
+}
+
+// 查找子串首次出现的位置，未找到返回 -1
+Func STR_INDEX_OF(STR, substr) {
+    Set STR_LEN LEN(STR)
+    Set SUB_LEN LEN(substr)
+    
+    If (SUB_LEN == 0) {
+        Return 0
+    }
+    
+    If (SUB_LEN > STR_LEN) {
+        Return -1
+    }
+    
+    Set MAX_POS (STR_LEN - SUB_LEN)
+    Set I 0
+    
+    While (I <= MAX_POS) {
+        Set SLICE STRSLICE(STR, I, I + SUB_LEN)
+        If (SLICE == substr) {
+            Return I
+        }
+        Set I (I + 1)
+    }
+    
+    Return -1
+}
+
+// 查找子串最后一次出现的位置，未找到返回 -1
+Func STR_LAST_INDEX_OF(STR, substr) {
+    Set STR_LEN LEN(STR)
+    Set SUB_LEN LEN(substr)
+    
+    If (SUB_LEN == 0) {
+        Return STR_LEN
+    }
+    
+    If (SUB_LEN > STR_LEN) {
+        Return -1
+    }
+    
+    Set I (STR_LEN - SUB_LEN)
+    
+    While (I >= 0) {
+        Set SLICE STRSLICE(STR, I, I + SUB_LEN)
+        If (SLICE == substr) {
+            Return I
+        }
+        Set I (I - 1)
+    }
+    
+    Return -1
+}
+
+// ==================== 字符串替换 ====================
+
+// 替换字符串中的所有匹配项
+Func STR_REPLACE_ALL(STR, old_str, NEW_STR) {
+    Set STR_LEN LEN(STR)
+    Set OLD_LEN LEN(old_str)
+    
+    If (OLD_LEN == 0) {
+        Return STR
+    }
+    
+    Set RESULT ""
+    Set I 0
+    
+    While (I < STR_LEN) {
+        If ((I + OLD_LEN) <= STR_LEN) {
+            Set SLICE STRSLICE(STR, I, I + OLD_LEN)
+            If (SLICE == old_str) {
+                Set RESULT (RESULT + NEW_STR)
+                Set I (I + OLD_LEN)
+            } Else {
+                Set CHAR STRSLICE(STR, I, I + 1)
+                Set RESULT (RESULT + CHAR)
+                Set I (I + 1)
+            }
+        } Else {
+            Set CHAR STRSLICE(STR, I, I + 1)
+            Set RESULT (RESULT + CHAR)
+            Set I (I + 1)
+        }
+    }
+    
+    Return RESULT
+}
+
+// 替换字符串中的第一个匹配项
+Func STR_REPLACE_FIRST(STR, old_str, NEW_STR) {
+    Set POS STR_INDEX_OF(STR, old_str)
+    
+    If (POS == -1) {
+        Return STR
+    }
+    
+    Set OLD_LEN LEN(old_str)
+    Set BEFORE STRSLICE(STR, 0, POS)
+    Set AFTER STRSLICE(STR, POS + OLD_LEN, LEN(STR))
+    
+    Return (BEFORE + NEW_STR + AFTER)
+}
+
+// ==================== 大小写转换 ====================
+
+// 转换为大写（仅限 ASCII 字符）
+Func STR_TO_UPPER(STR) {
+    Set LEN LEN(STR)
+    Set RESULT ""
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        // ASCII: a-z (97-122) -> A-Z (65-90)
+        If (CHAR >= "a" && CHAR <= "z") {
+            // 这里需要字符代码操作，暂时使用简单映射
+            Set UPPER_CHAR CHAR
+            If (CHAR == "a") { Set UPPER_CHAR "A" }
+            If (CHAR == "b") { Set UPPER_CHAR "B" }
+            If (CHAR == "c") { Set UPPER_CHAR "C" }
+            If (CHAR == "d") { Set UPPER_CHAR "D" }
+            If (CHAR == "e") { Set UPPER_CHAR "E" }
+            If (CHAR == "f") { Set UPPER_CHAR "F" }
+            If (CHAR == "g") { Set UPPER_CHAR "G" }
+            If (CHAR == "h") { Set UPPER_CHAR "H" }
+            If (CHAR == "I") { Set UPPER_CHAR "I" }
+            If (CHAR == "j") { Set UPPER_CHAR "J" }
+            If (CHAR == "k") { Set UPPER_CHAR "K" }
+            If (CHAR == "l") { Set UPPER_CHAR "L" }
+            If (CHAR == "m") { Set UPPER_CHAR "M" }
+            If (CHAR == "n") { Set UPPER_CHAR "N" }
+            If (CHAR == "o") { Set UPPER_CHAR "O" }
+            If (CHAR == "p") { Set UPPER_CHAR "P" }
+            If (CHAR == "q") { Set UPPER_CHAR "Q" }
+            If (CHAR == "r") { Set UPPER_CHAR "R" }
+            If (CHAR == "s") { Set UPPER_CHAR "S" }
+            If (CHAR == "t") { Set UPPER_CHAR "T" }
+            If (CHAR == "u") { Set UPPER_CHAR "U" }
+            If (CHAR == "v") { Set UPPER_CHAR "V" }
+            If (CHAR == "w") { Set UPPER_CHAR "W" }
+            If (CHAR == "x") { Set UPPER_CHAR "X" }
+            If (CHAR == "y") { Set UPPER_CHAR "Y" }
+            If (CHAR == "z") { Set UPPER_CHAR "Z" }
+            Set RESULT (RESULT + UPPER_CHAR)
+        } Else {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 转换为小写（仅限 ASCII 字符）
+Func STR_TO_LOWER(STR) {
+    Set LEN LEN(STR)
+    Set RESULT ""
+    Set I 0
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        // ASCII: A-Z (65-90) -> a-z (97-122)
+        If (CHAR >= "A" && CHAR <= "Z") {
+            Set LOWER_CHAR CHAR
+            If (CHAR == "A") { Set LOWER_CHAR "a" }
+            If (CHAR == "B") { Set LOWER_CHAR "b" }
+            If (CHAR == "C") { Set LOWER_CHAR "c" }
+            If (CHAR == "D") { Set LOWER_CHAR "d" }
+            If (CHAR == "E") { Set LOWER_CHAR "e" }
+            If (CHAR == "F") { Set LOWER_CHAR "f" }
+            If (CHAR == "G") { Set LOWER_CHAR "g" }
+            If (CHAR == "H") { Set LOWER_CHAR "h" }
+            If (CHAR == "I") { Set LOWER_CHAR "I" }
+            If (CHAR == "J") { Set LOWER_CHAR "j" }
+            If (CHAR == "K") { Set LOWER_CHAR "k" }
+            If (CHAR == "L") { Set LOWER_CHAR "l" }
+            If (CHAR == "M") { Set LOWER_CHAR "m" }
+            If (CHAR == "N") { Set LOWER_CHAR "n" }
+            If (CHAR == "O") { Set LOWER_CHAR "o" }
+            If (CHAR == "P") { Set LOWER_CHAR "p" }
+            If (CHAR == "Q") { Set LOWER_CHAR "q" }
+            If (CHAR == "R") { Set LOWER_CHAR "r" }
+            If (CHAR == "S") { Set LOWER_CHAR "s" }
+            If (CHAR == "T") { Set LOWER_CHAR "t" }
+            If (CHAR == "U") { Set LOWER_CHAR "u" }
+            If (CHAR == "V") { Set LOWER_CHAR "v" }
+            If (CHAR == "W") { Set LOWER_CHAR "w" }
+            If (CHAR == "X") { Set LOWER_CHAR "x" }
+            If (CHAR == "Y") { Set LOWER_CHAR "y" }
+            If (CHAR == "Z") { Set LOWER_CHAR "z" }
+            Set RESULT (RESULT + LOWER_CHAR)
+        } Else {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 字符串分割 ====================
+
+// 按分隔符分割字符串为数组
+Func STR_SPLIT(STR, DELIMITER) {
+    Set RESULT []
+    Set STR_LEN_ LEN(STR)
+    Set DELIM_LEN LEN(DELIMITER)
+    
+    If (DELIM_LEN == 0) {
+        // 分割每个字符
+        Set I 0
+        While (I < STR_LEN_) {
+            Set CHAR STRSLICE(STR, I, I + 1)
+            Set RESULT PUSH(RESULT, CHAR)
+            Set I (I + 1)
+        }
+        Return RESULT
+    }
+    
+    Set START 0
+    Set I 0
+    
+    While (I <= (STR_LEN_ - DELIM_LEN)) {
+        Set SLICE STRSLICE(STR, I, I + DELIM_LEN)
+        If (SLICE == DELIMITER) {
+            Set PART STRSLICE(STR, START, I)
+            Set RESULT PUSH(RESULT, PART)
+            Set I (I + DELIM_LEN)
+            Set START I
+        } Else {
+            Set I (I + 1)
+        }
+    }
+    
+    // 添加最后一部分
+    Set LAST_PART STRSLICE(STR, START, STR_LEN_)
+    Set RESULT PUSH(RESULT, LAST_PART)
+    
+    Return RESULT
+}
+
+// ==================== 字符串连接 ====================
+
+// 用分隔符连接数组元素为字符串
+Func STR_JOIN(ARR, DELIMITER) {
+    Set LEN LEN(ARR)
+    
+    If (LEN == 0) {
+        Return ""
+    }
+    
+    Set RESULT TO_STRING(ARR[0])
+    Set I 1
+    
+    While (I < LEN) {
+        Set RESULT (RESULT + DELIMITER + TO_STRING(ARR[I]))
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 字符串检查 ====================
+
+// 检查字符串是否为空
+Func STR_IS_EMPTY(STR) {
+    Return (LEN(STR) == 0)
+}
+
+// 检查字符串是否仅包含空白字符
+Func STR_IS_BLANK(STR) {
+    Set TRIMMED STR_TRIM(STR)
+    Return (LEN(TRIMMED) == 0)
+}
+
+// 检查字符串是否为数字
+Func STR_IS_NUMERIC(STR) {
+    Set LEN LEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    Set HAS_DOT False
+    
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        
+        If (CHAR == "-" || CHAR == "+") {
+            If (I != 0) {
+                Return False
+            }
+        } Elif (CHAR == ".") {
+            If (HAS_DOT) {
+                Return False
+            }
+            Set HAS_DOT True
+        } Elif (CHAR < "0" || CHAR > "9") {
+            Return False
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 检查字符串是否仅包含字母
+Func STR_IS_ALPHA(STR) {
+    Set LEN LEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        If (!((CHAR >= "a" && CHAR <= "z") || (CHAR >= "A" && CHAR <= "Z"))) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 检查字符串是否仅包含字母和数字
+Func STR_IS_ALPHANUMERIC(STR) {
+    Set LEN LEN(STR)
+    
+    If (LEN == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        Set IS_ALPHA ((CHAR >= "a" && CHAR <= "z") || (CHAR >= "A" && CHAR <= "Z"))
+        Set IS_DIGIT (CHAR >= "0" && CHAR <= "9")
+        If (!(IS_ALPHA || IS_DIGIT)) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+

@@ -360,3 +360,205 @@ pub fn repeat(args: &[Value]) -> Result<Value, RuntimeError> {
         }),
     }
 }
+
+/// 字符串切片
+///
+/// # 功能
+/// 提取字符串的子串（基于字节索引）。
+///
+/// # 参数
+/// - `string`: String - 原始字符串
+/// - `start`: Number - 起始索引（包含，从0开始）
+/// - `end`: Number - 结束索引（不包含）
+///
+/// # 返回值
+/// String - 提取的子串
+///
+/// # 示例
+/// ```aether
+/// Set text "Hello World"
+/// Set sub StrSlice(text, 0, 5)     # "Hello"
+/// Set sub2 StrSlice(text, 6, 11)   # "World"
+/// Set sub3 StrSlice(text, 0, 1)    # "H"
+/// ```
+pub fn substr(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 3 {
+        return Err(RuntimeError::WrongArity {
+            expected: 3,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1], &args[2]) {
+        (Value::String(s), Value::Number(start), Value::Number(end)) => {
+            if start.fract() != 0.0 || end.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(
+                    "String indices must be integers".to_string(),
+                ));
+            }
+
+            let start_idx = *start as i64;
+            let end_idx = *end as i64;
+            let len = s.len() as i64;
+
+            // 处理负数索引
+            let start_idx = if start_idx < 0 {
+                (len + start_idx).max(0)
+            } else {
+                start_idx.min(len)
+            } as usize;
+
+            let end_idx = if end_idx < 0 {
+                (len + end_idx).max(0)
+            } else {
+                end_idx.min(len)
+            } as usize;
+
+            if start_idx > end_idx {
+                return Ok(Value::String(String::new()));
+            }
+
+            // 使用字节切片
+            let result = s.get(start_idx..end_idx).unwrap_or("").to_string();
+
+            Ok(Value::String(result))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "String, Number, Number".to_string(),
+            got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
+        }),
+    }
+}
+
+/// 获取字符串长度
+///
+/// # 功能
+/// 返回字符串的字符数（注意：多字节字符按字符数计算）。
+///
+/// # 参数
+/// - `string`: String - 要测量的字符串
+///
+/// # 返回值
+/// Number - 字符串长度
+///
+/// # 示例
+/// ```aether
+/// Set text "Hello"
+/// Set length StrLen(text)          # 5
+/// Set chinese "你好"
+/// Set length2 StrLen(chinese)      # 2
+/// ```
+pub fn strlen(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::WrongArity {
+            expected: 1,
+            got: args.len(),
+        });
+    }
+
+    match &args[0] {
+        Value::String(s) => Ok(Value::Number(s.len() as f64)),
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "String".to_string(),
+            got: format!("{:?}", args[0]),
+        }),
+    }
+}
+
+/// 查找子串位置
+///
+/// # 功能
+/// 查找子串在字符串中首次出现的位置，未找到返回 -1。
+///
+/// # 参数
+/// - `string`: String - 原始字符串
+/// - `substring`: String - 要查找的子串
+///
+/// # 返回值
+/// Number - 子串的起始位置（从0开始），未找到返回 -1
+///
+/// # 示例
+/// ```aether
+/// Set text "Hello World"
+/// Set pos IndexOf(text, "World")   # 6
+/// Set pos2 IndexOf(text, "xyz")    # -1
+/// Set pos3 IndexOf(text, "l")      # 2 (第一个l)
+/// ```
+pub fn index_of(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::WrongArity {
+            expected: 2,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1]) {
+        (Value::String(s), Value::String(substr)) => match s.find(substr.as_str()) {
+            Some(pos) => Ok(Value::Number(pos as f64)),
+            None => Ok(Value::Number(-1.0)),
+        },
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "String, String".to_string(),
+            got: format!("{:?}, {:?}", args[0], args[1]),
+        }),
+    }
+}
+
+/// 获取指定位置的字符
+///
+/// # 功能
+/// 获取字符串中指定索引位置的字符。
+///
+/// # 参数
+/// - `string`: String - 原始字符串
+/// - `index`: Number - 字符位置（从0开始）
+///
+/// # 返回值
+/// String - 该位置的字符，索引越界返回空字符串
+///
+/// # 示例
+/// ```aether
+/// Set text "Hello"
+/// Set ch CharAt(text, 0)           # "H"
+/// Set ch2 CharAt(text, 4)          # "o"
+/// Set ch3 CharAt(text, 10)         # ""
+/// ```
+pub fn char_at(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::WrongArity {
+            expected: 2,
+            got: args.len(),
+        });
+    }
+
+    match (&args[0], &args[1]) {
+        (Value::String(s), Value::Number(idx)) => {
+            if idx.fract() != 0.0 {
+                return Err(RuntimeError::InvalidOperation(
+                    "Index must be an integer".to_string(),
+                ));
+            }
+
+            let index = *idx as i64;
+            let len = s.len() as i64;
+
+            // 处理负数索引
+            let index = if index < 0 {
+                (len + index).max(0)
+            } else {
+                index.min(len)
+            } as usize;
+
+            let ch = s
+                .chars()
+                .nth(index)
+                .map(|c| c.to_string())
+                .unwrap_or_default();
+            Ok(Value::String(ch))
+        }
+        _ => Err(RuntimeError::TypeErrorDetailed {
+            expected: "String, Number".to_string(),
+            got: format!("{:?}, {:?}", args[0], args[1]),
+        }),
+    }
+}

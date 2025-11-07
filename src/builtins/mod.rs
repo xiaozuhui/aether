@@ -131,6 +131,10 @@ impl BuiltInRegistry {
         registry.register("ENDS_WITH", string::ends_with, 2);
         registry.register("REPLACE", string::replace, 3);
         registry.register("REPEAT", string::repeat, 2);
+        registry.register("STRSLICE", string::substr, 3);
+        registry.register("STRLEN", string::strlen, 1);
+        registry.register("INDEXOF", string::index_of, 2);
+        registry.register("CHARAT", string::char_at, 2);
 
         // Math functions - Basic
         registry.register("ABS", math::abs, 1);

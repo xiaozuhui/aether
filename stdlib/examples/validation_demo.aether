@@ -1,0 +1,207 @@
+// stdlib/examples/validation_demo.aether
+// 数据验证库使用示例
+
+// 加载验证库
+// 注意：需要先运行 ../validation.aether
+
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Validation Library Demo")
+PRINTLN("═══════════════════════════════════════════════")
+
+// ==================== 邮箱验证 ====================
+PRINTLN("")
+PRINTLN("▶ Email Validation:")
+
+Set EMAIL1 "user@example.com"
+Set EMAIL2 "invalid.email"
+Set EMAIL3 "test@domain.co.uk"
+
+Set VALID1 VALIDATE_EMAIL(EMAIL1)
+PRINTLN(EMAIL1 + " is valid: " + TO_STRING(VALID1))
+
+Set VALID2 VALIDATE_EMAIL(EMAIL2)
+PRINTLN(EMAIL2 + " is valid: " + TO_STRING(VALID2))
+
+Set VALID3 VALIDATE_EMAIL(EMAIL3)
+PRINTLN(EMAIL3 + " is valid: " + TO_STRING(VALID3))
+
+// ==================== 电话号码验证 ====================
+PRINTLN("")
+PRINTLN("▶ Phone Number Validation:")
+
+Set PHONE1 "13812345678"
+Set PHONE2 "12345678901"
+Set PHONE3 "1234567890"
+
+PRINTLN("Chinese mobile validation:")
+Set VALID_PHONE1 VALIDATE_PHONE_CN(PHONE1)
+PRINTLN(PHONE1 + " is valid: " + TO_STRING(VALID_PHONE1))
+
+Set VALID_PHONE2 VALIDATE_PHONE_CN(PHONE2)
+PRINTLN(PHONE2 + " is valid: " + TO_STRING(VALID_PHONE2))
+
+Set VALID_PHONE3 VALIDATE_PHONE_CN(PHONE3)
+PRINTLN(PHONE3 + " is valid: " + TO_STRING(VALID_PHONE3))
+
+// ==================== URL 验证 ====================
+PRINTLN("")
+PRINTLN("▶ URL Validation:")
+
+Set URL1 "https://www.example.com"
+Set URL2 "http://test.org/path"
+Set URL3 "not-a-url"
+
+Set VALID_URL1 VALIDATE_URL(URL1)
+PRINTLN(URL1 + " is valid: " + TO_STRING(VALID_URL1))
+
+Set VALID_URL2 VALIDATE_URL(URL2)
+PRINTLN(URL2 + " is valid: " + TO_STRING(VALID_URL2))
+
+Set VALID_URL3 VALIDATE_URL(URL3)
+PRINTLN(URL3 + " is valid: " + TO_STRING(VALID_URL3))
+
+// ==================== 数值范围验证 ====================
+PRINTLN("")
+PRINTLN("▶ Number Range Validation:")
+
+Set NUM1 50
+Set NUM2 150
+Set MIN 0
+Set MAX 100
+
+Set IN_RANGE1 VALIDATE_RANGE(NUM1, MIN, MAX)
+PRINTLN(TO_STRING(NUM1) + " in [" + TO_STRING(MIN) + ", " + TO_STRING(MAX) + "]: " + TO_STRING(IN_RANGE1))
+
+Set IN_RANGE2 VALIDATE_RANGE(NUM2, MIN, MAX)
+PRINTLN(TO_STRING(NUM2) + " in [" + TO_STRING(MIN) + ", " + TO_STRING(MAX) + "]: " + TO_STRING(IN_RANGE2))
+
+Set IS_POS VALIDATE_POSITIVE(NUM1)
+PRINTLN(TO_STRING(NUM1) + " is positive: " + TO_STRING(IS_POS))
+
+Set NEG_NUM -5
+Set IS_POS_NEG VALIDATE_POSITIVE(NEG_NUM)
+PRINTLN(TO_STRING(NEG_NUM) + " is positive: " + TO_STRING(IS_POS_NEG))
+
+// ==================== 整数验证 ====================
+PRINTLN("")
+PRINTLN("▶ Integer Validation:")
+
+Set INT1 "123"
+Set INT2 "12.34"
+Set INT3 "-456"
+
+Set IS_INT1 VALIDATE_INTEGER(INT1)
+PRINTLN(INT1 + " is integer: " + TO_STRING(IS_INT1))
+
+Set IS_INT2 VALIDATE_INTEGER(INT2)
+PRINTLN(INT2 + " is integer: " + TO_STRING(IS_INT2))
+
+Set IS_INT3 VALIDATE_INTEGER(INT3)
+PRINTLN(INT3 + " is integer: " + TO_STRING(IS_INT3))
+
+// ==================== 字符串内容验证 ====================
+PRINTLN("")
+PRINTLN("▶ String Content Validation:")
+
+Set STR1 "Hello"
+Set STR2 "Hello123"
+Set STR3 "12345"
+
+Set IS_ALPHA VALIDATE_ALPHA(STR1)
+PRINTLN(STR1 + " is alpha: " + TO_STRING(IS_ALPHA))
+
+Set IS_ALPHANUM VALIDATE_ALPHANUMERIC(STR2)
+PRINTLN(STR2 + " is alphanumeric: " + TO_STRING(IS_ALPHANUM))
+
+Set IS_NUM VALIDATE_NUMERIC(STR3)
+PRINTLN(STR3 + " is numeric: " + TO_STRING(IS_NUM))
+
+// ==================== 长度验证 ====================
+PRINTLN("")
+PRINTLN("▶ Length Validation:")
+
+Set TEXT "Hello World"
+Set LEN_VALID VALIDATE_LENGTH(TEXT, 5, 15)
+PRINTLN("'" + TEXT + "' length in [5, 15]: " + TO_STRING(LEN_VALID))
+
+Set SHORT "Hi"
+Set LEN_VALID2 VALIDATE_LENGTH(SHORT, 5, 15)
+PRINTLN("'" + SHORT + "' length in [5, 15]: " + TO_STRING(LEN_VALID2))
+
+// ==================== 密码强度验证 ====================
+PRINTLN("")
+PRINTLN("▶ Password Strength:")
+
+Set PASS1 "Abc123456"
+Set PASS2 "weak"
+Set PASS3 "Strong1234"
+
+Set STRONG1 VALIDATE_PASSWORD_STRONG(PASS1)
+PRINTLN(PASS1 + " is strong: " + TO_STRING(STRONG1))
+
+Set STRONG2 VALIDATE_PASSWORD_STRONG(PASS2)
+PRINTLN(PASS2 + " is strong: " + TO_STRING(STRONG2))
+
+Set MEDIUM3 VALIDATE_PASSWORD_MEDIUM(PASS3)
+PRINTLN(PASS3 + " is medium: " + TO_STRING(MEDIUM3))
+
+// ==================== 日期时间格式验证 ====================
+PRINTLN("")
+PRINTLN("▶ Date/Time Format Validation:")
+
+Set DATE1 "2024-12-25"
+Set DATE2 "12/25/2024"
+
+Set DATE_VALID1 VALIDATE_DATE_FORMAT(DATE1)
+PRINTLN(DATE1 + " format valid: " + TO_STRING(DATE_VALID1))
+
+Set DATE_VALID2 VALIDATE_DATE_FORMAT(DATE2)
+PRINTLN(DATE2 + " format valid: " + TO_STRING(DATE_VALID2))
+
+Set TIME1 "14:30:45"
+Set TIME2 "2:30 PM"
+
+Set TIME_VALID1 VALIDATE_TIME_FORMAT(TIME1)
+PRINTLN(TIME1 + " format valid: " + TO_STRING(TIME_VALID1))
+
+Set TIME_VALID2 VALIDATE_TIME_FORMAT(TIME2)
+PRINTLN(TIME2 + " format valid: " + TO_STRING(TIME_VALID2))
+
+// ==================== IPv4 验证 ====================
+PRINTLN("")
+PRINTLN("▶ IPv4 Validation:")
+
+Set IP1 "192.168.1.1"
+Set IP2 "256.1.1.1"
+Set IP3 "10.0.0.1"
+
+Set IP_VALID1 VALIDATE_IPV4(IP1)
+PRINTLN(IP1 + " is valid IPv4: " + TO_STRING(IP_VALID1))
+
+Set IP_VALID2 VALIDATE_IPV4(IP2)
+PRINTLN(IP2 + " is valid IPv4: " + TO_STRING(IP_VALID2))
+
+Set IP_VALID3 VALIDATE_IPV4(IP3)
+PRINTLN(IP3 + " is valid IPv4: " + TO_STRING(IP_VALID3))
+
+// ==================== 用户名验证 ====================
+PRINTLN("")
+PRINTLN("▶ Username Validation:")
+
+Set USER1 "alice_123"
+Set USER2 "ab"
+Set USER3 "user@name"
+
+Set USER_VALID1 VALIDATE_USERNAME(USER1)
+PRINTLN(USER1 + " is valid: " + TO_STRING(USER_VALID1))
+
+Set USER_VALID2 VALIDATE_USERNAME(USER2)
+PRINTLN(USER2 + " is valid: " + TO_STRING(USER_VALID2))
+
+Set USER_VALID3 VALIDATE_USERNAME(USER3)
+PRINTLN(USER3 + " is valid: " + TO_STRING(USER_VALID3))
+
+PRINTLN("")
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Validation Demo Complete!")
+PRINTLN("═══════════════════════════════════════════════")

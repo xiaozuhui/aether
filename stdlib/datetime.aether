@@ -1,0 +1,475 @@
+// stdlib/datetime.aether
+// Aether 日期时间工具库
+// 提供日期时间处理功能
+
+// ==================== 常量定义 ====================
+
+Set DAYS_IN_MONTH [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+Set MONTH_NAMES ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+Set MONTH_NAMES_CN ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
+Set WEEKDAY_NAMES ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+Set WEEKDAY_NAMES_CN ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+
+// ==================== 闰年判断 ====================
+
+// 判断是否为闰年
+Func DT_IS_LEAP_YEAR(YEAR) {
+    // 能被4整除但不能被100整除，或者能被400整除
+    Set DIV_4 ((YEAR % 4) == 0)
+    Set DIV_100 ((YEAR % 100) == 0)
+    Set DIV_400 ((YEAR % 400) == 0)
+    
+    Return ((DIV_4 && !DIV_100) || DIV_400)
+}
+
+// ==================== 天数计算 ====================
+
+// 获取指定月份的天数
+Func DT_DAYS_IN_MONTH(YEAR, MONTH) {
+    If (MONTH < 1 || MONTH > 12) {
+        Return 0
+    }
+    
+    If (MONTH == 2) {
+        Set IS_LEAP DT_IS_LEAP_YEAR(YEAR)
+        If (IS_LEAP) {
+            Return 29
+        } Else {
+            Return 28
+        }
+    }
+    
+    Return DAYS_IN_MONTH[MONTH - 1]
+}
+
+// 计算某年某月某日是当年的第几天
+Func DT_DAY_OF_YEAR(YEAR, MONTH, DAY) {
+    Set TOTAL 0
+    Set M 1
+    
+    While (M < MONTH) {
+        Set DAYS DT_DAYS_IN_MONTH(YEAR, M)
+        Set TOTAL (TOTAL + DAYS)
+        Set M (M + 1)
+    }
+    
+    Set TOTAL (TOTAL + DAY)
+    Return TOTAL
+}
+
+// 计算一年有多少天
+Func DT_DAYS_IN_YEAR(YEAR) {
+    Set IS_LEAP DT_IS_LEAP_YEAR(YEAR)
+    If (IS_LEAP) {
+        Return 366
+    } Else {
+        Return 365
+    }
+}
+
+// ==================== 日期验证 ====================
+
+// 验证日期是否合法
+Func DT_IS_VALID_DATE(YEAR, MONTH, DAY) {
+    If (YEAR < 1 || YEAR > 9999) {
+        Return False
+    }
+    
+    If (MONTH < 1 || MONTH > 12) {
+        Return False
+    }
+    
+    Set MAX_DAYS DT_DAYS_IN_MONTH(YEAR, MONTH)
+    If (DAY < 1 || DAY > MAX_DAYS) {
+        Return False
+    }
+    
+    Return True
+}
+
+// 验证时间是否合法
+Func DT_IS_VALID_TIME(HOUR, MINUTE, SECOND) {
+    If (HOUR < 0 || HOUR > 23) {
+        Return False
+    }
+    
+    If (MINUTE < 0 || MINUTE > 59) {
+        Return False
+    }
+    
+    If (SECOND < 0 || SECOND > 59) {
+        Return False
+    }
+    
+    Return True
+}
+
+// ==================== 日期比较 ====================
+
+// 比较两个日期（返回 -1: 日期1早, 0: 相等, 1: 日期1晚）
+Func DT_COMPARE_DATE(YEAR1, MONTH1, DAY1, YEAR2, MONTH2, DAY2) {
+    If (YEAR1 < YEAR2) {
+        Return -1
+    } Elif (YEAR1 > YEAR2) {
+        Return 1
+    }
+    
+    If (MONTH1 < MONTH2) {
+        Return -1
+    } Elif (MONTH1 > MONTH2) {
+        Return 1
+    }
+    
+    If (DAY1 < DAY2) {
+        Return -1
+    } Elif (DAY1 > DAY2) {
+        Return 1
+    }
+    
+    Return 0
+}
+
+// ==================== 日期差值计算 ====================
+
+// 计算两个日期之间的天数差（简化版本，假设 date1 <= date2）
+Func DT_DAYS_BETWEEN(YEAR1, MONTH1, DAY1, YEAR2, MONTH2, DAY2) {
+    // 如果是同一天
+    If (YEAR1 == YEAR2 && MONTH1 == MONTH2 && DAY1 == DAY2) {
+        Return 0
+    }
+    
+    Set TOTAL_DAYS 0
+    
+    // 如果是同一年
+    If (YEAR1 == YEAR2) {
+        Set DAY_OF_YEAR1 DT_DAY_OF_YEAR(YEAR1, MONTH1, DAY1)
+        Set DAY_OF_YEAR2 DT_DAY_OF_YEAR(YEAR2, MONTH2, DAY2)
+        Return (DAY_OF_YEAR2 - DAY_OF_YEAR1)
+    }
+    
+    // 计算第一年剩余的天数
+    Set DAYS_IN_YEAR1 DT_DAYS_IN_YEAR(YEAR1)
+    Set DAY_OF_YEAR1 DT_DAY_OF_YEAR(YEAR1, MONTH1, DAY1)
+    Set TOTAL_DAYS (DAYS_IN_YEAR1 - DAY_OF_YEAR1)
+    
+    // 计算中间完整年份的天数
+    Set Y (YEAR1 + 1)
+    While (Y < YEAR2) {
+        Set DAYS_IN_Y DT_DAYS_IN_YEAR(Y)
+        Set TOTAL_DAYS (TOTAL_DAYS + DAYS_IN_Y)
+        Set Y (Y + 1)
+    }
+    
+    // 计算最后一年的天数
+    Set DAY_OF_YEAR2 DT_DAY_OF_YEAR(YEAR2, MONTH2, DAY2)
+    Set TOTAL_DAYS (TOTAL_DAYS + DAY_OF_YEAR2)
+    
+    Return TOTAL_DAYS
+}
+
+// ==================== 日期格式化 ====================
+
+// 将数字补零到两位
+Func DT_PAD_TWO(NUM) {
+    If (NUM < 10) {
+        Return ("0" + TO_STRING(NUM))
+    }
+    Return TO_STRING(NUM)
+}
+
+// 将数字补零到四位
+Func DT_PAD_FOUR(NUM) {
+    If (NUM < 10) {
+        Return ("000" + TO_STRING(NUM))
+    } Elif (NUM < 100) {
+        Return ("00" + TO_STRING(NUM))
+    } Elif (NUM < 1000) {
+        Return ("0" + TO_STRING(NUM))
+    }
+    Return TO_STRING(NUM)
+}
+
+// 格式化日期为 YYYY-MM-DD
+Func DT_FORMAT_DATE(YEAR, MONTH, DAY) {
+    Set YEAR_STR DT_PAD_FOUR(YEAR)
+    Set MONTH_STR DT_PAD_TWO(MONTH)
+    Set DAY_STR DT_PAD_TWO(DAY)
+    
+    Return (YEAR_STR + "-" + MONTH_STR + "-" + DAY_STR)
+}
+
+// 格式化时间为 HH:MM:SS
+Func DT_FORMAT_TIME(HOUR, MINUTE, SECOND) {
+    Set HOUR_STR DT_PAD_TWO(HOUR)
+    Set MINUTE_STR DT_PAD_TWO(MINUTE)
+    Set SECOND_STR DT_PAD_TWO(SECOND)
+    
+    Return (HOUR_STR + ":" + MINUTE_STR + ":" + SECOND_STR)
+}
+
+// 格式化日期时间为 YYYY-MM-DD HH:MM:SS
+Func DT_FORMAT_DATETIME(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND) {
+    Set DATE_STR DT_FORMAT_DATE(YEAR, MONTH, DAY)
+    Set TIME_STR DT_FORMAT_TIME(HOUR, MINUTE, SECOND)
+    
+    Return (DATE_STR + " " + TIME_STR)
+}
+
+// ==================== 日期解析 ====================
+
+// 从 YYYY-MM-DD 格式字符串解析年份
+Func DT_PARSE_YEAR(DATE_STR) {
+    If (STRLEN(DATE_STR) < 10) {
+        Return 0
+    }
+    
+    Set YEAR_STR STRSLICE(DATE_STR, 0, 4)
+    // 简化：假设字符串格式正确，直接转换
+    // 实际应该实现字符串转数字函数
+    Return YEAR_STR
+}
+
+// 从 YYYY-MM-DD 格式字符串解析月份
+Func DT_PARSE_MONTH(DATE_STR) {
+    If (STRLEN(DATE_STR) < 10) {
+        Return 0
+    }
+    
+    Set MONTH_STR STRSLICE(DATE_STR, 5, 7)
+    Return MONTH_STR
+}
+
+// 从 YYYY-MM-DD 格式字符串解析日期
+Func DT_PARSE_DAY(DATE_STR) {
+    If (STRLEN(DATE_STR) < 10) {
+        Return 0
+    }
+    
+    Set DAY_STR STRSLICE(DATE_STR, 8, 10)
+    Return DAY_STR
+}
+
+// ==================== 月份名称 ====================
+
+// 获取月份英文名称
+Func DT_MONTH_NAME(MONTH) {
+    If (MONTH < 1 || MONTH > 12) {
+        Return ""
+    }
+    
+    Return MONTH_NAMES[MONTH - 1]
+}
+
+// 获取月份中文名称
+Func DT_MONTH_NAME_CN(MONTH) {
+    If (MONTH < 1 || MONTH > 12) {
+        Return ""
+    }
+    
+    Return MONTH_NAMES_CN[MONTH - 1]
+}
+
+// ==================== 星期计算 ====================
+
+// 使用 Zeller 公式计算星期几（0=周日, 1=周一, ..., 6=周六）
+Func DT_DAY_OF_WEEK(YEAR, MONTH, DAY) {
+    // Zeller 公式：w = (d + 2*m + 3*(m+1)/5 + y + y/4 - y/100 + y/400 + 1) % 7
+    // 需要将1月和2月看作上一年的13月和14月
+    
+    Set Y YEAR
+    Set M MONTH
+    
+    If (M == 1 || M == 2) {
+        Set M (M + 12)
+        Set Y (Y - 1)
+    }
+    
+    Set C (Y / 100)
+    Set Y_CENTURY (Y % 100)
+    
+    Set W (DAY + (2 * M) + (3 * (M + 1) / 5) + Y_CENTURY + (Y_CENTURY / 4) - (C * 2) + (C / 4))
+    Set W ((W % 7 + 7) % 7)
+    
+    Return W
+}
+
+// 获取星期几的英文名称
+Func DT_WEEKDAY_NAME(YEAR, MONTH, DAY) {
+    Set DAY_NUM DT_DAY_OF_WEEK(YEAR, MONTH, DAY)
+    Return WEEKDAY_NAMES[DAY_NUM]
+}
+
+// 获取星期几的中文名称
+Func DT_WEEKDAY_NAME_CN(YEAR, MONTH, DAY) {
+    Set DAY_NUM DT_DAY_OF_WEEK(YEAR, MONTH, DAY)
+    Return WEEKDAY_NAMES_CN[DAY_NUM]
+}
+
+// ==================== 日期加减 ====================
+
+// 给日期加上指定天数（简化版本）
+Func DT_ADD_DAYS(YEAR, MONTH, DAY, DAYS_TO_ADD) {
+    Set RESULT_YEAR YEAR
+    Set RESULT_MONTH MONTH
+    Set RESULT_DAY (DAY + DAYS_TO_ADD)
+    
+    // 处理日期溢出
+    While (True) {
+        Set MAX_DAYS DT_DAYS_IN_MONTH(RESULT_YEAR, RESULT_MONTH)
+        
+        If (RESULT_DAY <= MAX_DAYS) {
+            Break
+        }
+        
+        Set RESULT_DAY (RESULT_DAY - MAX_DAYS)
+        Set RESULT_MONTH (RESULT_MONTH + 1)
+        
+        If (RESULT_MONTH > 12) {
+            Set RESULT_MONTH 1
+            Set RESULT_YEAR (RESULT_YEAR + 1)
+        }
+    }
+    
+    Set RESULT []
+    Set RESULT PUSH(RESULT, RESULT_YEAR)
+    Set RESULT PUSH(RESULT, RESULT_MONTH)
+    Set RESULT PUSH(RESULT, RESULT_DAY)
+    
+    Return RESULT
+}
+
+// 给日期加上指定月数
+Func DT_ADD_MONTHS(YEAR, MONTH, DAY, MONTHS_TO_ADD) {
+    Set RESULT_YEAR YEAR
+    Set RESULT_MONTH (MONTH + MONTHS_TO_ADD)
+    Set RESULT_DAY DAY
+    
+    // 处理月份溢出
+    While (RESULT_MONTH > 12) {
+        Set RESULT_MONTH (RESULT_MONTH - 12)
+        Set RESULT_YEAR (RESULT_YEAR + 1)
+    }
+    
+    // 确保日期合法（例如1月31日加1个月不能是2月31日）
+    Set MAX_DAYS DT_DAYS_IN_MONTH(RESULT_YEAR, RESULT_MONTH)
+    If (RESULT_DAY > MAX_DAYS) {
+        Set RESULT_DAY MAX_DAYS
+    }
+    
+    Set RESULT []
+    Set RESULT PUSH(RESULT, RESULT_YEAR)
+    Set RESULT PUSH(RESULT, RESULT_MONTH)
+    Set RESULT PUSH(RESULT, RESULT_DAY)
+    
+    Return RESULT
+}
+
+// 给日期加上指定年数
+Func DT_ADD_YEARS(YEAR, MONTH, DAY, YEARS_TO_ADD) {
+    Set RESULT_YEAR (YEAR + YEARS_TO_ADD)
+    Set RESULT_MONTH MONTH
+    Set RESULT_DAY DAY
+    
+    // 处理2月29日的特殊情况
+    If (MONTH == 2 && DAY == 29) {
+        Set IS_LEAP DT_IS_LEAP_YEAR(RESULT_YEAR)
+        If (!IS_LEAP) {
+            Set RESULT_DAY 28
+        }
+    }
+    
+    Set RESULT []
+    Set RESULT PUSH(RESULT, RESULT_YEAR)
+    Set RESULT PUSH(RESULT, RESULT_MONTH)
+    Set RESULT PUSH(RESULT, RESULT_DAY)
+    
+    Return RESULT
+}
+
+// ==================== 时间计算 ====================
+
+// 计算两个时间点之间的秒数差
+Func DT_SECONDS_BETWEEN(HOUR1, MIN1, SEC1, HOUR2, MIN2, SEC2) {
+    Set TOTAL1 (HOUR1 * 3600 + MIN1 * 60 + SEC1)
+    Set TOTAL2 (HOUR2 * 3600 + MIN2 * 60 + SEC2)
+    
+    Return (TOTAL2 - TOTAL1)
+}
+
+// 将秒数转换为小时
+Func DT_SECONDS_TO_HOURS(SECONDS) {
+    Return (SECONDS / 3600)
+}
+
+// 将秒数转换为分钟
+Func DT_SECONDS_TO_MINUTES(SECONDS) {
+    Return (SECONDS / 60)
+}
+
+// ==================== 年龄计算 ====================
+
+// 根据出生日期计算年龄（简化版本）
+Func DT_CALCULATE_AGE(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY, CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY) {
+    Set AGE (CURRENT_YEAR - BIRTH_YEAR)
+    
+    // 如果还没到生日，减1岁
+    If (CURRENT_MONTH < BIRTH_MONTH) {
+        Set AGE (AGE - 1)
+    } Elif (CURRENT_MONTH == BIRTH_MONTH && CURRENT_DAY < BIRTH_DAY) {
+        Set AGE (AGE - 1)
+    }
+    
+    Return AGE
+}
+
+// ==================== 季度计算 ====================
+
+// 获取月份所属的季度（1-4）
+Func DT_GET_QUARTER(MONTH) {
+    If (MONTH >= 1 && MONTH <= 3) {
+        Return 1
+    } Elif (MONTH >= 4 && MONTH <= 6) {
+        Return 2
+    } Elif (MONTH >= 7 && MONTH <= 9) {
+        Return 3
+    } Elif (MONTH >= 10 && MONTH <= 12) {
+        Return 4
+    }
+    
+    Return 0
+}
+
+// 获取季度的第一天
+Func DT_QUARTER_START(YEAR, QUARTER) {
+    Set MONTH 1
+    
+    If (QUARTER == 2) {
+        Set MONTH 4
+    } Elif (QUARTER == 3) {
+        Set MONTH 7
+    } Elif (QUARTER == 4) {
+        Set MONTH 10
+    }
+    
+    Set RESULT []
+    Set RESULT PUSH(RESULT, YEAR)
+    Set RESULT PUSH(RESULT, MONTH)
+    Set RESULT PUSH(RESULT, 1)
+    
+    Return RESULT
+}
+
+// ==================== 工作日计算 ====================
+
+// 判断是否为周末
+Func DT_IS_WEEKEND(YEAR, MONTH, DAY) {
+    Set DAY_NUM DT_DAY_OF_WEEK(YEAR, MONTH, DAY)
+    Return (DAY_NUM == 0 || DAY_NUM == 6)
+}
+
+// 判断是否为工作日
+Func DT_IS_WEEKDAY(YEAR, MONTH, DAY) {
+    Set IS_WEEKEND DT_IS_WEEKEND(YEAR, MONTH, DAY)
+    Return (!IS_WEEKEND)
+}
+

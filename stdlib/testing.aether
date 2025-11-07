@@ -1,0 +1,449 @@
+// stdlib/testing.aether
+// Aether 测试框架
+// 提供单元测试功能
+
+// ==================== 全局测试状态 ====================
+
+Set TEST_TOTAL 0
+Set TEST_PASSED 0
+Set TEST_FAILED 0
+Set TEST_CURRENT_SUITE ""
+Set TEST_FAILURES []
+
+// ==================== 断言函数 ====================
+
+// 断言值为真
+Func ASSERT_TRUE(VALUE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (VALUE) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected True, got False")
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值为假
+Func ASSERT_FALSE(VALUE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (!VALUE) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected False, got True")
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言两个值相等
+Func ASSERT_EQUAL(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL == EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected: " + TO_STRING(EXPECTED) + ", Got: " + TO_STRING(ACTUAL))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言两个值不相等
+Func ASSERT_NOT_EQUAL(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL != EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected values to be different, but both are: " + TO_STRING(ACTUAL))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值为 null
+Func ASSERT_NULL(VALUE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (VALUE == Null) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected null, got: " + TO_STRING(VALUE))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值不为 null
+Func ASSERT_NOT_NULL(VALUE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (VALUE != Null) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected non-null VALUE, got null")
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值大于预期值
+Func ASSERT_GREATER(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL > EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected " + TO_STRING(ACTUAL) + " > " + TO_STRING(EXPECTED))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值小于预期值
+Func ASSERT_LESS(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL < EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected " + TO_STRING(ACTUAL) + " < " + TO_STRING(EXPECTED))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值大于等于预期值
+Func ASSERT_GREATER_EQUAL(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL >= EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected " + TO_STRING(ACTUAL) + " >= " + TO_STRING(EXPECTED))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言值小于等于预期值
+Func ASSERT_LESS_EQUAL(ACTUAL, EXPECTED, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    
+    If (ACTUAL <= EXPECTED) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected " + TO_STRING(ACTUAL) + " <= " + TO_STRING(EXPECTED))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言数组包含某个值
+Func ASSERT_CONTAINS(ARR, VALUE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    Set LEN LEN(ARR)
+    Set FOUND False
+    Set I 0
+    
+    While (I < LEN) {
+        If (ARR[I] == VALUE) {
+            Set FOUND True
+            Break
+        }
+        Set I (I + 1)
+    }
+    
+    If (FOUND) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Array does not contain: " + TO_STRING(VALUE))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言数组长度
+Func ASSERT_LENGTH(ARR, EXPECTED_LEN, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    Set ACTUAL_LEN LEN(ARR)
+    
+    If (ACTUAL_LEN == EXPECTED_LEN) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected length: " + TO_STRING(EXPECTED_LEN) + ", Got: " + TO_STRING(ACTUAL_LEN))
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// 断言类型
+Func ASSERT_TYPE(VALUE, EXPECTED_TYPE, MESSAGE) {
+    Set TEST_TOTAL (TEST_TOTAL + 1)
+    Set ACTUAL_TYPE TYPE(VALUE)
+    
+    If (ACTUAL_TYPE == EXPECTED_TYPE) {
+        Set TEST_PASSED (TEST_PASSED + 1)
+        PRINTLN("  ✓ " + MESSAGE)
+        Return True
+    } Else {
+        Set TEST_FAILED (TEST_FAILED + 1)
+        Set FAILURE_MSG ("✗ " + MESSAGE + " - Expected type: " + EXPECTED_TYPE + ", Got: " + ACTUAL_TYPE)
+        PRINTLN("  " + FAILURE_MSG)
+        Set TEST_FAILURES PUSH(TEST_FAILURES, FAILURE_MSG)
+        Return False
+    }
+}
+
+// ==================== 测试套件管理 ====================
+
+// 开始一个新的测试套件
+Func TEST_SUITE(SUITE_NAME) {
+    Set TEST_CURRENT_SUITE SUITE_NAME
+    PRINTLN("")
+    PRINTLN("═══════════════════════════════════════════════")
+    PRINTLN("Test Suite: " + SUITE_NAME)
+    PRINTLN("═══════════════════════════════════════════════")
+}
+
+// 开始一个测试用例
+Func TEST_CASE(CASE_NAME) {
+    PRINTLN("")
+    PRINTLN("▶ " + CASE_NAME)
+}
+
+// ==================== 测试结果报告 ====================
+
+// 打印测试摘要
+Func TEST_SUMMARY() {
+    PRINTLN("")
+    PRINTLN("═══════════════════════════════════════════════")
+    PRINTLN("Test Summary")
+    PRINTLN("═══════════════════════════════════════════════")
+    PRINTLN("Total Tests:  " + TO_STRING(TEST_TOTAL))
+    PRINTLN("Passed:       " + TO_STRING(TEST_PASSED) + " ✓")
+    PRINTLN("Failed:       " + TO_STRING(TEST_FAILED) + " ✗")
+    
+    If (TEST_TOTAL > 0) {
+        Set PASS_RATE ((TEST_PASSED * 100) / TEST_TOTAL)
+        PRINTLN("Pass Rate:    " + TO_STRING(PASS_RATE) + "%")
+    }
+    
+    If (TEST_FAILED > 0) {
+        PRINTLN("")
+        PRINTLN("Failed Tests:")
+        PRINTLN("───────────────────────────────────────────────")
+        Set I 0
+        Set FAIL_LEN LEN(TEST_FAILURES)
+        While (I < FAIL_LEN) {
+            PRINTLN(TO_STRING(I + 1) + ". " + TEST_FAILURES[I])
+            Set I (I + 1)
+        }
+    }
+    
+    PRINTLN("═══════════════════════════════════════════════")
+    
+    If (TEST_FAILED == 0) {
+        PRINTLN("🎉 All tests passed!")
+        Return True
+    } Else {
+        PRINTLN("❌ Some tests failed.")
+        Return False
+    }
+}
+
+// 重置测试计数器
+Func TEST_RESET() {
+    Set TEST_TOTAL 0
+    Set TEST_PASSED 0
+    Set TEST_FAILED 0
+    Set TEST_CURRENT_SUITE ""
+    Set TEST_FAILURES []
+    PRINTLN("Test counters reset.")
+}
+
+// ==================== 性能测试 ====================
+
+// 性能测试辅助函数（记录开始时间）
+Func PERF_START() {
+    PRINTLN("⏱ Performance test started...")
+    // 注意：Aether 可能没有内置时间函数，这里只是占位
+    Return 0
+}
+
+// 性能测试辅助函数（记录结束时间并报告）
+Func PERF_END(START_TIME, OPERATION_NAME) {
+    // 注意：Aether 可能没有内置时间函数，这里只是占位
+    Set END_TIME 0
+    Set ELAPSED (END_TIME - START_TIME)
+    PRINTLN("⏱ " + OPERATION_NAME + " completed in " + TO_STRING(ELAPSED) + "ms")
+    Return ELAPSED
+}
+
+// ==================== Mock 辅助函数 ====================
+
+// 创建一个简单的 mock 对象（字典）
+Func MOCK_CREATE() {
+    Set MOCK {"called": False, "call_count": 0, "last_args": []}
+    Return MOCK
+}
+
+// 记录 mock 被调用
+Func MOCK_CALL(MOCK, ARGS) {
+    Set MOCK["called"] True
+    Set COUNT MOCK["call_count"]
+    Set MOCK["call_count"] (COUNT + 1)
+    Set MOCK["last_args"] ARGS
+    Return MOCK
+}
+
+// 检查 mock 是否被调用
+Func MOCK_WAS_CALLED(MOCK) {
+    Return MOCK["called"]
+}
+
+// 获取 mock 的调用次数
+Func MOCK_CALL_COUNT(MOCK) {
+    Return MOCK["call_count"]
+}
+
+// ==================== 测试数据生成 ====================
+
+// 生成测试用的整数数组
+Func TEST_DATA_INT_ARRAY(SIZE, START) {
+    Set RESULT []
+    Set I 0
+    
+    While (I < SIZE) {
+        Set RESULT PUSH(RESULT, START + I)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 生成测试用的字符串数组
+Func TEST_DATA_STR_ARRAY(SIZE, PREFIX) {
+    Set RESULT []
+    Set I 0
+    
+    While (I < SIZE) {
+        Set ITEM (PREFIX + TO_STRING(I))
+        Set RESULT PUSH(RESULT, ITEM)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 生成测试用的空数组
+Func TEST_DATA_EMPTY_ARRAY() {
+    Return []
+}
+
+// 生成测试用的单元素数组
+Func TEST_DATA_SINGLE_ARRAY(VALUE) {
+    Set RESULT []
+    Set RESULT PUSH(RESULT, VALUE)
+    Return RESULT
+}
+
+// ==================== 断言组合 ====================
+
+// 断言范围（值在min和max之间）
+Func ASSERT_IN_RANGE(VALUE, MIN, MAX, MESSAGE) {
+    Set IN_RANGE (VALUE >= MIN && VALUE <= MAX)
+    
+    If (IN_RANGE) {
+        Return ASSERT_TRUE(True, MESSAGE)
+    } Else {
+        Set FAILURE_MSG (MESSAGE + " - Value " + TO_STRING(VALUE) + " not in range [" + TO_STRING(MIN) + ", " + TO_STRING(MAX) + "]")
+        Return ASSERT_TRUE(False, FAILURE_MSG)
+    }
+}
+
+// 断言数组为空
+Func ASSERT_EMPTY(ARR, MESSAGE) {
+    Set LEN LEN(ARR)
+    Return ASSERT_EQUAL(LEN, 0, MESSAGE)
+}
+
+// 断言数组不为空
+Func ASSERT_NOT_EMPTY(ARR, MESSAGE) {
+    Set LEN LEN(ARR)
+    Return ASSERT_GREATER(LEN, 0, MESSAGE)
+}
+
+// ==================== 辅助工具 ====================
+
+// 打印分隔线
+Func TEST_DIVIDER() {
+    PRINTLN("───────────────────────────────────────────────")
+}
+
+// 打印测试信息
+Func TEST_INFO(MESSAGE) {
+    PRINTLN("ℹ " + MESSAGE)
+}
+
+// 打印警告信息
+Func TEST_WARN(MESSAGE) {
+    PRINTLN("⚠ " + MESSAGE)
+}
+
+// 跳过测试
+Func TEST_SKIP(REASON) {
+    PRINTLN("⊘ Test skipped: " + REASON)
+}
+

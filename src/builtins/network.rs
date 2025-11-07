@@ -37,7 +37,7 @@ pub fn http_get(args: &[Value]) -> Result<Value, RuntimeError> {
 
     // 使用 ureq 进行简单的 HTTP 请求
     match ureq::get(&url).call() {
-        Ok(response) => match response.into_string() {
+        Ok(response) => match response.into_body().read_to_string() {
             Ok(body) => Ok(Value::String(body)),
             Err(e) => Err(RuntimeError::CustomError(format!(
                 "Failed to read response body: {}",
@@ -80,10 +80,10 @@ pub fn http_post(args: &[Value]) -> Result<Value, RuntimeError> {
     };
 
     match ureq::post(&url)
-        .set("Content-Type", &content_type)
-        .send_string(&body)
+        .header("Content-Type", &content_type)
+        .send(body.as_bytes())
     {
-        Ok(response) => match response.into_string() {
+        Ok(response) => match response.into_body().read_to_string() {
             Ok(resp_body) => Ok(Value::String(resp_body)),
             Err(e) => Err(RuntimeError::CustomError(format!(
                 "Failed to read response body: {}",
@@ -126,10 +126,10 @@ pub fn http_put(args: &[Value]) -> Result<Value, RuntimeError> {
     };
 
     match ureq::put(&url)
-        .set("Content-Type", &content_type)
-        .send_string(&body)
+        .header("Content-Type", &content_type)
+        .send(body.as_bytes())
     {
-        Ok(response) => match response.into_string() {
+        Ok(response) => match response.into_body().read_to_string() {
             Ok(resp_body) => Ok(Value::String(resp_body)),
             Err(e) => Err(RuntimeError::CustomError(format!(
                 "Failed to read response body: {}",
@@ -164,7 +164,7 @@ pub fn http_delete(args: &[Value]) -> Result<Value, RuntimeError> {
     let url = get_string(&args[0])?;
 
     match ureq::delete(&url).call() {
-        Ok(response) => match response.into_string() {
+        Ok(response) => match response.into_body().read_to_string() {
             Ok(body) => Ok(Value::String(body)),
             Err(e) => Err(RuntimeError::CustomError(format!(
                 "Failed to read response body: {}",

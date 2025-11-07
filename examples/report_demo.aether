@@ -29,7 +29,7 @@ FOR emp IN employees {
 
 # 格式化表头
 header_format = {
-    "bold": TRUE,
+    "bold": True,
     "bg_color": "#4472C4",
     "font_color": "#FFFFFF",
     "align": "center"

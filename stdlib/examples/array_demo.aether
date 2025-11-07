@@ -1,0 +1,153 @@
+// stdlib/examples/array_demo.aether
+// 数组工具库使用示例
+
+// 加载数组工具库
+// 注意：需要先运行 ../array_utils.aether
+
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Array Utils Library Demo")
+PRINTLN("═══════════════════════════════════════════════")
+
+// ==================== 数组去重 ====================
+PRINTLN("")
+PRINTLN("▶ Array Unique:")
+
+Set ARR_DUP [1, 2, 3, 2, 4, 3, 5, 1]
+PRINTLN("Original: [1, 2, 3, 2, 4, 3, 5, 1]")
+Set UNIQUE ARR_UNIQUE(ARR_DUP)
+PRINTLN("Unique: " + TO_STRING(UNIQUE))
+
+// ==================== 数组扁平化 ====================
+PRINTLN("")
+PRINTLN("▶ Array Flatten:")
+
+Set NESTED [[1, 2], [3, 4], [5, 6]]
+PRINTLN("Nested: [[1, 2], [3, 4], [5, 6]]")
+Set FLAT ARR_FLATTEN(NESTED)
+PRINTLN("Flattened: " + TO_STRING(FLAT))
+
+// ==================== 数组分块 ====================
+PRINTLN("")
+PRINTLN("▶ Array Chunk:")
+
+Set NUMBERS [1, 2, 3, 4, 5, 6, 7, 8, 9]
+Set CHUNKS ARR_CHUNK(NUMBERS, 3)
+PRINTLN("Original: [1, 2, 3, 4, 5, 6, 7, 8, 9]")
+PRINTLN("Chunks of 3: " + TO_STRING(CHUNKS))
+
+// ==================== 数组压缩 ====================
+PRINTLN("")
+PRINTLN("▶ Array Zip:")
+
+Set NAMES ["Alice", "Bob", "Charlie"]
+Set AGES [25, 30, 35]
+Set ZIPPED ARR_ZIP(NAMES, AGES)
+PRINTLN("Names: " + TO_STRING(NAMES))
+PRINTLN("Ages: " + TO_STRING(AGES))
+PRINTLN("Zipped: " + TO_STRING(ZIPPED))
+
+// ==================== 数组分区 ====================
+PRINTLN("")
+PRINTLN("▶ Array Partition:")
+
+Set VALUES [1, 5, 3, 8, 2, 9, 4, 7, 6]
+Set PARTITIONED ARR_PARTITION(VALUES, ">", 5)
+PRINTLN("Values: [1, 5, 3, 8, 2, 9, 4, 7, 6]")
+PRINTLN("Partition (> 5): " + TO_STRING(PARTITIONED))
+
+// ==================== 数组查找 ====================
+PRINTLN("")
+PRINTLN("▶ Array Search:")
+
+Set FRUITS ["apple", "banana", "cherry", "date"]
+Set INDEX ARR_INDEX_OF(FRUITS, "cherry")
+PRINTLN("Fruits: " + TO_STRING(FRUITS))
+PRINTLN("Index of 'cherry': " + TO_STRING(INDEX))
+
+Set CONTAINS ARR_CONTAINS(FRUITS, "banana")
+PRINTLN("Contains 'banana': " + TO_STRING(CONTAINS))
+
+// ==================== 数组操作 ====================
+PRINTLN("")
+PRINTLN("▶ Array Operations:")
+
+Set ORIGINAL_ARR [1, 2, 3, 4, 5]
+PRINTLN("Original: " + TO_STRING(ORIGINAL_ARR))
+
+Set REVERSED ARR_REVERSE(ORIGINAL_ARR)
+PRINTLN("Reversed: " + TO_STRING(REVERSED))
+
+Set SLICED ARR_SLICE(ORIGINAL_ARR, 1, 4)
+PRINTLN("Slice [1:4]: " + TO_STRING(SLICED))
+
+Set FIRST_3 ARR_TAKE(ORIGINAL_ARR, 3)
+PRINTLN("Take 3: " + TO_STRING(FIRST_3))
+
+Set SKIP_2 ARR_SKIP(ORIGINAL_ARR, 2)
+PRINTLN("Skip 2: " + TO_STRING(SKIP_2))
+
+// ==================== 数组聚合 ====================
+PRINTLN("")
+PRINTLN("▶ Array Aggregation:")
+
+Set NUMS [10, 20, 30, 40, 50]
+PRINTLN("Numbers: " + TO_STRING(NUMS))
+
+Set SUM ARR_SUM(NUMS)
+PRINTLN("Sum: " + TO_STRING(SUM))
+
+Set AVG ARR_AVERAGE(NUMS)
+PRINTLN("Average: " + TO_STRING(AVG))
+
+Set MAX ARR_MAX(NUMS)
+PRINTLN("Max: " + TO_STRING(MAX))
+
+Set MIN ARR_MIN(NUMS)
+PRINTLN("Min: " + TO_STRING(MIN))
+
+// ==================== 数组比较 ====================
+PRINTLN("")
+PRINTLN("▶ Array Comparison:")
+
+Set ARR1 [1, 2, 3, 4, 5]
+Set ARR2 [3, 4, 5, 6, 7]
+
+PRINTLN("Array 1: " + TO_STRING(ARR1))
+PRINTLN("Array 2: " + TO_STRING(ARR2))
+
+Set INTERSECTION ARR_INTERSECTION(ARR1, ARR2)
+PRINTLN("Intersection: " + TO_STRING(INTERSECTION))
+
+Set UNION ARR_UNION(ARR1, ARR2)
+PRINTLN("Union: " + TO_STRING(UNION))
+
+Set DIFFERENCE ARR_DIFFERENCE(ARR1, ARR2)
+PRINTLN("Difference (1-2): " + TO_STRING(DIFFERENCE))
+
+// ==================== 数组创建 ====================
+PRINTLN("")
+PRINTLN("▶ Array Creation:")
+
+Set RANGE ARR_RANGE(1, 10, 2)
+PRINTLN("Range(1, 10, 2): " + TO_STRING(RANGE))
+
+Set FILLED ARR_FILL("X", 5)
+PRINTLN("Fill 'X' x 5: " + TO_STRING(FILLED))
+
+// ==================== 数组统计 ====================
+PRINTLN("")
+PRINTLN("▶ Array Statistics:")
+
+Set DATA [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+PRINTLN("Data: " + TO_STRING(DATA))
+
+Set COUNT_3 ARR_COUNT(DATA, 3)
+PRINTLN("Count of 3: " + TO_STRING(COUNT_3))
+
+Set FREQ ARR_FREQUENCY(DATA)
+PRINTLN("Frequency: " + TO_STRING(FREQ))
+
+PRINTLN("")
+PRINTLN("═══════════════════════════════════════════════")
+PRINTLN("Array Utils Demo Complete!")
+PRINTLN("═══════════════════════════════════════════════")

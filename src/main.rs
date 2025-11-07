@@ -7,8 +7,22 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 {
+        // 检查是否有 --stdlib 或 --no-stdlib 标志
+        let use_stdlib = if args.contains(&"--no-stdlib".to_string()) {
+            false
+        } else {
+            // 默认加载标准库
+            true
+        };
+
         // 脚本模式：运行文件
-        run_file(&args[1]);
+        let script_file = args
+            .iter()
+            .find(|arg| !arg.starts_with("--") && *arg != &args[0])
+            .map(|s| s.as_str())
+            .unwrap_or(&args[1]);
+
+        run_file(script_file, use_stdlib);
     } else {
         // REPL 交互模式
         run_repl();
@@ -16,11 +30,23 @@ fn main() {
 }
 
 /// 运行 Aether 脚本文件
-fn run_file(filename: &str) {
+fn run_file(filename: &str, load_stdlib: bool) {
     match fs::read_to_string(filename) {
         Ok(code) => {
             // 作为独立语言使用时，默认启用所有IO权限
-            let mut engine = Aether::with_all_permissions();
+            let mut engine = if load_stdlib {
+                match Aether::with_stdlib() {
+                    Ok(engine) => engine,
+                    Err(e) => {
+                        eprintln!("警告: 标准库加载失败: {}", e);
+                        eprintln!("继续运行但不加载标准库...");
+                        Aether::with_all_permissions()
+                    }
+                }
+            } else {
+                Aether::with_all_permissions()
+            };
+
             match engine.eval(&code) {
                 Ok(result) => {
                     // 只在有显式输出时打印
@@ -46,10 +72,12 @@ fn run_repl() {
     println!("Aether REPL v0.1.0");
     println!("输入 'exit' 或 'quit' 退出");
     println!("输入 'help' 查看帮助");
+    println!("输入 ':load stdlib' 加载标准库");
     println!();
 
     // REPL模式也默认启用所有IO权限
     let mut engine = Aether::with_all_permissions();
+    let mut stdlib_loaded = false;
     let mut line_number = 1;
 
     loop {
@@ -69,6 +97,30 @@ fn run_repl() {
                     }
                     "help" => {
                         print_help();
+                        continue;
+                    }
+                    ":load stdlib" => {
+                        if stdlib_loaded {
+                            println!("标准库已经加载过了");
+                        } else {
+                            match engine.load_all_stdlib() {
+                                Ok(_) => {
+                                    println!("✓ 标准库加载成功");
+                                    stdlib_loaded = true;
+                                }
+                                Err(e) => {
+                                    eprintln!("✗ 标准库加载失败: {}", e);
+                                }
+                            }
+                        }
+                        continue;
+                    }
+                    cmd if cmd.starts_with(":load ") => {
+                        let module = cmd.strip_prefix(":load ").unwrap().trim();
+                        match engine.load_stdlib_module(module) {
+                            Ok(_) => println!("✓ 模块 '{}' 加载成功", module),
+                            Err(e) => eprintln!("✗ 模块加载失败: {}", e),
+                        }
                         continue;
                     }
                     "" => continue,
@@ -104,7 +156,7 @@ fn print_help() {
     println!("基本语法:");
     println!("  Set X 10          # 定义变量");
     println!("  (X + 5)           # 表达式求值");
-    println!("  Print \"Hello\"     # 打印输出");
+    println!("  Println \"Hello\"   # 打印输出");
     println!();
     println!("数据结构:");
     println!("  [1, 2, 3]         # 数组");
@@ -112,31 +164,32 @@ fn print_help() {
     println!();
     println!("控制流:");
     println!("  If (X > 0) {{      # 条件判断");
-    println!("    Print \"正数\"");
+    println!("    Println \"正数\"");
     println!("  }}");
     println!();
-    println!("  For I In Range 5 {{  # 循环");
-    println!("    Print I");
+    println!("  While (I < 10) {{ # 循环");
+    println!("    Set I (I + 1)");
     println!("  }}");
     println!();
-    println!("内置函数:");
-    println!("  Len [1,2,3]       # 长度");
-    println!("  Map F [1,2,3]     # 映射");
-    println!("  Filter F [1,2,3]  # 过滤");
-    println!("  Sum [1,2,3]       # 求和");
-    println!();
-    println!("数学函数:");
-    println!("  Sin 1.57          # 正弦");
-    println!("  Sqrt 16           # 平方根");
-    println!("  Pow 2 10          # 幂运算");
-    println!();
-    println!("统计函数:");
-    println!("  Mean [1,2,3,4]    # 平均值");
-    println!("  StdDev [1,2,3,4]  # 标准差");
-    println!("  LinearRegression [[1,2],[2,4],[3,6]]  # 线性回归");
+    println!("标准库 (使用 :load stdlib 加载):");
+    println!("  STR_TRIM(str)            # 字符串修剪");
+    println!("  ARR_UNIQUE(arr)          # 数组去重");
+    println!("  VALIDATE_EMAIL(email)    # 邮箱验证");
+    println!("  DT_IS_LEAP_YEAR(year)    # 判断闰年");
+    println!("  ASSERT_EQUAL(a, b, msg)  # 断言相等");
     println!();
     println!("REPL 命令:");
-    println!("  help              # 显示此帮助");
-    println!("  exit, quit        # 退出 REPL");
+    println!("  help                     # 显示此帮助");
+    println!("  :load stdlib             # 加载所有标准库");
+    println!("  :load string_utils       # 加载字符串工具库");
+    println!("  :load array_utils        # 加载数组工具库");
+    println!("  :load validation         # 加载验证库");
+    println!("  :load datetime           # 加载日期时间库");
+    println!("  :load testing            # 加载测试框架");
+    println!("  exit, quit               # 退出 REPL");
+    println!();
+    println!("命令行选项:");
+    println!("  aether script.aether     # 运行脚本 (自动加载标准库)");
+    println!("  aether --no-stdlib file  # 运行脚本但不加载标准库");
     println!();
 }
