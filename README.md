@@ -2,252 +2,147 @@
 
 <div align="center">
 
-## A lightweight, embeddable domain-specific language (DSL)
+## 轻量级、可嵌入的领域特定语言 (DSL)
 
 [![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether)
 [![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 
-[Documentation](https://github.com/yourusername/aether/blob/main/DESIGN.md) | [Development Guide](https://github.com/yourusername/aether/blob/main/DEVELOPMENT.md)
+**高性能 · 易集成 · 跨平台 · 安全优先**
 
 </div>
 
-## 🎯 Overview
+---
 
-Aether is a modern, lightweight scripting language designed to be embedded in Rust, Go, and TypeScript applications. It provides:
+## 📋 目录
 
-- 🚀 **High Performance**: Rust-based interpreter with zero-cost abstractions
-- 🔌 **Easy Integration**: Simple API for Rust, Go, and TypeScript
-- 🌍 **Cross-Platform**: Supports x86_64, ARM64, and WebAssembly
-- ✨ **Modern Features**: Generators, lazy evaluation, and functional programming
-- 📝 **Simple Syntax**: Easy to learn and read
-- 🔍 **Enhanced Error Reporting**: Detailed error messages with line and column numbers
-- ✅ **Strict Naming Conventions**: Enforced UPPER_SNAKE_CASE for consistency
-- 🔒 **Security-First Design**: IO disabled by default in library mode, enabled in CLI mode
+- [概述](#-概述)
+- [快速开始](#-快速开始)
+- [语言特性](#-语言特性)
+- [安全模型](#-安全模型)
+- [性能优化](#-性能优化)
+- [语言绑定](#-语言绑定)
+- [开发与测试](#-开发与测试)
+- [许可证](#-许可证)
 
-## 🌟 Features
+---
 
-- **Basic Types**: Numbers, Strings, Booleans, Arrays, Dictionaries
-- **Functions**: First-class functions with closures
-- **Control Flow**: If/Else, While, For loops
-- **Generators**: Lazy sequences with `Generator` keyword
-- **Lazy Evaluation**: Deferred computation with `Lazy` keyword
-- **Naming Convention**: Enforced UPPER_SNAKE_CASE for variables, functions, and parameters
-- **Error Reporting**: Detailed error messages with line/column numbers and helpful suggestions
-- **Rich Standard Library**: 190+ built-in functions including:
-  - I/O operations (PRINT, PRINTLN, INPUT)
-  - **File system operations**: READ_FILE, WRITE_FILE, LIST_DIR, etc.
-  - **Network operations**: HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
-  - Type conversions and introspection
-  - Array and string manipulation
-  - Dictionary operations
-  - **Advanced mathematics**: Linear algebra, statistics, probability distributions
-  - **Precise arithmetic**: Fraction-based calculations for exact results
-  - **Precision arithmetic**: Fixed decimal place calculations for financial computations
-  - **Scientific computing**: Linear regression, normal/Poisson distributions, matrix inversion
-  - **Payroll calculations**: Comprehensive payroll and compensation module (78 functions)
-    - Basic salary calculations (hourly, daily, monthly, annual)
-    - Overtime pay (weekday 1.5x, weekend 2x, holiday 3x)
-    - Personal income tax (7-bracket progressive tax, annual bonus tax)
-    - Social insurance and housing fund
-    - Attendance and leave management
-    - Bonuses and allowances
-    - Salary conversion and proration (21.75 legal pay days standard)
-    - Date/time calculations for payroll
-    - Statistical analysis for compensation data
-- **Flexible Security Model**:
-  - **CLI mode**: IO enabled by default (convenient for direct usage)
-  - **Library mode**: IO disabled by default (secure for DSL embedding)
-  - Granular permission control for filesystem and network operations
+## 🎯 概述
 
-## 📦 Installation
+Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rust、Go 和 TypeScript 应用程序中。
 
-### As a Library (Rust)
+### 核心特性
 
-```toml
-[dependencies]
-aether = "0.1"
-```
+- 🚀 **高性能**: 基于 Rust，带 AST 缓存和常量折叠优化
+- 🔌 **易于集成**: 简单的 API，支持 Rust/Go/TypeScript
+- 🌍 **跨平台**: x86_64、ARM64、WebAssembly
+- ✨ **现代特性**: Generator、惰性求值、闭包
+- 📝 **简洁语法**: 易学易读，UPPER_SNAKE_CASE 命名
+- 🔒 **安全优先**: 库模式默认禁用 IO，CLI 模式自动启用
 
-### As a Command-Line Tool
+### 标准库 (190+ 函数)
 
-Build from source:
+- **基础**: I/O、类型转换、字符串/数组/字典操作
+- **文件系统**: READ_FILE, WRITE_FILE, LIST_DIR, CREATE_DIR 等
+- **网络**: HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
+- **数学**: 线性代数、统计、概率分布、矩阵运算
+- **精确计算**: 分数运算、固定精度金融计算
+- **薪资计算**: 工资、加班费、个税、社保（78个函数）
+
+---
+
+## 🚀 快速开始
+
+### 安装
 
 ```bash
-git clone https://github.com/yourusername/aether.git
-cd aether
-cargo build --release
-# The executable will be at target/release/aether
-```
+# Rust 库
+cargo add aether
 
-Or install with cargo:
-
-```bash
+# 命令行工具
 cargo install aether
-```
 
-### Go
-
-```bash
+# Go
 go get github.com/yourusername/aether-go
-```
 
-### TypeScript/JavaScript
-
-```bash
+# TypeScript/JavaScript
 npm install @yourusername/aether
 ```
 
-## 🚀 Quick Start
+### Hello World
 
-### Command-Line Usage (IO Enabled by Default)
-
-When you run Aether scripts from the command line, all IO capabilities are **automatically enabled** for your convenience:
-
-**Run a script file:**
+**命令行 (IO 自动启用):**
 
 ```bash
-# Run an Aether script - IO is enabled automatically
-aether my_script.aether
+# 创建 hello.aether
+echo 'Println("Hello, Aether!")' > hello.aether
 
-# Example: File operations work out of the box
-aether examples/test_cli_io.aether
+# 运行
+aether hello.aether
 ```
 
-**Interactive REPL:**
+**Rust 嵌入 (默认安全):**
 
-```bash
-# Start interactive mode - IO is enabled automatically
-aether
+```rust
+use aether::Aether;
 
-# You can use file and network operations directly:
-aether[1]> WriteFile("test.txt", "Hello, World!")
-true
-aether[2]> ReadFile("test.txt")
-"Hello, World!"
-aether[3]> HttpGet("https://api.github.com")
-"{...}"
-aether[4]> exit
+fn main() {
+    let mut engine = Aether::new(); // IO 默认禁用
+    
+    let result = engine.eval(r#"
+        Set X 10
+        Set Y 20
+        (X + Y)
+    "#).unwrap();
+    
+    println!("结果: {}", result); // 输出: 30
+}
 ```
 
-### Library Usage (Rust) - Secure by Default
-
-When embedding Aether as a DSL, **IO is disabled by default** for security:
+**启用 IO (可选):**
 
 ```rust
 use aether::{Aether, IOPermissions};
 
-fn main() {
-    // Option 1: Default (no IO) - secure for untrusted scripts
-    let mut engine = Aether::new();
-    
-    // Option 2: Custom permissions - granular control
-    let permissions = IOPermissions {
-        filesystem_enabled: true,   // Allow file operations
-        network_enabled: false,      // Block network operations
-    };
-    let mut engine = Aether::with_permissions(permissions);
-    
-    // Option 3: Full permissions - trust all operations
-    let mut engine = Aether::with_all_permissions();
-    
-    // Basic arithmetic (always works, no IO needed)
-    let code = r#"
-        Set X 10
-        Set Y 20
-        (X + Y)
-    "#;
-    
-    match engine.eval(code) {
-        Ok(result) => println!("Result: {}", result),
-        Err(e) => eprintln!("Error: {}", e),
-    }
-    
-    // File operations require permissions
-    let code = r#"
-        WriteFile("output.txt", "Result: 30")
-        ReadFile("output.txt")
-    "#;
-    
-    // This will fail with default Aether::new() (secure)
-    // This will work with Aether::with_all_permissions()
-    match engine.eval(code) {
-        Ok(result) => println!("File content: {}", result),
-        Err(e) => eprintln!("Error: {}", e),
-    }
-}
+// 完全启用 IO
+let mut engine = Aether::with_all_permissions();
+
+// 或仅启用文件系统
+let permissions = IOPermissions {
+    filesystem_enabled: true,
+    network_enabled: false,
+};
+let mut engine = Aether::with_permissions(permissions);
+
+engine.eval(r#"
+    WriteFile("output.txt", "Hello!")
+    Println(ReadFile("output.txt"))
+"#).unwrap();
 ```
 
-### Library Usage (Go)
+---
 
-```go
-package main
+## 📚 语言特性
 
-import (
-    "fmt"
-    "github.com/yourusername/aether-go"
-)
-
-func main() {
-    engine := aether.New()
-    defer engine.Close()
-    
-    code := `
-        Set X 10
-        Set Y 20
-        Return (X + Y)
-    `
-    
-    result, err := engine.Eval(code)
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
-    fmt.Println("Result:", result)
-}
-```
-
-### Library Usage (TypeScript)
-
-```typescript
-import { Aether } from '@yourusername/aether';
-
-async function main() {
-    const engine = new Aether();
-    await engine.init();
-    
-    const code = `
-        Set X 10
-        Set Y 20
-        Return (X + Y)
-    `;
-    
-    const result = engine.eval(code);
-    console.log('Result:', result);
-}
-
-main();
-```
-
-## 📚 Language Examples
-
-### Variables and Functions
+### 1. 基础语法
 
 ```javascript
-// Variables
+// 变量 (必须 UPPER_SNAKE_CASE)
 Set COUNT 10
 Set MESSAGE "Hello, Aether"
+Set NUMBERS [1, 2, 3, 4, 5]
+Set USER {"name": "Alice", "age": 30}
 
-// Functions
+// 函数
 Func ADD (A, B) {
     Return (A + B)
 }
 
 Set RESULT ADD(5, 3)
-Print "5 + 3 =", RESULT
+Println("5 + 3 =", RESULT)
 ```
 
-### Control Flow
+### 2. 控制流
 
 ```javascript
 // If-Else
@@ -259,13 +154,20 @@ Func ABS (X) {
     }
 }
 
-// For Loop
+// For 循环
 For I In RANGE(0, 5) {
-    Print "Number:", I
+    Println("数字:", I)
+}
+
+// While 循环
+Set I 0
+While (I < 5) {
+    Println(I)
+    Set I (I + 1)
 }
 ```
 
-### Generators
+### 3. Generator (惰性序列)
 
 ```javascript
 Generator FIBONACCI (LIMIT) {
@@ -282,252 +184,476 @@ Generator FIBONACCI (LIMIT) {
     }
 }
 
+// 使用
 For NUM In FIBONACCI(10) {
-    Print NUM
+    Println(NUM)
 }
 ```
 
-### Lazy Evaluation
+### 4. 惰性求值
 
 ```javascript
+// 延迟计算，仅在需要时执行
 Lazy EXPENSIVE_DATA (
-    Print "Loading large dataset..."
+    Println("正在加载大数据集...")
     Return LOAD_FILE("big_data.json")
 )
 
-// Data is only loaded when accessed
+// 数据仅在访问时加载
 If (NEEDS_ANALYSIS) {
-    Set DATA EXPENSIVE_DATA
+    Set DATA EXPENSIVE_DATA  // 此时才执行
     PROCESS(DATA)
 }
 ```
 
-### Precise and Precision Arithmetic
+### 5. 精确和精度算术
 
 ```javascript
-// Avoid floating-point precision issues with fractions
+// 问题：浮点精度
 Set A 0.1
 Set B 0.2
-Println(A + B)  // May show: 0.30000000000000004
+Println(A + B)  // 可能显示: 0.30000000000000004
 
-// Use fraction arithmetic for exact results
+// 解决方案：分数运算（精确）
 Set FA TO_FRACTION(0.1)
 Set FB TO_FRACTION(0.2)
 Set FC FRAC_ADD(FA, FB)
-Println(FC)           // Shows: 3/10
-Println(TO_FLOAT(FC)) // Shows: 0.3
+Println(FC)           // 显示: 3/10
+Println(TO_FLOAT(FC)) // 显示: 0.3
 
-// Financial calculations with fixed precision
+// 金融计算（固定精度）
 Set PRICE1 19.99
 Set PRICE2 29.99
 Set TOTAL ADD_WITH_PRECISION(PRICE1, PRICE2, 2)
-Println(TOTAL)  // Shows: 49.98
+Println(TOTAL)  // 显示: 49.98
 
-// Calculate tax with 2 decimal places
 Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
-Println(TAX)    // Shows: 4.00
+Println(TAX)    // 显示: 4.00
 ```
 
-### File System and Network Operations
-
-**CLI Mode (IO Enabled Automatically):**
-
-When running Aether from the command line, all IO operations work out of the box:
+### 6. 文件系统操作
 
 ```javascript
-// File operations - works in CLI mode without configuration
+// CLI 模式：自动工作
 WriteFile("data.txt", "Hello, World!")
 Set CONTENT ReadFile("data.txt")
-Println(CONTENT)  // Prints: Hello, World!
+Println(CONTENT)
 
-// Check if file exists
 If FileExists("data.txt") {
-    Println("File exists!")
+    Println("文件存在!")
     DeleteFile("data.txt")
 }
 
-// Directory operations
+// 目录操作
 CreateDir("output")
 Set FILES ListDir(".")
 For FILE In FILES {
     Println(FILE)
 }
+```
 
-// Network operations - works in CLI mode without configuration
+### 7. 网络操作
+
+```javascript
+// HTTP GET
 Set RESPONSE HttpGet("https://api.github.com")
 Println(RESPONSE)
 
-// POST request with custom content type
+// HTTP POST
 Set DATA '{"name": "test"}'
-Set RESULT HttpPost("https://api.example.com/data", DATA, "application/json")
+Set RESULT HttpPost(
+    "https://api.example.com/data",
+    DATA,
+    "application/json"
+)
 Println(RESULT)
 ```
 
-**Library Mode (Requires Explicit Permissions):**
+### 8. 错误处理
 
-When embedding Aether as a DSL, you must explicitly enable IO for security:
+```javascript
+// 错误示例
+Set myVar 10
+// ❌ 错误: 变量名必须使用全大写字母和下划线
+// 正确: Set MY_VAR 10
+
+Set RESULT (X + Y
+// ❌ 错误: Parse error at line 1, column 18: Expected RightParen
+
+// 正确
+Set RESULT (X + Y)
+```
+
+---
+
+## 🔒 安全模型
+
+### CLI 模式 vs 库模式
+
+| 模式 | IO 状态 | 使用场景 |
+|------|---------|----------|
+| **CLI** | 默认启用 | 直接运行脚本，用户明确信任 |
+| **库** | 默认禁用 | 嵌入应用，脚本可能不可信 |
+
+### 权限控制
 
 ```rust
 use aether::{Aether, IOPermissions};
 
-// Option 1: Enable all IO (if you trust the scripts)
-let mut engine = Aether::with_all_permissions();
+// 1. 无 IO（最安全，默认）
+let mut engine = Aether::new();
 
-// Option 2: Enable only specific operations (recommended)
+// 2. 仅文件系统
 let permissions = IOPermissions {
-    filesystem_enabled: true,   // Allow file operations
-    network_enabled: false,      // Block network operations
+    filesystem_enabled: true,
+    network_enabled: false,
 };
 let mut engine = Aether::with_permissions(permissions);
 
-// Option 3: No IO at all (most secure, default)
-let mut engine = Aether::new();  // IO disabled by default
-
-let code = r#"
-    WriteFile("output.txt", "Result: 42")
-    ReadFile("output.txt")
-"#;
-
-match engine.eval(code) {
-    Ok(result) => println!("{}", result),
-    Err(e) => eprintln!("Error: {}", e),
-}
+// 3. 完全权限
+let mut engine = Aether::with_all_permissions();
 ```
 
-**Security Model:**
+### 命名约定强制
 
-- **CLI mode**: IO enabled by default (you explicitly run the script)
-- **Library mode**: IO disabled by default (scripts may be untrusted)
-
-See [docs/IO_QUICKSTART.md](docs/IO_QUICKSTART.md) and [docs/IO_PERMISSIONS.md](docs/IO_PERMISSIONS.md) for details.
-
-### Enhanced Error Reporting
+所有变量、函数、参数必须使用 `UPPER_SNAKE_CASE`：
 
 ```javascript
-// Invalid variable name (not UPPER_SNAKE_CASE)
-Set myVar 10
-// Error: Parse error at line 1, column 4: Invalid identifier 'myVar' - 
-// 变量名和函数名必须使用全大写字母和下划线（例如：MY_VAR, CALCULATE_SUM）
+// ✅ 正确
+Set MY_VARIABLE 10
+Func CALCULATE_TOTAL (PRICE, TAX_RATE) { }
 
-// Correct variable name
-Set MY_VAR 10  // ✅ Correct
-
-// Syntax error with location
-Set RESULT (X + Y
-// Error: Parse error at line 1, column 18: Expected RightParen, found Newline
+// ❌ 错误
+Set myVariable 10      // 会报错
+Func calculateTotal () // 会报错
 ```
-
-## 🛠️ Development Status
-
-Aether is currently in **version 0.1.0**. Current features:
-
-- ✅ Complete interpreter (Lexer, Parser, Evaluator)
-- ✅ **112 built-in functions** across all categories (including 17 new precision/fraction functions)
-- ✅ **Enhanced error reporting** with line/column numbers and detailed messages
-- ✅ **Strict naming conventions** (UPPER_SNAKE_CASE enforcement)
-- ✅ **114 tests passing** (100% pass rate)
-- ✅ Advanced math library (linear regression, probability distributions, matrix operations)
-- ✅ Precise arithmetic (fraction-based calculations)
-- ✅ Precision arithmetic (fixed decimal place calculations)
-- ✅ Go bindings via C-FFI
-- ✅ TypeScript/JavaScript bindings via WASM
-- 🔄 Python bindings (planned)
-
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md), [docs/ERROR_REPORTING.md](docs/ERROR_REPORTING.md), and [QUICKSTART_BINDINGS.md](QUICKSTART_BINDINGS.md) for complete documentation. Check [CHANGELOG.md](CHANGELOG.md) for version history.
-
-## 📖 Documentation
-
-- **[User Guide](docs/USER_GUIDE.md)** - Complete reference for all built-in functions
-- **[Precision Guide](docs/PRECISION_GUIDE.md)** - Guide to precise and precision arithmetic
-- **[Error Reporting Guide](docs/ERROR_REPORTING.md)** - Error messages and naming conventions
-- **[IO Quick Start](docs/IO_QUICKSTART.md)** - File system and network operations with security
-- **[IO Permissions Guide](docs/IO_PERMISSIONS.md)** - Understanding CLI vs library security models
-- **[Language Bindings Quick Start](QUICKSTART_BINDINGS.md)** - Using Aether from Go, TypeScript/JavaScript
-- **[Language Bindings Overview](bindings/README.md)** - Detailed guide for all language bindings
-- **[Changelog](CHANGELOG.md)** - Version history and roadmap
-- **[Development Guide](DEVELOPMENT.md)** - Implementation and contribution guide
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/aether.git
-cd aether
-
-# Build and test
-cargo build
-cargo test
-
-# Run benchmarks
-cargo bench
-
-# Quick benchmark (faster, reduced sampling)
-./scripts/bench.sh quick
-
-# Run specific benchmark category
-./scripts/bench.sh arithmetic
-```
-
-### Performance Benchmarks
-
-Aether includes comprehensive performance benchmarks using Criterion.rs:
-
-```bash
-# Run all benchmarks
-cargo bench
-
-# Run quick benchmarks (10 samples, ~2-3 minutes)
-cargo bench -- --sample-size 10
-
-# View results in browser
-open target/criterion/report/index.html
-```
-
-**Benchmark Coverage:**
-
-- Arithmetic operations (simple, complex, nested)
-- Variable operations (assignment, reading, multiple variables)
-- Function calls (built-in, user-defined, recursive)
-- Control flow (if/else, while, for loops)
-- Data structures (arrays, dictionaries, strings)
-- Parsing performance (lexer, parser, full execution)
-- Different program sizes (small, medium, large)
-
-See [`benches/README.md`](benches/README.md) and [`benches/QUICKSTART.md`](benches/QUICKSTART.md) for detailed documentation.
-
-**Performance Comparison Workflow:**
-
-```bash
-# Save baseline before optimization
-cargo bench -- --save-baseline before
-
-# Make your changes...
-
-# Compare with baseline
-cargo bench -- --baseline before
-```
-
-## 📄 License
-
-Licensed under the Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>).
-
-## 🙏 Acknowledgments
-
-Aether is inspired by:
-
-- [Lua](https://www.lua.org/) - Embeddable scripting language
-- [Rhai](https://rhai.rs/) - Embedded scripting for Rust
-- [Crafting Interpreters](https://craftinginterpreters.com/) - Excellent book on interpreter design
-
-## 📬 Contact
-
-- GitHub Issues: [github.com/yourusername/aether/issues](https://github.com/yourusername/aether/issues)
-- Discussions: [github.com/yourusername/aether/discussions](https://github.com/yourusername/aether/discussions)
 
 ---
 
-Made with ❤️ by the Aether contributors
+## ⚡ 性能优化
+
+Aether v0.2.0 引入了多项性能优化：
+
+### 1. AST 缓存 (50-140x 加速)
+
+自动缓存已解析的代码，避免重复解析：
+
+```rust
+let mut engine = Aether::new();
+let code = "Set X 10\n(X + 20)";
+
+// 第一次：解析 + 执行
+engine.eval(code)?; // ~400µs
+
+// 第二次：缓存命中 + 执行
+engine.eval(code)?; // ~2.8µs (142x 快!)
+
+// 查看缓存统计
+println!("{}", engine.cache_stats());
+// 输出: 命中率: 50.0%, 加速比: 142x
+```
+
+### 2. 常量折叠
+
+编译时计算常量表达式：
+
+```javascript
+// 优化前
+Set X (2 + 3 * 4)
+
+// 优化后（自动）
+Set X 14
+```
+
+### 3. 死代码消除
+
+移除永不执行的代码：
+
+```javascript
+// 优化前
+While False {
+    Println("永远不执行")
+}
+
+// 优化后（自动删除整个循环）
+```
+
+### 4. 环境管理优化
+
+- HashMap 预分配容量
+- 热路径/冷路径分离
+- 环境对象池复用
+- **结果**: 变量访问快 10-15%
+
+### 自定义优化选项
+
+```rust
+let mut engine = Aether::new();
+
+// 控制优化
+engine.set_optimization(
+    true,  // 常量折叠
+    true,  // 死代码消除
+    false  // 尾递归优化（部分完成）
+);
+```
+
+### 性能测试
+
+```bash
+# 运行基准测试
+cargo bench
+
+# 快速测试
+cargo bench -- --sample-size 10
+
+# 对比优化效果
+cargo bench -- --save-baseline before
+# 进行优化...
+cargo bench -- --baseline before
+```
+
+---
+
+## 🔗 语言绑定
+
+### Go
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/yourusername/aether-go"
+)
+
+func main() {
+    engine := aether.New()
+    defer engine.Close()
+    
+    result, err := engine.Eval(`
+        Set X 10
+        Set Y 20
+        Return (X + Y)
+    `)
+    
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+    fmt.Println("Result:", result) // 30
+}
+```
+
+### TypeScript/JavaScript
+
+```typescript
+import { Aether } from '@yourusername/aether';
+
+async function main() {
+    const engine = new Aether();
+    await engine.init();
+    
+    const result = engine.eval(`
+        Set X 10
+        Set Y 20
+        Return (X + Y)
+    `);
+    
+    console.log('Result:', result); // 30
+}
+
+main();
+```
+
+---
+
+## 🛠️ 开发与测试
+
+### 构建
+
+```bash
+# 克隆仓库
+git clone https://github.com/yourusername/aether.git
+cd aether
+
+# 构建
+cargo build --release
+
+# 运行测试
+cargo test
+
+# 运行所有测试（包括集成测试）
+cargo test --all
+```
+
+### 测试覆盖
+
+- ✅ **114 个测试** (100% 通过率)
+- ✅ 完整的解释器测试（Lexer, Parser, Evaluator）
+- ✅ 所有内置函数测试
+- ✅ 错误处理和命名约定测试
+- ✅ 性能基准测试
+
+### 基准测试
+
+```bash
+# 运行所有基准测试
+cargo bench
+
+# 查看结果
+open target/criterion/report/index.html
+
+# 快速基准测试
+./scripts/bench.sh quick
+
+# 特定类别
+./scripts/bench.sh arithmetic
+```
+
+**基准覆盖：**
+
+- 算术运算、变量操作、函数调用
+- 控制流、数据结构、解析性能
+- 不同程序规模（小/中/大型）
+
+---
+
+## 📖 内置函数速查
+
+### I/O 操作
+
+```javascript
+PRINT, PRINTLN, INPUT
+```
+
+### 文件系统
+
+```javascript
+READ_FILE, WRITE_FILE, APPEND_FILE
+DELETE_FILE, FILE_EXISTS, CREATE_DIR
+LIST_DIR, DELETE_DIR, FILE_SIZE
+```
+
+### 网络
+
+```javascript
+HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
+```
+
+### 类型转换
+
+```javascript
+TO_STRING, TO_NUMBER, TYPE_OF
+TO_ARRAY, TO_DICT, IS_NULL
+```
+
+### 数组操作
+
+```javascript
+PUSH, POP, SHIFT, UNSHIFT
+MAP, FILTER, REDUCE, SORT
+FIND, INCLUDES, JOIN, SLICE
+```
+
+### 字符串操作
+
+```javascript
+LEN, SPLIT, TRIM, UPPER, LOWER
+REPLACE, SUBSTRING, STARTS_WITH, ENDS_WITH
+```
+
+### 数学函数
+
+```javascript
+ABS, SQRT, POW, SIN, COS, TAN
+MIN, MAX, SUM, AVG, MEDIAN
+STDEV, VARIANCE, CORRELATION
+LINEAR_REGRESSION, MATRIX_INVERSE
+```
+
+### 精确计算
+
+```javascript
+TO_FRACTION, FRAC_ADD, FRAC_SUB
+FRAC_MUL, FRAC_DIV, TO_FLOAT
+ADD_WITH_PRECISION, SUB_WITH_PRECISION
+MUL_WITH_PRECISION, DIV_WITH_PRECISION
+```
+
+### 薪资计算 (78 个函数)
+
+```javascript
+// 基本工资
+HOURLY_TO_DAILY, DAILY_TO_MONTHLY
+MONTHLY_TO_ANNUAL, ANNUAL_TO_MONTHLY
+
+// 加班费
+CALC_WEEKDAY_OVERTIME  // 1.5x
+CALC_WEEKEND_OVERTIME  // 2x
+CALC_HOLIDAY_OVERTIME  // 3x
+
+// 个税
+CALC_PERSONAL_TAX      // 7级累进
+CALC_BONUS_TAX         // 年终奖税
+
+// 社保
+CALC_SOCIAL_INSURANCE
+CALC_HOUSING_FUND
+```
+
+---
+
+## 🎯 开发状态
+
+### 当前版本: v0.2.0
+
+**已完成：**
+
+- ✅ 完整的解释器 (Lexer, Parser, Evaluator)
+- ✅ 190+ 内置函数
+- ✅ 增强的错误报告
+- ✅ 严格的命名约定
+- ✅ AST 缓存和性能优化
+- ✅ Go/TypeScript 绑定
+- ✅ 114 个测试通过
+
+**计划中：**
+
+- 🔄 完整的尾递归优化
+- 🔄 JIT 编译器
+- 🔄 Python 绑定
+- 🔄 更多优化
+
+---
+
+## 📄 许可证
+
+根据 Apache License 2.0 许可（[LICENSE-APACHE](LICENSE-APACHE) 或 <http://www.apache.org/licenses/LICENSE-2.0）。>
+
+---
+
+## 🙏 致谢
+
+Aether 的灵感来自：
+
+- [Lua](https://www.lua.org/) - 可嵌入的脚本语言
+- [Rhai](https://rhai.rs/) - Rust 的嵌入式脚本
+- [Crafting Interpreters](https://craftinginterpreters.com/) - 关于解释器设计的优秀书籍
+
+---
+
+## 📬 联系方式
+
+- GitHub Issues: [提交问题](https://github.com/yourusername/aether/issues)
+- Discussions: [参与讨论](https://github.com/yourusername/aether/discussions)
+
+---
+
+<div align="center">
+
+**由 Aether 贡献者用 ❤️ 制作**
+
+[⬆ 返回顶部](#aether)
+
+</div>
