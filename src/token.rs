@@ -64,6 +64,7 @@ pub enum Token {
     // Identifiers and literals - 全大写标识符
     Identifier(String),
     Number(f64),
+    BigInteger(String), // 大整数字面量，保留原始字符串
     String(String),
     Boolean(bool),
     Null,
@@ -172,6 +173,7 @@ impl Token {
             Token::Throw => "Throw",
             Token::Identifier(_) => "Identifier",
             Token::Number(_) => "Number",
+            Token::BigInteger(_) => "BigInteger",
             Token::String(_) => "String",
             Token::Boolean(_) => "Boolean",
             Token::Null => "nil",

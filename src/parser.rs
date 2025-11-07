@@ -811,6 +811,11 @@ impl Parser {
                 self.next_token();
                 Ok(Expr::Number(num))
             }
+            Token::BigInteger(s) => {
+                let big_int_str = s.clone();
+                self.next_token();
+                Ok(Expr::BigInteger(big_int_str))
+            }
             Token::String(s) => {
                 let string = s.clone();
                 self.next_token();

@@ -304,6 +304,20 @@ impl Evaluator {
         match expr {
             Expr::Number(n) => Ok(Value::Number(*n)),
 
+            Expr::BigInteger(s) => {
+                // 将大整数字符串转换为 Fraction (分母为1的分数)
+                use num_bigint::BigInt;
+                use num_rational::Ratio;
+
+                match s.parse::<BigInt>() {
+                    Ok(big_int) => Ok(Value::Fraction(Ratio::new(big_int, BigInt::from(1)))),
+                    Err(_) => Err(RuntimeError::InvalidOperation(format!(
+                        "Invalid big integer: {}",
+                        s
+                    ))),
+                }
+            }
+
             Expr::String(s) => Ok(Value::String(s.clone())),
 
             Expr::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -428,6 +442,21 @@ impl Evaluator {
             BinOp::Add => match (left, right) {
                 (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
                 (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{}{}", a, b))),
+                (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a + b)),
+                (Value::Number(a), Value::Fraction(b)) | (Value::Fraction(b), Value::Number(a)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    if a.fract() == 0.0 {
+                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a_frac + b))
+                    } else {
+                        // 浮点数和分数混合运算，转换为浮点数
+                        use num_traits::ToPrimitive;
+                        let b_float =
+                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
+                        Ok(Value::Number(a + b_float))
+                    }
+                }
                 _ => Err(RuntimeError::TypeError(format!(
                     "Cannot add {} and {}",
                     left.type_name(),
@@ -437,6 +466,33 @@ impl Evaluator {
 
             BinOp::Subtract => match (left, right) {
                 (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a - b)),
+                (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a - b)),
+                (Value::Number(a), Value::Fraction(b)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    if a.fract() == 0.0 {
+                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a_frac - b))
+                    } else {
+                        use num_traits::ToPrimitive;
+                        let b_float =
+                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
+                        Ok(Value::Number(a - b_float))
+                    }
+                }
+                (Value::Fraction(a), Value::Number(b)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    if b.fract() == 0.0 {
+                        let b_frac = Ratio::new(BigInt::from(*b as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a - b_frac))
+                    } else {
+                        use num_traits::ToPrimitive;
+                        let a_float =
+                            a.numer().to_f64().unwrap_or(0.0) / a.denom().to_f64().unwrap_or(1.0);
+                        Ok(Value::Number(a_float - b))
+                    }
+                }
                 _ => Err(RuntimeError::TypeError(format!(
                     "Cannot subtract {} from {}",
                     right.type_name(),
@@ -445,7 +501,44 @@ impl Evaluator {
             },
 
             BinOp::Multiply => match (left, right) {
-                (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a * b)),
+                (Value::Number(a), Value::Number(b)) => {
+                    // 如果两个数都是整数，且足够大，使用精确计算
+                    if a.fract() == 0.0 && b.fract() == 0.0 {
+                        // 检查是否超过 f64 的安全整数范围 (2^53)
+                        let max_safe = 9007199254740992.0; // 2^53
+                        if a.abs() > max_safe || b.abs() > max_safe {
+                            // 使用 Fraction (BigInt) 进行精确计算
+                            use num_bigint::BigInt;
+                            use num_rational::Ratio;
+
+                            // 将 f64 转换为字符串再转为 BigInt，避免精度损失
+                            let a_str = format!("{:.0}", a);
+                            let b_str = format!("{:.0}", b);
+
+                            if let (Ok(a_big), Ok(b_big)) =
+                                (a_str.parse::<BigInt>(), b_str.parse::<BigInt>())
+                            {
+                                let result_big = a_big * b_big;
+                                let frac = Ratio::new(result_big, BigInt::from(1));
+                                return Ok(Value::Fraction(frac));
+                            }
+                        }
+                    }
+                    Ok(Value::Number(a * b))
+                }
+                (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a * b)),
+                (Value::Number(a), Value::Fraction(b)) | (Value::Fraction(b), Value::Number(a)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    if a.fract() == 0.0 {
+                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a_frac * b))
+                    } else {
+                        Err(RuntimeError::TypeError(format!(
+                            "Cannot multiply non-integer Number with Fraction"
+                        )))
+                    }
+                }
                 _ => Err(RuntimeError::TypeError(format!(
                     "Cannot multiply {} and {}",
                     left.type_name(),
@@ -459,6 +552,45 @@ impl Evaluator {
                         Err(RuntimeError::DivisionByZero)
                     } else {
                         Ok(Value::Number(a / b))
+                    }
+                }
+                (Value::Fraction(a), Value::Fraction(b)) => {
+                    use num_traits::Zero;
+                    if b.is_zero() {
+                        Err(RuntimeError::DivisionByZero)
+                    } else {
+                        Ok(Value::Fraction(a / b))
+                    }
+                }
+                (Value::Number(a), Value::Fraction(b)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    use num_traits::Zero;
+                    if b.is_zero() {
+                        Err(RuntimeError::DivisionByZero)
+                    } else if a.fract() == 0.0 {
+                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a_frac / b))
+                    } else {
+                        use num_traits::ToPrimitive;
+                        let b_float =
+                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
+                        Ok(Value::Number(a / b_float))
+                    }
+                }
+                (Value::Fraction(a), Value::Number(b)) => {
+                    use num_bigint::BigInt;
+                    use num_rational::Ratio;
+                    if *b == 0.0 {
+                        Err(RuntimeError::DivisionByZero)
+                    } else if b.fract() == 0.0 {
+                        let b_frac = Ratio::new(BigInt::from(*b as i64), BigInt::from(1));
+                        Ok(Value::Fraction(a / b_frac))
+                    } else {
+                        use num_traits::ToPrimitive;
+                        let a_float =
+                            a.numer().to_f64().unwrap_or(0.0) / a.denom().to_f64().unwrap_or(1.0);
+                        Ok(Value::Number(a_float / b))
                     }
                 }
                 _ => Err(RuntimeError::TypeError(format!(

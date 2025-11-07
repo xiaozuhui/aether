@@ -249,6 +249,11 @@ impl Lexer {
 
         let num_str: String = self.input[start..self.position].iter().collect();
 
+        // 如果是整数且位数较多（超过15位，接近f64精度极限），作为大整数处理
+        if !has_dot && num_str.len() > 15 {
+            return Token::BigInteger(num_str);
+        }
+
         match num_str.parse::<f64>() {
             Ok(num) => Token::Number(num),
             Err(_) => Token::Illegal('0'), // Invalid number

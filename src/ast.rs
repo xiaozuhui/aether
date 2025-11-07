@@ -38,6 +38,7 @@ pub enum UnaryOp {
 pub enum Expr {
     // Literals
     Number(f64),
+    BigInteger(String), // 大整数字面量
     String(String),
     Boolean(bool),
     Null,
