@@ -509,6 +509,81 @@ fn bench_payroll(c: &mut Criterion) {
     group.finish();
 }
 
+/// 基准测试：尾递归优化
+fn bench_tail_recursion(c: &mut Criterion) {
+    let mut group = c.benchmark_group("tail_recursion");
+
+    group.bench_function("tail_recursive_factorial_10", |b| {
+        let mut engine = Aether::new();
+        let code = r#"
+            Func FACTORIAL(N, ACC) {
+                If (N <= 1) {
+                    Return ACC
+                } Else {
+                    Return FACTORIAL(N - 1, ACC * N)
+                }
+            }
+            FACTORIAL(10, 1)
+        "#;
+        b.iter(|| {
+            engine.eval(black_box(code)).unwrap();
+        });
+    });
+
+    group.bench_function("tail_recursive_sum_100", |b| {
+        let mut engine = Aether::new();
+        let code = r#"
+            Func SUM_TO_N(N, ACC) {
+                If (N <= 0) {
+                    Return ACC
+                } Else {
+                    Return SUM_TO_N(N - 1, ACC + N)
+                }
+            }
+            SUM_TO_N(100, 0)
+        "#;
+        b.iter(|| {
+            engine.eval(black_box(code)).unwrap();
+        });
+    });
+
+    group.bench_function("tail_recursive_fibonacci_20", |b| {
+        let mut engine = Aether::new();
+        let code = r#"
+            Func FIB(N, A, B) {
+                If (N == 0) {
+                    Return A
+                } Else {
+                    Return FIB(N - 1, B, A + B)
+                }
+            }
+            FIB(20, 0, 1)
+        "#;
+        b.iter(|| {
+            engine.eval(black_box(code)).unwrap();
+        });
+    });
+
+    group.bench_function("tail_recursive_deep_1000", |b| {
+        let mut engine = Aether::new();
+        let code = r#"
+            Func COUNTDOWN(N, ACC) {
+                If (N <= 0) {
+                    Return ACC
+                } Else {
+                    Return COUNTDOWN(N - 1, ACC + 1)
+                }
+            }
+            COUNTDOWN(1000, 0)
+        "#;
+        b.iter(|| {
+            engine.eval(black_box(code)).unwrap();
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_arithmetic,
@@ -522,7 +597,8 @@ criterion_group!(
     bench_program_sizes,
     bench_parsing,
     bench_fibonacci_sizes,
-    bench_payroll
+    bench_payroll,
+    bench_tail_recursion
 );
 
 criterion_main!(benches);
