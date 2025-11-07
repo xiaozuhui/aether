@@ -1,0 +1,18 @@
+language = "C"
+cpp_compat = true
+
+[export]
+include = ["AetherHandle", "AetherErrorCode"]
+
+[export.rename]
+"AetherHandle" = "AetherHandle"
+"AetherErrorCode" = "AetherErrorCode"
+
+[parse]
+parse_deps = false
+include = ["aether"]
+exclude = ["wasm_bindgen"]
+
+[fn]
+prefix = ""
+postfix = ""

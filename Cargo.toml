@@ -2,7 +2,7 @@
 name = "aether"
 version = "0.1.0"
 edition = "2021"
-authors = ["许子恒<xiaozuhui@outlook.com>"]
+authors = ["xiaozuhui<xiaozuhui@outlook.com>"]
 description = "一个简单小型的DSL语言解释器"
 license = "Apache-2.0"
 repository = "https://github.com/yourusername/aether"

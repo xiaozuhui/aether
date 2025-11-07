@@ -1,0 +1,36 @@
+{
+    "name": "@xiaozuhui/aether",
+    "version": "0.1.0",
+    "description": "TypeScript/JavaScript bindings for the Aether DSL",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "pkg"
+    ],
+    "scripts": {
+        "build": "npm run build:wasm && npm run build:ts",
+        "build:wasm": "wasm-pack build --target bundler --out-dir bindings/typescript/pkg ../.. -- --features wasm",
+        "build:ts": "tsc",
+        "test": "node dist/test.js",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "dsl",
+        "interpreter",
+        "scripting",
+        "wasm",
+        "typescript"
+    ],
+    "author": "xiaozuhui <xiaozuhui@outlook.com>",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/xiaozuhui/aether"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {}
+}

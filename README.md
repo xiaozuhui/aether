@@ -429,10 +429,11 @@ Aether is currently in **version 0.1.0**. Current features:
 - ✅ Advanced math library (linear regression, probability distributions, matrix operations)
 - ✅ Precise arithmetic (fraction-based calculations)
 - ✅ Precision arithmetic (fixed decimal place calculations)
-- 🔄 Go bindings (planned)
-- 🔄 TypeScript/WASM bindings (planned)
+- ✅ Go bindings via C-FFI
+- ✅ TypeScript/JavaScript bindings via WASM
+- 🔄 Python bindings (planned)
 
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md), and [docs/ERROR_REPORTING.md](docs/ERROR_REPORTING.md) for complete documentation and [CHANGELOG.md](CHANGELOG.md) for version history.
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRECISION_GUIDE.md), [docs/ERROR_REPORTING.md](docs/ERROR_REPORTING.md), and [QUICKSTART_BINDINGS.md](QUICKSTART_BINDINGS.md) for complete documentation. Check [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## 📖 Documentation
 
@@ -441,9 +442,10 @@ See [docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/PRECISION_GUIDE.md](docs/PRE
 - **[Error Reporting Guide](docs/ERROR_REPORTING.md)** - Error messages and naming conventions
 - **[IO Quick Start](docs/IO_QUICKSTART.md)** - File system and network operations with security
 - **[IO Permissions Guide](docs/IO_PERMISSIONS.md)** - Understanding CLI vs library security models
+- **[Language Bindings Quick Start](QUICKSTART_BINDINGS.md)** - Using Aether from Go, TypeScript/JavaScript
+- **[Language Bindings Overview](bindings/README.md)** - Detailed guide for all language bindings
 - **[Changelog](CHANGELOG.md)** - Version history and roadmap
 - **[Development Guide](DEVELOPMENT.md)** - Implementation and contribution guide
-- **[Architecture](cross-language-architecture.md)** - Cross-language design
 
 ## 🤝 Contributing
 

@@ -44,7 +44,14 @@ wasm-pack.log
 
 # C FFI 生成的文件
 *.h.bak
-/bindings/
+
+# Node.js (TypeScript bindings)
+bindings/typescript/node_modules/
+bindings/typescript/dist/
+bindings/typescript/pkg/
+
+# Go bindings
+bindings/go/go.sum
 
 # 临时文件
 *.tmp

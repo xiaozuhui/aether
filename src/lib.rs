@@ -59,6 +59,12 @@ pub mod parser;
 pub mod token;
 pub mod value;
 
+// FFI and language bindings
+pub mod ffi;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 // Re-export commonly used types
 pub use ast::{Expr, Program, Stmt};
 pub use builtins::{BuiltInRegistry, IOPermissions};
