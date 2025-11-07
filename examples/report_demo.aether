@@ -1,0 +1,201 @@
+# 报表演示示例
+
+# 示例 1: Excel 基础操作
+PRINT("=== Excel 基础操作 ===")
+
+# 创建工作簿
+workbook = EXCEL_CREATE()
+
+# 写入表头
+headers = ["姓名", "部门", "销售额", "完成率"]
+EXCEL_WRITE_ROW(workbook, "员工业绩", 0, headers)
+
+# 写入员工数据
+employees = [
+    ["张三", "销售部", 120000, 0.95],
+    ["李四", "市场部", 98000, 0.88],
+    ["王五", "销售部", 145000, 1.12],
+    ["赵六", "技术部", 85000, 0.82],
+    ["孙七", "市场部", 112000, 0.92]
+]
+
+row = 1
+FOR emp IN employees {
+    FOR col IN RANGE(0, LEN(emp)) {
+        EXCEL_WRITE_CELL(workbook, "员工业绩", row, col, emp[col])
+    }
+    row = row + 1
+}
+
+# 格式化表头
+header_format = {
+    "bold": TRUE,
+    "bg_color": "#4472C4",
+    "font_color": "#FFFFFF",
+    "align": "center"
+}
+FOR col IN RANGE(0, LEN(headers)) {
+    EXCEL_SET_CELL_FORMAT(workbook, "员工业绩", 0, col, header_format)
+}
+
+# 设置列宽
+EXCEL_SET_COLUMN_WIDTH(workbook, "员工业绩", 0, 12)  # 姓名
+EXCEL_SET_COLUMN_WIDTH(workbook, "员工业绩", 1, 12)  # 部门
+EXCEL_SET_COLUMN_WIDTH(workbook, "员工业绩", 2, 15)  # 销售额
+EXCEL_SET_COLUMN_WIDTH(workbook, "员工业绩", 3, 12)  # 完成率
+
+# 添加总计行
+total_row = row
+EXCEL_WRITE_CELL(workbook, "员工业绩", total_row, 0, "总计")
+EXCEL_ADD_FORMULA(workbook, "员工业绩", total_row, 2, "=SUM(C2:C6)")
+
+# 保存文件
+EXCEL_SAVE(workbook, "employee_performance.xlsx")
+PRINT("✓ Excel 文件已生成: employee_performance.xlsx")
+
+# 示例 2: 数据格式化
+PRINT("\n=== 数据格式化 ===")
+
+amount = 1234567.89
+PRINT("原始数字:", amount)
+PRINT("格式化数字:", FORMAT_NUMBER(amount, 2))
+PRINT("货币格式:", FORMAT_CURRENCY(amount, "¥", 2))
+PRINT("美元格式:", FORMAT_CURRENCY(amount, "$", 2))
+
+rate = 0.1234
+PRINT("原始比率:", rate)
+PRINT("百分比格式:", FORMAT_PERCENT(rate, 2))
+PRINT("百分比(1位小数):", FORMAT_PERCENT(rate, 1))
+
+# 示例 3: 数据分组和聚合（模拟）
+PRINT("\n=== 数据处理演示 ===")
+
+# 销售数据
+sales_data = [
+    {"region": "华东", "product": "A", "amount": 100000, "quantity": 50},
+    {"region": "华东", "product": "B", "amount": 150000, "quantity": 75},
+    {"region": "华北", "product": "A", "amount": 120000, "quantity": 60},
+    {"region": "华北", "product": "B", "amount": 130000, "quantity": 65},
+    {"region": "华南", "product": "A", "amount": 90000, "quantity": 45},
+    {"region": "华南", "product": "B", "amount": 110000, "quantity": 55}
+]
+
+# 手动计算各区域总销售额
+regions = {}
+FOR sale IN sales_data {
+    region = sale["region"]
+    IF NOT DICT_HAS(regions, region) {
+        regions[region] = 0
+    }
+    regions[region] = regions[region] + sale["amount"]
+}
+
+PRINT("各区域销售额:")
+FOR region IN DICT_KEYS(regions) {
+    total = regions[region]
+    PRINT("  ", region, ":", FORMAT_CURRENCY(total, "¥", 0))
+}
+
+# 示例 4: 创建销售报表
+PRINT("\n=== 生成销售报表 ===")
+
+report_wb = EXCEL_CREATE()
+
+# 写入数据到 Excel
+EXCEL_WRITE_ROW(report_wb, "销售明细", 0, ["区域", "产品", "销售额", "数量"])
+
+row = 1
+FOR sale IN sales_data {
+    EXCEL_WRITE_CELL(report_wb, "销售明细", row, 0, sale["region"])
+    EXCEL_WRITE_CELL(report_wb, "销售明细", row, 1, sale["product"])
+    EXCEL_WRITE_CELL(report_wb, "销售明细", row, 2, sale["amount"])
+    EXCEL_WRITE_CELL(report_wb, "销售明细", row, 3, sale["quantity"])
+    row = row + 1
+}
+
+# 格式化报表
+FOR col IN RANGE(0, 4) {
+    EXCEL_SET_CELL_FORMAT(report_wb, "销售明细", 0, col, header_format)
+    EXCEL_SET_COLUMN_WIDTH(report_wb, "销售明细", col, 15)
+}
+
+# 添加汇总工作表
+EXCEL_WRITE_ROW(report_wb, "区域汇总", 0, ["区域", "总销售额"])
+row = 1
+FOR region IN DICT_KEYS(regions) {
+    EXCEL_WRITE_CELL(report_wb, "区域汇总", row, 0, region)
+    EXCEL_WRITE_CELL(report_wb, "区域汇总", row, 1, regions[region])
+    row = row + 1
+}
+
+# 格式化汇总表
+EXCEL_SET_CELL_FORMAT(report_wb, "区域汇总", 0, 0, header_format)
+EXCEL_SET_CELL_FORMAT(report_wb, "区域汇总", 0, 1, header_format)
+EXCEL_SET_COLUMN_WIDTH(report_wb, "区域汇总", 0, 12)
+EXCEL_SET_COLUMN_WIDTH(report_wb, "区域汇总", 1, 18)
+
+EXCEL_SAVE(report_wb, "sales_report.xlsx")
+PRINT("✓ 销售报表已生成: sales_report.xlsx")
+
+# 示例 5: Word 文档生成（模拟）
+PRINT("\n=== Word 文档生成（计划） ===")
+PRINT("以下功能将在实现后可用:")
+PRINT("  • 创建 Word 文档")
+PRINT("  • 添加标题和段落")
+PRINT("  • 插入表格和图片")
+PRINT("  • 使用模板生成文档")
+PRINT("  • 批量生成合同")
+
+# 示例 6: 数据透视表（模拟）
+PRINT("\n=== 数据透视表（计划） ===")
+PRINT("功能规划:")
+PRINT("  • 按多个维度透视数据")
+PRINT("  • 支持 SUM, AVG, COUNT, MIN, MAX 聚合")
+PRINT("  • 生成交叉表")
+PRINT("  • 多层级分组")
+
+# 当前简化版透视 - 区域×产品的销售额
+PRINT("\n手动构建的透视表（区域×产品）:")
+pivot = {}
+FOR sale IN sales_data {
+    region = sale["region"]
+    product = sale["product"]
+    
+    IF NOT DICT_HAS(pivot, region) {
+        pivot[region] = {}
+    }
+    
+    pivot[region][product] = sale["amount"]
+}
+
+# 打印透视表
+PRINT("区域    | 产品A   | 产品B")
+PRINT("--------|---------|--------")
+FOR region IN DICT_KEYS(pivot) {
+    a_amount = pivot[region]["A"]
+    b_amount = pivot[region]["B"]
+    PRINT(region, "  |", FORMAT_NUMBER(a_amount, 0), "|", FORMAT_NUMBER(b_amount, 0))
+}
+
+# 示例 7: 模板渲染（模拟）
+PRINT("\n=== 模板渲染示例 ===")
+
+# 简化的模板替换
+template = "尊敬的 {{name}},\n您的订单 {{order_id}} 已确认，总金额为 {{amount}}。\n感谢您的购买！"
+
+# 手动替换
+name = "张三"
+order_id = "20240101001"
+amount = FORMAT_CURRENCY(5678.90, "¥", 2)
+
+message = template
+message = STR_REPLACE(message, "{{name}}", name)
+message = STR_REPLACE(message, "{{order_id}}", order_id)
+message = STR_REPLACE(message, "{{amount}}", amount)
+
+PRINT("\n生成的消息:")
+PRINT(message)
+
+PRINT("\n=== 报表功能演示完成 ===")
+PRINT("\n注意: 部分功能（Excel、Word、PDF）需要添加相应的 Rust 依赖才能完全实现。")
+PRINT("当前已实现的格式化函数可以正常使用。")

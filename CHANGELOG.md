@@ -8,6 +8,37 @@
 
 ### 新增功能 ✨
 
+#### 报表生成模块 📊 (NEW)
+
+添加了完整的报表生成和文档处理功能模块：
+
+**已实现功能 (3个)**
+
+- `FORMAT_NUMBER(number, decimals, use_separator)` - 数字格式化（支持千分位分隔符）
+- `FORMAT_CURRENCY(amount, symbol, decimals)` - 货币格式化
+- `FORMAT_PERCENT(number, decimals)` - 百分比格式化
+
+**规划功能 (67个接口已定义)**
+
+- Excel 操作：读取、写入、格式化、图表（45个函数）
+- Word 文档：创建、编辑、模板（9个函数）
+- PDF 生成：创建、添加内容（5个函数）
+- 数据处理：透视表、分组、聚合（8个函数）
+
+**文档**
+
+- `docs/REPORT_GUIDE.md` - 完整用户指南（510行）
+- `docs/REPORT_IMPLEMENTATION_PLAN.md` - 技术实现计划（360行）
+- `docs/REPORT_QUICKSTART.md` - 快速开始指南（300行）
+- `docs/REPORT_SUMMARY.md` - 功能总结（350行）
+- `examples/report_demo.aether` - 演示示例（180行）
+
+**下一步**
+
+- 添加 Excel 读写功能（需要 calamine 和 rust_xlsxwriter）
+- 实现 Word 文档生成（需要 docx-rs）
+- 添加日期格式化（需要 chrono）
+
 #### IO功能与安全控制 🔒
 
 新增文件系统和网络IO功能，**默认禁用以确保安全性**：

@@ -40,7 +40,7 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - 📝 **简洁语法**: 易学易读，UPPER_SNAKE_CASE 命名
 - 🔒 **安全优先**: 库模式默认禁用 IO，CLI 模式自动启用
 
-### 标准库 (190+ 函数)
+### 标准库 (200+ 函数)
 
 - **基础**: I/O、类型转换、字符串/数组/字典操作
 - **文件系统**: READ_FILE, WRITE_FILE, LIST_DIR, CREATE_DIR 等
@@ -48,6 +48,8 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - **数学**: 线性代数、统计、概率分布、矩阵运算
 - **精确计算**: 分数运算、固定精度金融计算
 - **薪资计算**: 工资、加班费、个税、社保（78个函数）
+- **报表生成**: Excel创建/写入/保存、数据格式化（8个函数）
+- **报表生成**: Excel/Word/PDF 操作、数据格式化、透视表（🆕）
 
 ---
 
@@ -269,7 +271,32 @@ Set RESULT HttpPost(
 Println(RESULT)
 ```
 
-### 8. 错误处理
+### 8. 报表生成 (🆕)
+
+```javascript
+// Excel 操作
+Set WORKBOOK EXCEL_CREATE()
+EXCEL_WRITE_ROW(WORKBOOK, "Sheet1", 0, ["姓名", "销售额", "完成率"])
+EXCEL_WRITE_ROW(WORKBOOK, "Sheet1", 1, ["张三", 120000, 0.95])
+EXCEL_SAVE(WORKBOOK, "report.xlsx")
+
+// 数据格式化
+Set AMOUNT 1234567.89
+Println(FORMAT_NUMBER(AMOUNT, 2))        // "1,234,567.89"
+Println(FORMAT_CURRENCY(AMOUNT, "¥", 2)) // "¥1,234,567.89"
+Println(FORMAT_PERCENT(0.1234, 2))       // "12.34%"
+
+// Word 文档
+Set DOC WORD_CREATE()
+WORD_ADD_HEADING(DOC, "销售报告", 1)
+WORD_ADD_PARAGRAPH(DOC, "2024年第一季度总结", "Normal")
+WORD_SAVE(DOC, "report.docx")
+
+// 数据透视（规划中）
+Set PIVOT PIVOT_TABLE(DATA, ["region"], ["product"], ["amount"], "sum")
+```
+
+### 9. 错误处理
 
 ```javascript
 // 错误示例
@@ -539,6 +566,26 @@ LIST_DIR, DELETE_DIR, FILE_SIZE
 
 ```javascript
 HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
+```
+
+### 报表生成 (🆕)
+
+```javascript
+// Excel
+EXCEL_CREATE, EXCEL_READ_SHEET, EXCEL_WRITE_CELL
+EXCEL_WRITE_ROW, EXCEL_WRITE_TABLE, EXCEL_SAVE
+EXCEL_SET_CELL_FORMAT, EXCEL_ADD_CHART
+
+// Word
+WORD_CREATE, WORD_ADD_PARAGRAPH, WORD_ADD_HEADING
+WORD_ADD_TABLE, WORD_SAVE, WORD_LOAD_TEMPLATE
+
+// 数据格式化
+FORMAT_NUMBER, FORMAT_CURRENCY, FORMAT_PERCENT
+FORMAT_DATE
+
+// 数据处理（规划中）
+PIVOT_TABLE, GROUP_BY, AGGREGATE
 ```
 
 ### 类型转换

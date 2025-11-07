@@ -220,6 +220,7 @@ mod tests {
         assert!(result.is_null());
         assert!(!error.is_null());
 
+        #[allow(unused_unsafe)]
         unsafe {
             aether_free_string(error);
         }
