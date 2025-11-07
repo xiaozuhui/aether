@@ -464,6 +464,51 @@ cargo test
 
 # Run benchmarks
 cargo bench
+
+# Quick benchmark (faster, reduced sampling)
+./scripts/bench.sh quick
+
+# Run specific benchmark category
+./scripts/bench.sh arithmetic
+```
+
+### Performance Benchmarks
+
+Aether includes comprehensive performance benchmarks using Criterion.rs:
+
+```bash
+# Run all benchmarks
+cargo bench
+
+# Run quick benchmarks (10 samples, ~2-3 minutes)
+cargo bench -- --sample-size 10
+
+# View results in browser
+open target/criterion/report/index.html
+```
+
+**Benchmark Coverage:**
+
+- Arithmetic operations (simple, complex, nested)
+- Variable operations (assignment, reading, multiple variables)
+- Function calls (built-in, user-defined, recursive)
+- Control flow (if/else, while, for loops)
+- Data structures (arrays, dictionaries, strings)
+- Parsing performance (lexer, parser, full execution)
+- Different program sizes (small, medium, large)
+
+See [`benches/README.md`](benches/README.md) and [`benches/QUICKSTART.md`](benches/QUICKSTART.md) for detailed documentation.
+
+**Performance Comparison Workflow:**
+
+```bash
+# Save baseline before optimization
+cargo bench -- --save-baseline before
+
+# Make your changes...
+
+# Compare with baseline
+cargo bench -- --baseline before
 ```
 
 ## 📄 License

@@ -23,7 +23,11 @@ num-bigint = "0.4"
 ureq = "2.10"
 
 [dev-dependencies]
-criterion = "0.7.0"
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[[bench]]
+name = "aether_benchmarks"
+harness = false
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
