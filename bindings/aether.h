@@ -38,15 +38,13 @@ struct AetherHandle *aether_new_with_permissions(void);
  * - handle: Aether engine handle
  * - code: C string containing Aether code
  * - result: Output parameter for result (must be freed with aether_free_string)
- * - error: Output parameter for error message (must be freed with
- * aether_free_string)
+ * - error: Output parameter for error message (must be freed with aether_free_string)
  *
  * # Returns
  * - 0 (Success) if evaluation succeeded
  * - Non-zero error code if evaluation failed
  */
-int aether_eval(struct AetherHandle *handle, const char *code, char **result,
-                char **error);
+int aether_eval(struct AetherHandle *handle, const char *code, char **result, char **error);
 
 /**
  * Get the version string of Aether
@@ -65,8 +63,10 @@ void aether_free(struct AetherHandle *handle);
  */
 void aether_free_string(char *s);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+extern void log(const str *s);
 
-#endif /* AETHER_H */
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
+
+#endif  /* AETHER_H */

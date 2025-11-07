@@ -1,15 +1,64 @@
 // src/environment.rs
 //! Environment for variable storage and scoping
+//! 优化版本: 减少Rc/RefCell开销, 使用索引代替指针
 
 use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// 环境池,用于复用环境对象
+pub struct EnvironmentPool {
+    /// 可复用的环境对象池
+    pool: Vec<Environment>,
+    /// 最大池大小
+    max_size: usize,
+}
+
+impl EnvironmentPool {
+    /// 创建新的环境池
+    pub fn new() -> Self {
+        Self::with_capacity(50)
+    }
+
+    /// 创建指定容量的环境池
+    pub fn with_capacity(max_size: usize) -> Self {
+        EnvironmentPool {
+            pool: Vec::with_capacity(max_size.min(50)),
+            max_size,
+        }
+    }
+
+    /// 从池中获取或创建新环境
+    pub fn acquire(&mut self) -> Environment {
+        self.pool.pop().unwrap_or_else(Environment::new)
+    }
+
+    /// 将环境归还到池中
+    pub fn release(&mut self, mut env: Environment) {
+        if self.pool.len() < self.max_size {
+            env.clear();
+            env.parent = None;
+            self.pool.push(env);
+        }
+    }
+
+    /// 清空池
+    pub fn clear(&mut self) {
+        self.pool.clear();
+    }
+}
+
+impl Default for EnvironmentPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Environment for storing variables
 #[derive(Debug, Clone)]
 pub struct Environment {
-    /// Variables in this scope
+    /// Variables in this scope (使用预分配容量优化)
     store: HashMap<String, Value>,
 
     /// Parent environment (for nested scopes)
@@ -17,10 +66,10 @@ pub struct Environment {
 }
 
 impl Environment {
-    /// Create a new global environment
+    /// Create a new global environment (with pre-allocated capacity)
     pub fn new() -> Self {
         Environment {
-            store: HashMap::new(),
+            store: HashMap::with_capacity(16), // 预分配容量减少rehash
             parent: None,
         }
     }
@@ -28,7 +77,7 @@ impl Environment {
     /// Create a new environment with a parent
     pub fn with_parent(parent: Rc<RefCell<Environment>>) -> Self {
         Environment {
-            store: HashMap::new(),
+            store: HashMap::with_capacity(8), // 子环境通常变量较少
             parent: Some(parent),
         }
     }
@@ -38,30 +87,27 @@ impl Environment {
         self.store.insert(name, value);
     }
 
-    /// Get a variable from this scope or parent scopes
+    /// Get a variable from this scope or parent scopes (优化路径)
     pub fn get(&self, name: &str) -> Option<Value> {
+        // 快速路径: 直接在当前作用域查找
         if let Some(value) = self.store.get(name) {
             return Some(value.clone());
         }
 
-        if let Some(parent) = &self.parent {
-            return parent.borrow().get(name);
-        }
+        // 慢速路径: 递归查找父作用域
+        self.get_from_parent(name)
+    }
 
-        None
+    /// 从父作用域获取变量 (分离热路径和冷路径)
+    #[inline(never)]
+    fn get_from_parent(&self, name: &str) -> Option<Value> {
+        self.parent.as_ref()?.borrow().get(name)
     }
 
     /// Check if a variable exists in this scope or parent scopes
     pub fn has(&self, name: &str) -> bool {
-        if self.store.contains_key(name) {
-            return true;
-        }
-
-        if let Some(parent) = &self.parent {
-            return parent.borrow().has(name);
-        }
-
-        false
+        self.store.contains_key(name)
+            || self.parent.as_ref().map_or(false, |p| p.borrow().has(name))
     }
 
     /// Update a variable in the scope where it was defined

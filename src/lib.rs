@@ -52,9 +52,11 @@
 
 pub mod ast;
 pub mod builtins;
+pub mod cache;
 pub mod environment;
 pub mod evaluator;
 pub mod lexer;
+pub mod optimizer;
 pub mod parser;
 pub mod token;
 pub mod value;
@@ -68,9 +70,11 @@ pub mod wasm;
 // Re-export commonly used types
 pub use ast::{Expr, Program, Stmt};
 pub use builtins::{BuiltInRegistry, IOPermissions};
+pub use cache::{ASTCache, CacheStats};
 pub use environment::Environment;
 pub use evaluator::{EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
+pub use optimizer::Optimizer;
 pub use parser::{ParseError, Parser};
 pub use token::Token;
 pub use value::Value;
@@ -78,6 +82,8 @@ pub use value::Value;
 /// Main Aether engine struct
 pub struct Aether {
     evaluator: Evaluator,
+    cache: ASTCache,
+    optimizer: Optimizer,
 }
 
 impl Aether {
@@ -95,6 +101,8 @@ impl Aether {
     pub fn with_permissions(permissions: IOPermissions) -> Self {
         Aether {
             evaluator: Evaluator::with_permissions(permissions),
+            cache: ASTCache::new(),
+            optimizer: Optimizer::new(),
         }
     }
 
@@ -105,16 +113,50 @@ impl Aether {
 
     /// Evaluate Aether code and return the result
     pub fn eval(&mut self, code: &str) -> Result<Value, String> {
-        // Parse the code
-        let mut parser = Parser::new(code);
-        let program = parser
-            .parse_program()
-            .map_err(|e| format!("Parse error: {}", e))?;
+        // 尝试从缓存获取AST
+        let program = if let Some(cached_program) = self.cache.get(code) {
+            cached_program
+        } else {
+            // Parse the code
+            let mut parser = Parser::new(code);
+            let program = parser
+                .parse_program()
+                .map_err(|e| format!("Parse error: {}", e))?;
+
+            // 优化AST
+            let optimized = self.optimizer.optimize_program(&program);
+
+            // 将优化后的结果存入缓存
+            self.cache.insert(code, optimized.clone());
+            optimized
+        };
 
         // Evaluate the program
         self.evaluator
             .eval_program(&program)
             .map_err(|e| format!("Runtime error: {}", e))
+    }
+
+    /// 获取缓存统计信息
+    pub fn cache_stats(&self) -> CacheStats {
+        self.cache.stats()
+    }
+
+    /// 清空缓存
+    pub fn clear_cache(&mut self) {
+        self.cache.clear();
+    }
+
+    /// 设置优化选项
+    pub fn set_optimization(
+        &mut self,
+        constant_folding: bool,
+        dead_code: bool,
+        tail_recursion: bool,
+    ) {
+        self.optimizer.constant_folding = constant_folding;
+        self.optimizer.dead_code_elimination = dead_code;
+        self.optimizer.tail_recursion = tail_recursion;
     }
 }
 
@@ -131,5 +173,24 @@ mod tests {
     #[test]
     fn test_aether_creation() {
         let _engine = Aether::new();
+    }
+
+    #[test]
+    fn test_cache_usage() {
+        let mut engine = Aether::new();
+        let code = "Set X 10\nX";
+
+        // 第一次执行会解析
+        let result1 = engine.eval(code).unwrap();
+        assert_eq!(result1, Value::Number(10.0));
+
+        // 第二次执行应该使用缓存
+        let result2 = engine.eval(code).unwrap();
+        assert_eq!(result2, Value::Number(10.0));
+
+        // 检查缓存统计
+        let stats = engine.cache_stats();
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.misses, 1);
     }
 }
