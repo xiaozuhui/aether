@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub mod array;
 pub mod dict;
 pub mod filesystem;
+pub mod help;
 pub mod io;
 pub mod math;
 pub mod network;
@@ -19,6 +20,21 @@ pub mod types;
 
 /// Type alias for built-in function implementations
 pub type BuiltInFn = fn(&[Value]) -> Result<Value, RuntimeError>;
+
+/// 函数文档信息
+#[derive(Debug, Clone)]
+pub struct FunctionDoc {
+    /// 函数名称
+    pub name: String,
+    /// 函数描述
+    pub description: String,
+    /// 参数列表（参数名和描述）
+    pub params: Vec<(String, String)>,
+    /// 返回值描述
+    pub returns: String,
+    /// 使用示例
+    pub example: Option<String>,
+}
 
 /// IO 权限配置
 #[derive(Debug, Clone)]
@@ -56,6 +72,7 @@ impl IOPermissions {
 /// Registry of all built-in functions
 pub struct BuiltInRegistry {
     functions: HashMap<String, (BuiltInFn, usize)>, // (function, arity)
+    docs: HashMap<String, FunctionDoc>,             // 函数文档
     permissions: IOPermissions,
 }
 
@@ -69,8 +86,12 @@ impl BuiltInRegistry {
     pub fn with_permissions(permissions: IOPermissions) -> Self {
         let mut registry = Self {
             functions: HashMap::new(),
+            docs: HashMap::new(),
             permissions: permissions.clone(),
         };
+
+        // Help function
+        registry.register("HELP", help::help, 0); // Variadic: 0-1 args
 
         // IO functions
         registry.register("PRINT", io::print, 1);
@@ -539,6 +560,12 @@ impl BuiltInRegistry {
         self.functions.insert(name.to_string(), (func, arity));
     }
 
+    /// 注册带文档的函数
+    fn register_with_doc(&mut self, name: &str, func: BuiltInFn, arity: usize, doc: FunctionDoc) {
+        self.functions.insert(name.to_string(), (func, arity));
+        self.docs.insert(name.to_string(), doc);
+    }
+
     /// Get a built-in function by name
     pub fn get(&self, name: &str) -> Option<(BuiltInFn, usize)> {
         self.functions.get(name).copied()
@@ -552,6 +579,16 @@ impl BuiltInRegistry {
     /// Get all function names
     pub fn names(&self) -> Vec<String> {
         self.functions.keys().cloned().collect()
+    }
+
+    /// 获取函数文档
+    pub fn get_doc(&self, name: &str) -> Option<&FunctionDoc> {
+        self.docs.get(name)
+    }
+
+    /// 获取所有文档
+    pub fn all_docs(&self) -> &HashMap<String, FunctionDoc> {
+        &self.docs
     }
 }
 

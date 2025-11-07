@@ -1,0 +1,29 @@
+// 演示如何在 Aether 中使用 HELP 函数
+
+// 场景：用户想了解如何进行精确计算
+
+// 1. 先看看有哪些函数可用
+PRINTLN("想知道有哪些函数？使用 HELP()：\n")
+PRINTLN(HELP())
+
+// 2. 发现有个 TO_FRACTION，看看怎么用
+PRINTLN("\n\n想知道 TO_FRACTION 怎么用？")
+PRINTLN(HELP("TO_FRACTION"))
+
+// 3. 试试看
+PRINTLN("\n\n实际使用：")
+f1 = TO_FRACTION(0.1)
+PRINTLN("TO_FRACTION(0.1) = " + f1)
+
+f2 = TO_FRACTION(0.2)
+PRINTLN("TO_FRACTION(0.2) = " + f2)
+
+// 4. 看看如何相加
+PRINTLN("\n")
+PRINTLN(HELP("FRAC_ADD"))
+
+// 5. 实际计算
+PRINTLN("\n\n实际计算：")
+result = FRAC_ADD(0.1, 0.2)
+PRINTLN("FRAC_ADD(0.1, 0.2) = " + result)
+PRINTLN("（避免了浮点数精度问题！）")
