@@ -84,7 +84,7 @@ sales_data = [
 regions = {}
 FOR sale IN sales_data {
     region = sale["region"]
-    IF NOT DICT_HAS(regions, region) {
+    IF Not DICT_HAS(regions, region) {
         regions[region] = 0
     }
     regions[region] = regions[region] + sale["amount"]
@@ -161,7 +161,7 @@ FOR sale IN sales_data {
     region = sale["region"]
     product = sale["product"]
     
-    IF NOT DICT_HAS(pivot, region) {
+    IF Not DICT_HAS(pivot, region) {
         pivot[region] = {}
     }
     

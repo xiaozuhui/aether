@@ -1,0 +1,441 @@
+// ============================================
+// Text Template Engine - 文本模板引擎
+// ============================================
+// 提供模板渲染功能，用于代码生成、报告等场景
+// 支持：
+// - 变量替换: {{variable}}
+// - 条件渲染: {{if condition}}...{{endif}}
+// - 循环: {{for item in list}}...{{endfor}}
+// - 嵌套模板
+// - 过滤器: {{variable|upper}}
+// ============================================
+
+// ============================================
+// 模板渲染主函数
+// ============================================
+
+// 渲染模板
+// TEMPLATE: 模板字符串
+// CONTEXT: 变量上下文字典
+Func TEMPLATE_RENDER(TEMPLATE, CONTEXT) {
+    Set RESULT TEMPLATE
+    
+    // 1. 处理条件语句
+    Set RESULT TEMPLATE_PROCESS_IF(RESULT, CONTEXT)
+    
+    // 2. 处理循环
+    Set RESULT TEMPLATE_PROCESS_FOR(RESULT, CONTEXT)
+    
+    // 3. 处理变量替换（带过滤器）
+    Set RESULT TEMPLATE_PROCESS_VARS(RESULT, CONTEXT)
+    
+    Return RESULT
+}
+
+// ============================================
+// 变量替换 {{variable}} 或 {{variable|filter}}
+// ============================================
+
+Func TEMPLATE_PROCESS_VARS(TEXT, CONTEXT) {
+    Set RESULT TEXT
+    Set PATTERN "{{"
+    
+    While (CONTAINS(RESULT, PATTERN)) {
+        Set START_POS INDEXOF(RESULT, PATTERN)
+        Set END_PATTERN "}}"
+        Set END_POS INDEXOF(RESULT, END_PATTERN)
+        
+        If (END_POS < 0) {
+            Break
+        }
+        
+        // 提取变量表达式
+        Set VAR_START (START_POS + 2)
+        Set VAR_EXPR STRSLICE(RESULT, VAR_START, END_POS)
+        Set VAR_EXPR TRIM(VAR_EXPR)
+        
+        // 检查是否有过滤器
+        Set VALUE Null
+        If (CONTAINS(VAR_EXPR, "|")) {
+            Set PARTS SPLIT(VAR_EXPR, "|")
+            Set VAR_NAME TRIM(PARTS[0])
+            Set FILTER_NAME TRIM(PARTS[1])
+            
+            // 获取变量值
+            If (HAS(CONTEXT, VAR_NAME)) {
+                Set VALUE CONTEXT[VAR_NAME]
+                // 应用过滤器
+                Set VALUE TEMPLATE_APPLY_FILTER(VALUE, FILTER_NAME)
+            } Else {
+                Set VALUE ""
+            }
+        } Else {
+            // 无过滤器，直接获取值
+            If (HAS(CONTEXT, VAR_EXPR)) {
+                Set VALUE CONTEXT[VAR_EXPR]
+            } Else {
+                Set VALUE ""
+            }
+        }
+        
+        // 替换
+        Set VALUE_STR TO_STRING(VALUE)
+        Set BEFORE STRSLICE(RESULT, 0, START_POS)
+        Set AFTER STRSLICE(RESULT, (END_POS + 2), LEN(RESULT))
+        Set RESULT (BEFORE + VALUE_STR + AFTER)
+    }
+    
+    Return RESULT
+}
+
+// ============================================
+// 过滤器
+// ============================================
+
+Func TEMPLATE_APPLY_FILTER(VALUE, FILTER) {
+    Set VALUE_STR TO_STRING(VALUE)
+    
+    If (FILTER == "upper") {
+        Return UPPER(VALUE_STR)
+    } Elif (FILTER == "lower") {
+        Return LOWER(VALUE_STR)
+    } Elif (FILTER == "title") {
+        Return TITLE_CASE(VALUE_STR)
+    } Elif (FILTER == "trim") {
+        Return TRIM(VALUE_STR)
+    } Elif (FILTER == "length") {
+        Return LEN(VALUE_STR)
+    } Elif (FILTER == "reverse") {
+        Return REVERSE_STRING(VALUE_STR)
+    } Elif (FILTER == "json") {
+        Return JSON_STRINGIFY(VALUE)
+    } Elif (FILTER == "escape") {
+        Return TEMPLATE_ESCAPE_HTML(VALUE_STR)
+    }
+    
+    Return VALUE
+}
+
+// 标题格式化（首字母大写）
+Func TITLE_CASE(STR) {
+    If (LEN(STR) == 0) {
+        Return STR
+    }
+    Set FIRST UPPER(STRSLICE(STR, 0, 1))
+    Set REST STRSLICE(STR, 1, LEN(STR))
+    Return (FIRST + REST)
+}
+
+// 反转字符串
+Func REVERSE_STRING(STR) {
+    Set RESULT ""
+    Set I (LEN(STR) - 1)
+    While (I >= 0) {
+        Set RESULT (RESULT + CHARAT(STR, I))
+        Set I (I - 1)
+    }
+    Return RESULT
+}
+
+// HTML 转义
+Func TEMPLATE_ESCAPE_HTML(STR) {
+    Set RESULT STR
+    Set RESULT REPLACE(RESULT, "&", "&amp;")
+    Set RESULT REPLACE(RESULT, "<", "&lt;")
+    Set RESULT REPLACE(RESULT, ">", "&gt;")
+    Set RESULT REPLACE(RESULT, "\"", "&quot;")
+    Set RESULT REPLACE(RESULT, "'", "&#39;")
+    Return RESULT
+}
+
+// ============================================
+// 条件语句 {{if condition}}...{{endif}}
+// ============================================
+
+Func TEMPLATE_PROCESS_IF(TEXT, CONTEXT) {
+    Set RESULT TEXT
+    Set IF_START "{{if "
+    Set IF_END "{{endif}}"
+    Set ELSE_TAG "{{else}}"
+    
+    While (CONTAINS(RESULT, IF_START)) {
+        Set START_POS INDEXOF(RESULT, IF_START)
+        
+        // 找到 if 标签的结束
+        Set TAG_END_POS INDEXOF(STRSLICE(RESULT, START_POS, LEN(RESULT)), "}}")
+        If (TAG_END_POS < 0) {
+            Break
+        }
+        Set TAG_END_POS (TAG_END_POS + START_POS)
+        
+        // 提取条件
+        Set CONDITION_START (START_POS + LEN(IF_START))
+        Set CONDITION STRSLICE(RESULT, CONDITION_START, TAG_END_POS)
+        Set CONDITION TRIM(CONDITION)
+        
+        // 找到对应的 endif
+        Set ENDIF_POS INDEXOF(STRSLICE(RESULT, TAG_END_POS, LEN(RESULT)), IF_END)
+        If (ENDIF_POS < 0) {
+            Break
+        }
+        Set ENDIF_POS (ENDIF_POS + TAG_END_POS)
+        
+        // 提取内容块
+        Set CONTENT_START (TAG_END_POS + 2)
+        Set CONTENT STRSLICE(RESULT, CONTENT_START, ENDIF_POS)
+        
+        // 检查是否有 else
+        Set TRUE_BLOCK CONTENT
+        Set FALSE_BLOCK ""
+        
+        If (CONTAINS(CONTENT, ELSE_TAG)) {
+            Set ELSE_POS INDEXOF(CONTENT, ELSE_TAG)
+            Set TRUE_BLOCK STRSLICE(CONTENT, 0, ELSE_POS)
+            Set FALSE_BLOCK STRSLICE(CONTENT, (ELSE_POS + LEN(ELSE_TAG)), LEN(CONTENT))
+        }
+        
+        // 评估条件
+        Set CONDITION_VALUE TEMPLATE_EVAL_CONDITION(CONDITION, CONTEXT)
+        
+        // 选择要渲染的块
+        Set RENDERED ""
+        If (CONDITION_VALUE) {
+            Set RENDERED TRUE_BLOCK
+        } Else {
+            Set RENDERED FALSE_BLOCK
+        }
+        
+        // 替换整个 if 块
+        Set BEFORE STRSLICE(RESULT, 0, START_POS)
+        Set AFTER STRSLICE(RESULT, (ENDIF_POS + LEN(IF_END)), LEN(RESULT))
+        Set RESULT (BEFORE + RENDERED + AFTER)
+    }
+    
+    Return RESULT
+}
+
+// 评估条件表达式
+Func TEMPLATE_EVAL_CONDITION(CONDITION, CONTEXT) {
+    // 简单的条件评估：检查变量是否存在且为真值
+    Set VAR_NAME TRIM(CONDITION)
+    
+    // 处理 not 运算符
+    Set IS_NOT False
+    If (STARTS_WITH(VAR_NAME, "not ")) {
+        Set IS_NOT True
+        Set VAR_NAME TRIM(STRSLICE(VAR_NAME, 4, LEN(VAR_NAME)))
+    }
+    
+    // 检查变量
+    Set VALUE False
+    If (HAS(CONTEXT, VAR_NAME)) {
+        Set VALUE CONTEXT[VAR_NAME]
+        
+        // 转换为布尔值
+        If (TYPE(VALUE) == "Boolean") {
+            // 已经是布尔值
+        } Elif (TYPE(VALUE) == "Number") {
+            Set VALUE (VALUE != 0)
+        } Elif (TYPE(VALUE) == "String") {
+            Set VALUE (LEN(VALUE) > 0)
+        } Elif (TYPE(VALUE) == "Array") {
+            Set VALUE (LEN(VALUE) > 0)
+        } Elif (TYPE(VALUE) == "Null") {
+            Set VALUE False
+        } Else {
+            Set VALUE True
+        }
+    }
+    
+    If (IS_NOT) {
+        Return (Not VALUE)
+    }
+    
+    Return VALUE
+}
+
+// ============================================
+// 循环 {{for item in list}}...{{endfor}}
+// ============================================
+
+Func TEMPLATE_PROCESS_FOR(TEXT, CONTEXT) {
+    Set RESULT TEXT
+    Set FOR_START "{{for "
+    Set FOR_END "{{endfor}}"
+    
+    While (CONTAINS(RESULT, FOR_START)) {
+        Set START_POS INDEXOF(RESULT, FOR_START)
+        
+        // 找到 for 标签的结束
+        Set TAG_END_POS INDEXOF(STRSLICE(RESULT, START_POS, LEN(RESULT)), "}}")
+        If (TAG_END_POS < 0) {
+            Break
+        }
+        Set TAG_END_POS (TAG_END_POS + START_POS)
+        
+        // 提取循环表达式: item in list
+        Set EXPR_START (START_POS + LEN(FOR_START))
+        Set EXPR STRSLICE(RESULT, EXPR_START, TAG_END_POS)
+        Set EXPR TRIM(EXPR)
+        
+        // 解析: item in list
+        If (Not CONTAINS(EXPR, " in ")) {
+            Break
+        }
+        
+        Set PARTS SPLIT(EXPR, " in ")
+        Set ITEM_VAR TRIM(PARTS[0])
+        Set LIST_VAR TRIM(PARTS[1])
+        
+        // 找到对应的 endfor
+        Set ENDFOR_POS INDEXOF(STRSLICE(RESULT, TAG_END_POS, LEN(RESULT)), FOR_END)
+        If (ENDFOR_POS < 0) {
+            Break
+        }
+        Set ENDFOR_POS (ENDFOR_POS + TAG_END_POS)
+        
+        // 提取循环体
+        Set BODY_START (TAG_END_POS + 2)
+        Set BODY STRSLICE(RESULT, BODY_START, ENDFOR_POS)
+        
+        // 获取列表
+        Set LIST []
+        If (HAS(CONTEXT, LIST_VAR)) {
+            Set LIST CONTEXT[LIST_VAR]
+        }
+        
+        // 渲染每次迭代
+        Set RENDERED ""
+        Set I 0
+        While (I < LEN(LIST)) {
+            Set ITEM LIST[I]
+            
+            // 创建新的上下文（包含循环变量）
+            Set LOOP_CONTEXT CLONE(CONTEXT)
+            Set LOOP_CONTEXT[ITEM_VAR] ITEM
+            Set LOOP_CONTEXT["loop_index"] I
+            Set LOOP_CONTEXT["loop_first"] (I == 0)
+            Set LOOP_CONTEXT["loop_last"] (I == (LEN(LIST) - 1))
+            
+            // 渲染循环体
+            Set ITERATION TEMPLATE_PROCESS_VARS(BODY, LOOP_CONTEXT)
+            Set RENDERED (RENDERED + ITERATION)
+            
+            Set I (I + 1)
+        }
+        
+        // 替换整个 for 块
+        Set BEFORE STRSLICE(RESULT, 0, START_POS)
+        Set AFTER STRSLICE(RESULT, (ENDFOR_POS + LEN(FOR_END)), LEN(RESULT))
+        Set RESULT (BEFORE + RENDERED + AFTER)
+    }
+    
+    Return RESULT
+}
+
+// ============================================
+// 模板加载（从文件）
+// ============================================
+
+Func TEMPLATE_LOAD(FILEPATH) {
+    Return READ_FILE(FILEPATH)
+}
+
+// 渲染文件模板
+Func TEMPLATE_RENDER_FILE(FILEPATH, CONTEXT) {
+    Set TEMPLATE TEMPLATE_LOAD(FILEPATH)
+    Return TEMPLATE_RENDER(TEMPLATE, CONTEXT)
+}
+
+// ============================================
+// 常用模板预设
+// ============================================
+
+// HTML 页面模板
+Func TEMPLATE_HTML_PAGE(TITLE, CONTENT, STYLE) {
+    Set LINE1 "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+    Set LINE2 "<title>{{title}}</title><style>{{style}}</style></head>"
+    Set LINE3 "<body>{{content}}</body></html>"
+    Set TEMPLATE (LINE1 + LINE2 + LINE3)
+    
+    Set CTX {}
+    Set CTX["title"] TITLE
+    Set CTX["content"] CONTENT
+    Set CTX["style"] STYLE
+    
+    Return TEMPLATE_RENDER(TEMPLATE, CTX)
+}
+
+// Markdown 报告模板
+Func TEMPLATE_MARKDOWN_REPORT(TITLE, SECTIONS) {
+    Set TEMPLATE "# {{title}}\n\n{{for section in sections}}\n## {{section.heading}}\n\n{{section.content}}\n\n{{endfor}}"
+    
+    Set CTX {}
+    Set CTX["title"] TITLE
+    Set CTX["sections"] SECTIONS
+    
+    Return TEMPLATE_RENDER(TEMPLATE, CTX)
+}
+
+// 代码生成模板（函数）
+Func TEMPLATE_FUNCTION_CODE(LANG, NAME, PARAMS, BODY) {
+    Set JS_TPL "function {{name}}({{params}}) {\n    {{body}}\n}"
+    Set PY_TPL "def {{name}}({{params}}):\n    {{body}}"
+    Set RS_TPL "fn {{name}}({{params}}) {\n    {{body}}\n}"
+    Set GO_TPL "func {{name}}({{params}}) {\n    {{body}}\n}"
+    
+    Set TEMPLATES {}
+    Set TEMPLATES["javascript"] JS_TPL
+    Set TEMPLATES["python"] PY_TPL
+    Set TEMPLATES["rust"] RS_TPL
+    Set TEMPLATES["go"] GO_TPL
+    
+    If (HAS(TEMPLATES, LANG)) {
+        Set TEMPLATE TEMPLATES[LANG]
+        Set CTX {}
+        Set CTX["name"] NAME
+        Set CTX["params"] PARAMS
+        Set CTX["body"] BODY
+        Return TEMPLATE_RENDER(TEMPLATE, CTX)
+    }
+    
+    Return ""
+}
+
+// JSON 配置模板
+Func TEMPLATE_JSON_CONFIG(DATA) {
+    Return JSON_STRINGIFY(DATA, 2)
+}
+
+// ============================================
+// 批量渲染
+// ============================================
+
+// 批量渲染多个模板
+// TEMPLATES: [{"template": "...", "context": {...}, "output": "path"}, ...]
+Func TEMPLATE_BATCH_RENDER(TEMPLATES) {
+    Set RESULTS []
+    
+    Set I 0
+    While (I < LEN(TEMPLATES)) {
+        Set ITEM TEMPLATES[I]
+        Set TEMPLATE ITEM["template"]
+        Set CONTEXT ITEM["context"]
+        
+        Set RENDERED TEMPLATE_RENDER(TEMPLATE, CONTEXT)
+        
+        // 如果指定了输出路径，保存文件
+        If (HAS(ITEM, "output")) {
+            WRITE_FILE(ITEM["output"], RENDERED)
+            PUSH(RESULTS, {"output": ITEM["output"], "success": True})
+        } Else {
+            PUSH(RESULTS, {"content": RENDERED, "success": True})
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULTS
+}
+
+PRINTLN("[stdlib] text_template.aether loaded - Text template engine for code generation")

@@ -1,0 +1,142 @@
+// ============================================
+// Text Template Demo - 模板引擎演示
+// ============================================
+
+PRINTLN("========== 文本模板引擎演示 ==========")
+PRINTLN("")
+
+// ============================================
+// 1. 基本变量替换
+// ============================================
+
+PRINTLN("1. 基本变量替换")
+Set TEMPLATE1 "你好，{{name}}！你今年 {{age}} 岁。"
+Set CONTEXT1 {"name": "Alice", "age": 25}
+Set RESULT1 TEMPLATE_RENDER(TEMPLATE1, CONTEXT1)
+PRINTLN(RESULT1)
+PRINTLN("")
+
+// ============================================
+// 2. 过滤器
+// ============================================
+
+PRINTLN("2. 过滤器")
+Set TEMPLATE2 "大写: {{name|upper}}, 小写: {{name|lower}}, 长度: {{name|length}}"
+Set CONTEXT2 {"name": "Alice"}
+Set RESULT2 TEMPLATE_RENDER(TEMPLATE2, CONTEXT2)
+PRINTLN(RESULT2)
+PRINTLN("")
+
+// ============================================
+// 3. 条件渲染
+// ============================================
+
+PRINTLN("3. 条件渲染")
+Set TEMPLATE3 "{{if logged_in}}欢迎回来，{{username}}！{{else}}请先登录{{endif}}"
+
+Set CONTEXT3A {"logged_in": True, "username": "Alice"}
+Set RESULT3A TEMPLATE_RENDER(TEMPLATE3, CONTEXT3A)
+PRINTLN("已登录: " + RESULT3A)
+
+Set CONTEXT3B {"logged_in": False, "username": ""}
+Set RESULT3B TEMPLATE_RENDER(TEMPLATE3, CONTEXT3B)
+PRINTLN("未登录: " + RESULT3B)
+PRINTLN("")
+
+// ============================================
+// 4. 循环
+// ============================================
+
+PRINTLN("4. 循环")
+Set TEMPLATE4 "水果列表:
+{{for fruit in fruits}}  - {{fruit}}
+{{endfor}}"
+
+Set CONTEXT4 {"fruits": ["苹果", "香蕉", "橙子", "葡萄"]}
+Set RESULT4 TEMPLATE_RENDER(TEMPLATE4, CONTEXT4)
+PRINTLN(RESULT4)
+PRINTLN("")
+
+// ============================================
+// 5. 循环索引
+// ============================================
+
+PRINTLN("5. 循环索引")
+Set TEMPLATE5 "员工列表:
+{{for emp in employees}}{{loop_index}}. {{emp.name}} - {{emp.dept}}
+{{endfor}}"
+
+Set CONTEXT5 {
+    "employees": [
+        {"name": "张三", "dept": "技术部"},
+        {"name": "李四", "dept": "市场部"},
+        {"name": "王五", "dept": "人事部"}
+    ]
+}
+Set RESULT5 TEMPLATE_RENDER(TEMPLATE5, CONTEXT5)
+PRINTLN(RESULT5)
+PRINTLN("")
+
+// ============================================
+// 6. 组合使用
+// ============================================
+
+PRINTLN("6. 组合使用（条件 + 循环）")
+Set TEMPLATE6 "{{if has_items}}购物车 ({{item_count}} 件商品):
+{{for item in items}}  - {{item.name}}: ¥{{item.price}}
+{{endfor}}总计: ¥{{total}}{{else}}购物车为空{{endif}}"
+
+Set CONTEXT6A {
+    "has_items": True,
+    "item_count": 3,
+    "items": [
+        {"name": "书", "price": 29.9},
+        {"name": "笔", "price": 5.5},
+        {"name": "本", "price": 12.0}
+    ],
+    "total": 47.4
+}
+Set RESULT6A TEMPLATE_RENDER(TEMPLATE6, CONTEXT6A)
+PRINTLN(RESULT6A)
+PRINTLN("")
+
+// ============================================
+// 7. 代码生成
+// ============================================
+
+PRINTLN("7. 代码生成")
+Set JS_CODE TEMPLATE_FUNCTION_CODE("javascript", "add", "a, b", "return a + b;")
+PRINTLN("JavaScript 函数:")
+PRINTLN(JS_CODE)
+PRINTLN("")
+
+Set PY_CODE TEMPLATE_FUNCTION_CODE("python", "multiply", "x, y", "return x * y")
+PRINTLN("Python 函数:")
+PRINTLN(PY_CODE)
+PRINTLN("")
+
+// ============================================
+// 8. HTML 生成
+// ============================================
+
+PRINTLN("8. HTML 页面生成")
+Set HTML_CONTENT "<h1>欢迎</h1><p>这是一个测试页面</p>"
+Set CSS_STYLE "body { font-family: Arial; margin: 20px; }"
+Set HTML TEMPLATE_HTML_PAGE("测试页面", HTML_CONTENT, CSS_STYLE)
+PRINTLN(SLICE(HTML, 0, MIN(200, LEN(HTML))) + "...")
+PRINTLN("")
+
+// ============================================
+// 9. Markdown 报告
+// ============================================
+
+PRINTLN("9. Markdown 报告生成")
+Set SECTIONS [
+    {"heading": "概述", "content": "这是一份测试报告。"},
+    {"heading": "数据分析", "content": "样本数量: 100\n平均值: 75.5"},
+    {"heading": "结论", "content": "测试通过。"}
+]
+Set MD_REPORT TEMPLATE_MARKDOWN_REPORT("月度报告", SECTIONS)
+PRINTLN(MD_REPORT)
+
+PRINTLN("✅ 演示完成！")

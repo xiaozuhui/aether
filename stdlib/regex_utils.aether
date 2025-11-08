@@ -1,0 +1,618 @@
+// ============================================
+// Regex-like Utilities - 正则风格文本处理工具
+// ============================================
+// 提供文本模式匹配和处理功能（基于字符串操作）
+// 注意：这不是真正的正则表达式引擎，而是常用模式的实用工具
+// 支持：
+// - 通配符匹配
+// - 模式查找和替换
+// - 文本提取
+// - 常用验证（邮箱、URL、电话等）
+// ============================================
+
+// ============================================
+// 通配符匹配
+// ============================================
+
+// 通配符匹配（支持 * 和 ?）
+// * 匹配任意字符序列
+// ? 匹配单个字符
+Func REGEX_WILDCARD_MATCH(TEXT, PATTERN) {
+    Return REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, 0, 0)
+}
+
+Func REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, TEXT_IDX, PAT_IDX) {
+    Set TEXT_LEN LEN(TEXT)
+    Set PAT_LEN LEN(PATTERN)
+    
+    // 都到末尾，匹配成功
+    If ((TEXT_IDX == TEXT_LEN) And (PAT_IDX == PAT_LEN)) {
+        Return True
+    }
+    
+    // 模式到末尾但文本未完，失败
+    If ((PAT_IDX == PAT_LEN) And (TEXT_IDX < TEXT_LEN)) {
+        Return False
+    }
+    
+    // 文本到末尾但模式有非*字符，失败
+    If ((TEXT_IDX == TEXT_LEN) And (PAT_IDX < PAT_LEN)) {
+        Set I PAT_IDX
+        While (I < PAT_LEN) {
+            If (CHARAT(PATTERN, I) != "*") {
+                Return False
+            }
+            Set I (I + 1)
+        }
+        Return True
+    }
+    
+    // 获取当前字符
+    Set PAT_CHAR CHARAT(PATTERN, PAT_IDX)
+    Set TEXT_CHAR CHARAT(TEXT, TEXT_IDX)
+    
+    // ? 匹配任意单个字符
+    If (PAT_CHAR == "?") {
+        Return REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, (TEXT_IDX + 1), (PAT_IDX + 1))
+    }
+    
+    // * 匹配任意序列
+    If (PAT_CHAR == "*") {
+        // 尝试匹配0个字符
+        If (REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, TEXT_IDX, (PAT_IDX + 1))) {
+            Return True
+        }
+        // 尝试匹配1个或多个字符
+        Return REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, (TEXT_IDX + 1), PAT_IDX)
+    }
+    
+    // 普通字符必须完全匹配
+    If (PAT_CHAR == TEXT_CHAR) {
+        Return REGEX_WILDCARD_MATCH_IMPL(TEXT, PATTERN, (TEXT_IDX + 1), (PAT_IDX + 1))
+    }
+    
+    Return False
+}
+
+// ============================================
+// 模式查找
+// ============================================
+
+// 查找所有匹配指定前缀和后缀的子串
+Func REGEX_FIND_BETWEEN(TEXT, PREFIX, SUFFIX) {
+    Set RESULTS []
+    Set START 0
+    
+    While (START < LEN(TEXT)) {
+        Set PREFIX_POS INDEXOF(STRSLICE(TEXT, START, LEN(TEXT)), PREFIX)
+        If (PREFIX_POS < 0) {
+            Break
+        }
+        Set PREFIX_POS (PREFIX_POS + START)
+        
+        Set CONTENT_START (PREFIX_POS + LEN(PREFIX))
+        Set SUFFIX_POS INDEXOF(STRSLICE(TEXT, CONTENT_START, LEN(TEXT)), SUFFIX)
+        
+        If (SUFFIX_POS < 0) {
+            Break
+        }
+        Set SUFFIX_POS (SUFFIX_POS + CONTENT_START)
+        
+        // 提取内容
+        Set CONTENT STRSLICE(TEXT, CONTENT_START, SUFFIX_POS)
+        PUSH(RESULTS, CONTENT)
+        
+        Set START (SUFFIX_POS + LEN(SUFFIX))
+    }
+    
+    Return RESULTS
+}
+
+// 查找所有以指定前缀开始的行
+Func REGEX_FIND_LINES_STARTING_WITH(TEXT, PREFIX) {
+    Set LINES SPLIT(TEXT, "\n")
+    Set RESULTS []
+    
+    Set I 0
+    While (I < LEN(LINES)) {
+        Set LINE LINES[I]
+        If (STARTS_WITH(TRIM(LINE), PREFIX)) {
+            PUSH(RESULTS, LINE)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULTS
+}
+
+// 查找所有包含指定文本的行
+Func REGEX_FIND_LINES_CONTAINING(TEXT, NEEDLE) {
+    Set LINES SPLIT(TEXT, "\n")
+    Set RESULTS []
+    
+    Set I 0
+    While (I < LEN(LINES)) {
+        Set LINE LINES[I]
+        If (CONTAINS(LINE, NEEDLE)) {
+            PUSH(RESULTS, LINE)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULTS
+}
+
+// ============================================
+// 模式替换
+// ============================================
+
+// 替换所有匹配通配符模式的文本
+Func REGEX_REPLACE_PATTERN(TEXT, PATTERN, REPLACEMENT) {
+    // 简化实现：如果模式是纯文本（无通配符），使用 REPLACE_ALL
+    If ((Not CONTAINS(PATTERN, "*")) And (Not CONTAINS(PATTERN, "?"))) {
+        Return REPLACE(TEXT, PATTERN, REPLACEMENT)
+    }
+    
+    // 对于通配符模式，逐词检查（简化实现）
+    Set WORDS SPLIT(TEXT, " ")
+    Set RESULTS []
+    
+    Set I 0
+    While (I < LEN(WORDS)) {
+        Set WORD WORDS[I]
+        If (REGEX_WILDCARD_MATCH(WORD, PATTERN)) {
+            PUSH(RESULTS, REPLACEMENT)
+        } Else {
+            PUSH(RESULTS, WORD)
+        }
+        Set I (I + 1)
+    }
+    
+    Return JOIN(RESULTS, " ")
+}
+
+// 删除匹配模式的所有文本
+Func REGEX_REMOVE_PATTERN(TEXT, PATTERN) {
+    Return REGEX_REPLACE_PATTERN(TEXT, PATTERN, "")
+}
+
+// ============================================
+// 文本提取
+// ============================================
+
+// 提取所有数字
+Func REGEX_EXTRACT_NUMBERS(TEXT) {
+    Set RESULTS []
+    Set CURRENT ""
+    Set IN_NUMBER False
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        
+        If (REGEX_IS_DIGIT(CHAR)) {
+            Set CURRENT (CURRENT + CHAR)
+            Set IN_NUMBER True
+        } Elif ((CHAR == ".") And IN_NUMBER) {
+            // 支持小数点
+            Set CURRENT (CURRENT + CHAR)
+        } Else {
+            If (IN_NUMBER) {
+                PUSH(RESULTS, TO_NUMBER(CURRENT))
+                Set CURRENT ""
+                Set IN_NUMBER False
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    // 处理末尾的数字
+    If (IN_NUMBER) {
+        PUSH(RESULTS, TO_NUMBER(CURRENT))
+    }
+    
+    Return RESULTS
+}
+
+// 提取所有单词（字母序列）
+Func REGEX_EXTRACT_WORDS(TEXT) {
+    Set RESULTS []
+    Set CURRENT ""
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        
+        If (REGEX_IS_ALPHA(CHAR)) {
+            Set CURRENT (CURRENT + CHAR)
+        } Else {
+            If (LEN(CURRENT) > 0) {
+                PUSH(RESULTS, CURRENT)
+                Set CURRENT ""
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    // 处理末尾的单词
+    If (LEN(CURRENT) > 0) {
+        PUSH(RESULTS, CURRENT)
+    }
+    
+    Return RESULTS
+}
+
+// 提取所有邮箱地址（简化版）
+Func REGEX_EXTRACT_EMAILS(TEXT) {
+    Set RESULTS []
+    Set WORDS SPLIT(TEXT, " ")
+    
+    Set I 0
+    While (I < LEN(WORDS)) {
+        Set WORD TRIM(WORDS[I])
+        If (REGEX_IS_EMAIL(WORD)) {
+            PUSH(RESULTS, WORD)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULTS
+}
+
+// 提取所有 URL（简化版）
+Func REGEX_EXTRACT_URLS(TEXT) {
+    Set RESULTS []
+    Set WORDS SPLIT(TEXT, " ")
+    
+    Set I 0
+    While (I < LEN(WORDS)) {
+        Set WORD TRIM(WORDS[I])
+        If (REGEX_IS_URL(WORD)) {
+            PUSH(RESULTS, WORD)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULTS
+}
+
+// ============================================
+// 验证函数
+// ============================================
+
+// 验证邮箱格式
+Func REGEX_IS_EMAIL(TEXT) {
+    // 简单验证：包含 @ 且两边都有内容
+    If (Not CONTAINS(TEXT, "@")) {
+        Return False
+    }
+    
+    Set PARTS SPLIT(TEXT, "@")
+    If (LEN(PARTS) != 2) {
+        Return False
+    }
+    
+    Set LOCAL PARTS[0]
+    Set DOMAIN PARTS[1]
+    
+    If ((LEN(LOCAL) == 0) Or (LEN(DOMAIN) == 0)) {
+        Return False
+    }
+    
+    // 域名必须包含至少一个点
+    If (Not CONTAINS(DOMAIN, ".")) {
+        Return False
+    }
+    
+    Return True
+}
+
+// 验证 URL 格式
+Func REGEX_IS_URL(TEXT) {
+    Set LOWER_TEXT LOWER(TEXT)
+    
+    If (STARTS_WITH(LOWER_TEXT, "http://")) {
+        Return True
+    }
+    If (STARTS_WITH(LOWER_TEXT, "https://")) {
+        Return True
+    }
+    If (STARTS_WITH(LOWER_TEXT, "ftp://")) {
+        Return True
+    }
+    
+    Return False
+}
+
+// 验证是否只包含数字
+Func REGEX_IS_NUMERIC(TEXT) {
+    If (LEN(TEXT) == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (Not REGEX_IS_DIGIT(CHAR)) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证是否只包含字母
+Func REGEX_IS_ALPHA(TEXT) {
+    If (LEN(TEXT) == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (Not REGEX_IS_ALPHA_CHAR(CHAR)) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证是否只包含字母和数字
+Func REGEX_IS_ALPHANUMERIC(TEXT) {
+    If (LEN(TEXT) == 0) {
+        Return False
+    }
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If ((Not REGEX_IS_ALPHA_CHAR(CHAR)) And (Not REGEX_IS_DIGIT(CHAR))) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证电话号码（简化，支持中国格式）
+Func REGEX_IS_PHONE(TEXT) {
+    // 去除常见分隔符
+    Set CLEANED REPLACE(TEXT, "-", "")
+    Set CLEANED REPLACE(CLEANED, " ", "")
+    Set CLEANED REPLACE(CLEANED, "(", "")
+    Set CLEANED REPLACE(CLEANED, ")", "")
+    
+    // 检查是否全是数字
+    If (Not REGEX_IS_NUMERIC(CLEANED)) {
+        Return False
+    }
+    
+    // 长度检查（中国手机号11位，座机8-12位）
+    Set LEN_VAL LEN(CLEANED)
+    Return ((LEN_VAL >= 8) And (LEN_VAL <= 12))
+}
+
+// 验证身份证号（中国18位）
+Func REGEX_IS_ID_CARD(TEXT) {
+    If (LEN(TEXT) != 18) {
+        Return False
+    }
+    
+    // 前17位必须是数字
+    Set I 0
+    While (I < 17) {
+        Set CHAR CHARAT(TEXT, I)
+        If (Not REGEX_IS_DIGIT(CHAR)) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    // 最后一位可以是数字或 X
+    Set LAST UPPER(CHARAT(TEXT, 17))
+    Return (REGEX_IS_DIGIT(LAST) Or (LAST == "X"))
+}
+
+// ============================================
+// 字符类型检查（辅助函数）
+// ============================================
+
+Func REGEX_IS_DIGIT(CHAR) {
+    Return ((CHAR >= "0") And (CHAR <= "9"))
+}
+
+Func REGEX_IS_ALPHA_CHAR(CHAR) {
+    Set UPPER_CHAR UPPER(CHAR)
+    Return ((UPPER_CHAR >= "A") And (UPPER_CHAR <= "Z"))
+}
+
+Func REGEX_IS_WHITESPACE(CHAR) {
+    Return ((CHAR == " ") Or (CHAR == "\t") Or (CHAR == "\n") Or (CHAR == "\r"))
+}
+
+// ============================================
+// 文本清理
+// ============================================
+
+// 删除所有空白字符
+Func REGEX_REMOVE_WHITESPACE(TEXT) {
+    Set RESULT ""
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (Not REGEX_IS_WHITESPACE(CHAR)) {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    Return RESULT
+}
+
+// 删除所有非字母数字字符
+Func REGEX_REMOVE_NON_ALPHANUMERIC(TEXT) {
+    Set RESULT ""
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (REGEX_IS_ALPHA_CHAR(CHAR) Or REGEX_IS_DIGIT(CHAR)) {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    Return RESULT
+}
+
+// 删除所有数字
+Func REGEX_REMOVE_DIGITS(TEXT) {
+    Set RESULT ""
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (Not REGEX_IS_DIGIT(CHAR)) {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    Return RESULT
+}
+
+// 保留指定字符集
+Func REGEX_KEEP_CHARS(TEXT, ALLOWED) {
+    Set RESULT ""
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        If (CONTAINS(ALLOWED, CHAR)) {
+            Set RESULT (RESULT + CHAR)
+        }
+        Set I (I + 1)
+    }
+    Return RESULT
+}
+
+// ============================================
+// 分词和分段
+// ============================================
+
+// 按句子分割（基于标点）
+Func REGEX_SPLIT_SENTENCES(TEXT) {
+    Set RESULT []
+    Set CURRENT ""
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        Set CURRENT (CURRENT + CHAR)
+        
+        // 句子结束符
+        If ((CHAR == ".") Or (CHAR == "!") Or (CHAR == "?") Or (CHAR == "。") Or (CHAR == "！") Or (CHAR == "？")) {
+            Set TRIMMED TRIM(CURRENT)
+            If (LEN(TRIMMED) > 0) {
+                PUSH(RESULT, TRIMMED)
+            }
+            Set CURRENT ""
+        }
+        
+        Set I (I + 1)
+    }
+    
+    // 处理剩余文本
+    Set TRIMMED TRIM(CURRENT)
+    If (LEN(TRIMMED) > 0) {
+        PUSH(RESULT, TRIMMED)
+    }
+    
+    Return RESULT
+}
+
+// 按段落分割
+Func REGEX_SPLIT_PARAGRAPHS(TEXT) {
+    Set LINES SPLIT(TEXT, "\n")
+    Set RESULT []
+    Set CURRENT ""
+    
+    Set I 0
+    While (I < LEN(LINES)) {
+        Set LINE TRIM(LINES[I])
+        
+        If (LEN(LINE) == 0) {
+            // 空行，结束当前段落
+            If (LEN(CURRENT) > 0) {
+                PUSH(RESULT, TRIM(CURRENT))
+                Set CURRENT ""
+            }
+        } Else {
+            If (LEN(CURRENT) > 0) {
+                Set CURRENT (CURRENT + " ")
+            }
+            Set CURRENT (CURRENT + LINE)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    // 处理最后一个段落
+    If (LEN(CURRENT) > 0) {
+        PUSH(RESULT, TRIM(CURRENT))
+    }
+    
+    Return RESULT
+}
+
+// ============================================
+// 统计函数
+// ============================================
+
+// 统计匹配次数
+Func REGEX_COUNT_MATCHES(TEXT, PATTERN) {
+    Set COUNT 0
+    Set POS 0
+    
+    While (POS < LEN(TEXT)) {
+        Set FOUND INDEXOF(STRSLICE(TEXT, POS, LEN(TEXT)), PATTERN)
+        If (FOUND < 0) {
+            Break
+        }
+        Set COUNT (COUNT + 1)
+        Set POS (POS + FOUND + LEN(PATTERN))
+    }
+    
+    Return COUNT
+}
+
+// 统计字符类型
+Func REGEX_COUNT_CHARS(TEXT) {
+    Set STATS {}
+    Set STATS["total"] LEN(TEXT)
+    Set STATS["alpha"] 0
+    Set STATS["digit"] 0
+    Set STATS["space"] 0
+    Set STATS["other"] 0
+    
+    Set I 0
+    While (I < LEN(TEXT)) {
+        Set CHAR CHARAT(TEXT, I)
+        
+        If (REGEX_IS_ALPHA_CHAR(CHAR)) {
+            Set STATS["alpha"] (STATS["alpha"] + 1)
+        } Elif (REGEX_IS_DIGIT(CHAR)) {
+            Set STATS["digit"] (STATS["digit"] + 1)
+        } Elif (REGEX_IS_WHITESPACE(CHAR)) {
+            Set STATS["space"] (STATS["space"] + 1)
+        } Else {
+            Set STATS["other"] (STATS["other"] + 1)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return STATS
+}
+
+PRINTLN("[stdlib] regex_utils.aether loaded - Regex-like text processing utilities")

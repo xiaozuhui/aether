@@ -1,0 +1,514 @@
+// ============================================
+// CLI Utilities - 命令行工具友好库
+// ============================================
+// 提供命令行程序常用的功能：
+// - 参数解析（短选项、长选项、位置参数）
+// - ANSI 颜色输出
+// - 进度条显示
+// - 表格格式化
+// - 交互式确认
+// ============================================
+
+// ============================================
+// ANSI 颜色代码
+// ============================================
+
+// 文本颜色常量
+Set CLI_COLOR_BLACK "\u001b[30m"
+Set CLI_COLOR_RED "\u001b[31m"
+Set CLI_COLOR_GREEN "\u001b[32m"
+Set CLI_COLOR_YELLOW "\u001b[33m"
+Set CLI_COLOR_BLUE "\u001b[34m"
+Set CLI_COLOR_MAGENTA "\u001b[35m"
+Set CLI_COLOR_CYAN "\u001b[36m"
+Set CLI_COLOR_WHITE "\u001b[37m"
+Set CLI_COLOR_RESET "\u001b[0m"
+
+// 背景颜色常量
+Set CLI_BG_BLACK "\u001b[40m"
+Set CLI_BG_RED "\u001b[41m"
+Set CLI_BG_GREEN "\u001b[42m"
+Set CLI_BG_YELLOW "\u001b[43m"
+Set CLI_BG_BLUE "\u001b[44m"
+Set CLI_BG_MAGENTA "\u001b[45m"
+Set CLI_BG_CYAN "\u001b[46m"
+Set CLI_BG_WHITE "\u001b[47m"
+
+// 文本样式
+Set CLI_STYLE_BOLD "\u001b[1m"
+Set CLI_STYLE_DIM "\u001b[2m"
+Set CLI_STYLE_ITALIC "\u001b[3m"
+Set CLI_STYLE_UNDERLINE "\u001b[4m"
+Set CLI_STYLE_BLINK "\u001b[5m"
+Set CLI_STYLE_REVERSE "\u001b[7m"
+Set CLI_STYLE_HIDDEN "\u001b[8m"
+
+// ============================================
+// 颜色输出函数
+// ============================================
+
+// 用指定颜色包装文本
+Func CLI_COLORIZE(TEXT, COLOR) {
+    Return (COLOR + TEXT + CLI_COLOR_RESET)
+}
+
+// 快捷颜色函数
+Func CLI_RED(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_RED)
+}
+
+Func CLI_GREEN(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_GREEN)
+}
+
+Func CLI_YELLOW(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_YELLOW)
+}
+
+Func CLI_BLUE(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_BLUE)
+}
+
+Func CLI_CYAN(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_CYAN)
+}
+
+Func CLI_MAGENTA(TEXT) {
+    Return CLI_COLORIZE(TEXT, CLI_COLOR_MAGENTA)
+}
+
+// 带样式的颜色输出
+Func CLI_BOLD(TEXT) {
+    Return (CLI_STYLE_BOLD + TEXT + CLI_COLOR_RESET)
+}
+
+Func CLI_DIM(TEXT) {
+    Return (CLI_STYLE_DIM + TEXT + CLI_COLOR_RESET)
+}
+
+Func CLI_UNDERLINE(TEXT) {
+    Return (CLI_STYLE_UNDERLINE + TEXT + CLI_COLOR_RESET)
+}
+
+// 语义化颜色函数
+Func CLI_SUCCESS(TEXT) {
+    Return CLI_GREEN("✓ " + TEXT)
+}
+
+Func CLI_ERROR(TEXT) {
+    Return CLI_RED("✗ " + TEXT)
+}
+
+Func CLI_WARNING(TEXT) {
+    Return CLI_YELLOW("⚠ " + TEXT)
+}
+
+Func CLI_INFO(TEXT) {
+    Return CLI_BLUE("ℹ " + TEXT)
+}
+
+// ============================================
+// 参数解析
+// ============================================
+
+// 解析命令行参数
+// 返回字典: { "flags": {...}, "options": {...}, "args": [...] }
+Func CLI_PARSE_ARGS(ARGS_ARRAY) {
+    Set FLAGS_DICT {}
+    Set OPTIONS_DICT {}
+    Set ARGS_LIST []
+    
+    Set RESULT {}
+    Set RESULT["flags"] FLAGS_DICT
+    Set RESULT["options"] OPTIONS_DICT
+    Set RESULT["args"] ARGS_LIST
+    
+    Set I 0
+    While (I < LEN(ARGS_ARRAY)) {
+        Set ARG ARGS_ARRAY[I]
+        
+        // 长选项: --option=value 或 --option value
+        If (STARTS_WITH(ARG, "--")) {
+            Set KEY STRSLICE(ARG, 2, LEN(ARG))
+            
+            // 检查是否有等号
+            If (CONTAINS(KEY, "=")) {
+                Set PARTS SPLIT(KEY, "=")
+                Set OPT_NAME PARTS[0]
+                Set OPT_VALUE PARTS[1]
+                Set RESULT["options"][OPT_NAME] OPT_VALUE
+            } Else {
+                // 检查下一个参数是否是值
+                Set NEXT_I (I + 1)
+                If (NEXT_I < LEN(ARGS_ARRAY)) {
+                    Set NEXT_ARG ARGS_ARRAY[NEXT_I]
+                    If (Not (STARTS_WITH(NEXT_ARG, "-"))) {
+                        Set RESULT["options"][KEY] NEXT_ARG
+                        Set I (I + 1)
+                    } Else {
+                        Set RESULT["flags"][KEY] True
+                    }
+                } Else {
+                    Set RESULT["flags"][KEY] True
+                }
+            }
+        } Elif (STARTS_WITH(ARG, "-")) {
+            // 短选项: -f 或 -abc (多个标志)
+            Set FLAGS STRSLICE(ARG, 1, LEN(ARG))
+            Set J 0
+            While (J < LEN(FLAGS)) {
+                Set FLAG_CHAR CHARAT(FLAGS, J)
+                Set RESULT["flags"][FLAG_CHAR] True
+                Set J (J + 1)
+            }
+        } Else {
+            // 位置参数
+            PUSH(RESULT["args"], ARG)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取选项值，带默认值
+Func CLI_GET_OPTION(PARSED, NAME, DEFAULT) {
+    Set OPTIONS PARSED["options"]
+    If (HAS(OPTIONS, NAME)) {
+        Return OPTIONS[NAME]
+    }
+    Return DEFAULT
+}
+
+// 检查标志是否存在
+Func CLI_HAS_FLAG(PARSED, NAME) {
+    Set FLAGS PARSED["flags"]
+    Return HAS(FLAGS, NAME)
+}
+
+// ============================================
+// 表格格式化
+// ============================================
+
+// 格式化表格
+// HEADERS: ["列1", "列2", "列3"]
+// ROWS: [["数据1", "数据2", "数据3"], ...]
+// OPTIONS: { "border": true, "padding": 1 }
+Func CLI_TABLE(HEADERS, ROWS, OPTIONS) {
+    Set BORDER True
+    Set PADDING 1
+    
+    If (TYPE(OPTIONS) == "Dict") {
+        If (HAS(OPTIONS, "border")) {
+            Set BORDER OPTIONS["border"]
+        }
+        If (HAS(OPTIONS, "padding")) {
+            Set PADDING OPTIONS["padding"]
+        }
+    }
+    
+    // 计算每列的最大宽度
+    Set COL_WIDTHS []
+    Set NUM_COLS LEN(HEADERS)
+    
+    Set I 0
+    While (I < NUM_COLS) {
+        Set MAX_WIDTH LEN(TO_STRING(HEADERS[I]))
+        
+        // 检查每行数据
+        Set J 0
+        While (J < LEN(ROWS)) {
+            Set ROW ROWS[J]
+            If (I < LEN(ROW)) {
+                Set CELL_LEN LEN(TO_STRING(ROW[I]))
+                If (CELL_LEN > MAX_WIDTH) {
+                    Set MAX_WIDTH CELL_LEN
+                }
+            }
+            Set J (J + 1)
+        }
+        
+        PUSH(COL_WIDTHS, MAX_WIDTH)
+        Set I (I + 1)
+    }
+    
+    // 构建表格
+    Set RESULT []
+    
+    // 顶部边框
+    If (BORDER) {
+        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "top"))
+    }
+    
+    // 表头
+    PUSH(RESULT, CLI_TABLE_ROW(HEADERS, COL_WIDTHS, PADDING, BORDER))
+    
+    // 表头分隔线
+    If (BORDER) {
+        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "middle"))
+    }
+    
+    // 数据行
+    Set I 0
+    While (I < LEN(ROWS)) {
+        Set ROW ROWS[I]
+        PUSH(RESULT, CLI_TABLE_ROW(ROW, COL_WIDTHS, PADDING, BORDER))
+        Set I (I + 1)
+    }
+    
+    // 底部边框
+    If (BORDER) {
+        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "bottom"))
+    }
+    
+    Return JOIN(RESULT, "\n")
+}
+
+// 内部函数：生成表格行
+Func CLI_TABLE_ROW(CELLS, COL_WIDTHS, PADDING, BORDER) {
+    Set PARTS []
+    Set PAD_STR REPEAT(" ", PADDING)
+    
+    If (BORDER) {
+        PUSH(PARTS, "│")
+    }
+    
+    Set I 0
+    While (I < LEN(CELLS)) {
+        Set CELL TO_STRING(CELLS[I])
+        Set WIDTH COL_WIDTHS[I]
+        Set PADDED (CELL + REPEAT(" ", (WIDTH - LEN(CELL))))
+        
+        PUSH(PARTS, PAD_STR)
+        PUSH(PARTS, PADDED)
+        PUSH(PARTS, PAD_STR)
+        
+        If (BORDER) {
+            PUSH(PARTS, "│")
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return JOIN(PARTS, "")
+}
+
+// 内部函数：生成表格边框
+Func CLI_TABLE_BORDER(COL_WIDTHS, PADDING, TYPE) {
+    Set LEFT "├"
+    Set MID "┼"
+    Set RIGHT "┤"
+    Set HLINE "─"
+    
+    If (TYPE == "top") {
+        Set LEFT "┌"
+        Set MID "┬"
+        Set RIGHT "┐"
+    } Elif (TYPE == "bottom") {
+        Set LEFT "└"
+        Set MID "┴"
+        Set RIGHT "┘"
+    }
+    
+    Set PARTS []
+    PUSH(PARTS, LEFT)
+    
+    Set I 0
+    While (I < LEN(COL_WIDTHS)) {
+        Set WIDTH COL_WIDTHS[I]
+        Set TOTAL_WIDTH (WIDTH + (PADDING * 2))
+        PUSH(PARTS, REPEAT(HLINE, TOTAL_WIDTH))
+        
+        If (I < (LEN(COL_WIDTHS) - 1)) {
+            PUSH(PARTS, MID)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    PUSH(PARTS, RIGHT)
+    Return JOIN(PARTS, "")
+}
+
+// ============================================
+// 进度条
+// ============================================
+
+// 创建进度条
+// CURRENT: 当前值
+// TOTAL: 总值
+// WIDTH: 进度条宽度（字符数）
+// OPTIONS: { "showPercent": true, "showNumbers": true }
+Func CLI_PROGRESS_BAR(CURRENT, TOTAL, WIDTH, OPTIONS) {
+    Set SHOW_PERCENT True
+    Set SHOW_NUMBERS True
+    
+    If (TYPE(OPTIONS) == "Dict") {
+        If (HAS(OPTIONS, "showPercent")) {
+            Set SHOW_PERCENT OPTIONS["showPercent"]
+        }
+        If (HAS(OPTIONS, "showNumbers")) {
+            Set SHOW_NUMBERS OPTIONS["showNumbers"]
+        }
+    }
+    
+    // 计算百分比
+    Set PERCENT ((CURRENT / TOTAL) * 100)
+    Set FILLED_WIDTH FLOOR((PERCENT / 100) * WIDTH)
+    
+    // 构建进度条
+    Set BAR "["
+    Set BAR (BAR + REPEAT("█", FILLED_WIDTH))
+    Set BAR (BAR + REPEAT("░", (WIDTH - FILLED_WIDTH)))
+    Set BAR (BAR + "]")
+    
+    // 添加百分比
+    If (SHOW_PERCENT) {
+        Set BAR (BAR + " " + TO_STRING(FLOOR(PERCENT)) + "%")
+    }
+    
+    // 添加数字
+    If (SHOW_NUMBERS) {
+        Set BAR (BAR + " (" + TO_STRING(CURRENT) + "/" + TO_STRING(TOTAL) + ")")
+    }
+    
+    Return BAR
+}
+
+// 简化版进度条（仅百分比）
+Func CLI_PROGRESS(PERCENT, WIDTH) {
+    Set FILLED_WIDTH FLOOR((PERCENT / 100) * WIDTH)
+    Set BAR "["
+    Set BAR (BAR + REPEAT("█", FILLED_WIDTH))
+    Set BAR (BAR + REPEAT("░", (WIDTH - FILLED_WIDTH)))
+    Set BAR (BAR + "] " + TO_STRING(FLOOR(PERCENT)) + "%")
+    Return BAR
+}
+
+// ============================================
+// 交互式输入
+// ============================================
+
+// 确认提示（返回用户输入）
+Func CLI_CONFIRM(MESSAGE) {
+    PRINT(MESSAGE + " (y/n): ")
+    Set INPUT INPUT_LINE()
+    Set LOWER LOWER(TRIM(INPUT))
+    Return (((LOWER == "y") Or (LOWER == "yes")))
+}
+
+// 选择菜单
+Func CLI_SELECT(PROMPT, OPTIONS) {
+    PRINTLN(PROMPT)
+    Set I 0
+    While (I < LEN(OPTIONS)) {
+        PRINTLN("  " + TO_STRING((I + 1)) + ". " + OPTIONS[I])
+        Set I (I + 1)
+    }
+    
+    PRINT("请选择 (1-" + TO_STRING(LEN(OPTIONS)) + "): ")
+    Set INPUT INPUT_LINE()
+    Set CHOICE (TO_NUMBER(TRIM(INPUT)) - 1)
+    
+    If ((CHOICE >= 0) And (CHOICE < LEN(OPTIONS))) {
+        Return OPTIONS[CHOICE]
+    }
+    
+    Return Null
+}
+
+// ============================================
+// 帮助信息生成
+// ============================================
+
+// 生成帮助信息
+// CONFIG: {
+//   "name": "命令名",
+//   "version": "1.0.0",
+//   "description": "描述",
+//   "usage": "命令 [选项] 参数",
+//   "options": [
+//     {"flag": "-h, --help", "description": "显示帮助"},
+//     ...
+//   ],
+//   "examples": [
+//     "命令 --option value",
+//     ...
+//   ]
+// }
+Func CLI_HELP(CONFIG) {
+    Set LINES []
+    
+    // 标题和版本
+    If (HAS(CONFIG, "name")) {
+        Set TITLE CONFIG["name"]
+        If (HAS(CONFIG, "version")) {
+            Set TITLE (TITLE + " v" + CONFIG["version"])
+        }
+        PUSH(LINES, CLI_BOLD(TITLE))
+        PUSH(LINES, "")
+    }
+    
+    // 描述
+    If (HAS(CONFIG, "description")) {
+        PUSH(LINES, CONFIG["description"])
+        PUSH(LINES, "")
+    }
+    
+    // 用法
+    If (HAS(CONFIG, "usage")) {
+        PUSH(LINES, CLI_BOLD("用法:"))
+        PUSH(LINES, "  " + CONFIG["usage"])
+        PUSH(LINES, "")
+    }
+    
+    // 选项
+    If (HAS(CONFIG, "options")) {
+        PUSH(LINES, CLI_BOLD("选项:"))
+        Set OPTIONS CONFIG["options"]
+        Set I 0
+        While (I < LEN(OPTIONS)) {
+            Set OPT OPTIONS[I]
+            Set FLAG OPT["flag"]
+            Set DESC OPT["description"]
+            
+            // 对齐描述
+            Set PADDING REPEAT(" ", (20 - LEN(FLAG)))
+            PUSH(LINES, "  " + CLI_GREEN(FLAG) + PADDING + DESC)
+            
+            Set I (I + 1)
+        }
+        PUSH(LINES, "")
+    }
+    
+    // 示例
+    If (HAS(CONFIG, "examples")) {
+        PUSH(LINES, CLI_BOLD("示例:"))
+        Set EXAMPLES CONFIG["examples"]
+        Set I 0
+        While (I < LEN(EXAMPLES)) {
+            PUSH(LINES, "  $ " + CLI_DIM(EXAMPLES[I]))
+            Set I (I + 1)
+        }
+        PUSH(LINES, "")
+    }
+    
+    Return JOIN(LINES, "\n")
+}
+
+// ============================================
+// 字符串重复（辅助函数）
+// ============================================
+
+Func REPEAT(STR, COUNT) {
+    Set RESULT ""
+    Set I 0
+    While (I < COUNT) {
+        Set RESULT (RESULT + STR)
+        Set I (I + 1)
+    }
+    Return RESULT
+}
+
+PRINTLN("[stdlib] cli_utils.aether loaded - CLI utilities for command-line programs")

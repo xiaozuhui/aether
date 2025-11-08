@@ -182,13 +182,37 @@ pub fn contains(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     match (&args[0], &args[1]) {
+        // String contains substring
         (Value::String(s), Value::String(substr)) => {
             Ok(Value::Boolean(s.contains(substr.as_str())))
         }
+        // Array contains element
+        (Value::Array(arr), item) => {
+            for elem in arr.iter() {
+                if values_equal(elem, item) {
+                    return Ok(Value::Boolean(true));
+                }
+            }
+            Ok(Value::Boolean(false))
+        }
+        // Dict contains key
+        (Value::Dict(dict), Value::String(key)) => Ok(Value::Boolean(dict.contains_key(key))),
         _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "String, String".to_string(),
+            expected: "(String, String) or (Array, Any) or (Dict, String)".to_string(),
             got: format!("{:?}, {:?}", args[0], args[1]),
         }),
+    }
+}
+
+// Helper function to compare values for equality
+fn values_equal(a: &Value, b: &Value) -> bool {
+    use Value::*;
+    match (a, b) {
+        (Number(a), Number(b)) => (a - b).abs() < f64::EPSILON,
+        (String(a), String(b)) => a == b,
+        (Boolean(a), Boolean(b)) => a == b,
+        (Null, Null) => true,
+        _ => false,
     }
 }
 

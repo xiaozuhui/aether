@@ -1,0 +1,18 @@
+// 简单测试 CLI工具的基本功能
+
+PRINTLN("=== CLI Utils 基础测试 ===")
+PRINTLN("")
+
+// 测试颜色函数
+PRINTLN(CLI_RED("这是红色"))
+PRINTLN(CLI_GREEN("这是绿色"))
+PRINTLN(CLI_SUCCESS("成功"))
+PRINTLN(CLI_ERROR("错误"))
+PRINTLN("")
+
+// 测试字符串重复
+Set STARS REPEAT("*", 10)
+PRINTLN("重复: " + STARS)
+PRINTLN("")
+
+PRINTLN("✅ 基础测试完成")

@@ -1,0 +1,173 @@
+// ============================================
+// Regex Utils Demo - 正则工具演示
+// ============================================
+
+PRINTLN("========== 正则风格工具演示 ==========")
+PRINTLN("")
+
+// ============================================
+// 1. 通配符匹配
+// ============================================
+
+PRINTLN("1. 通配符匹配")
+PRINTLN("hello.txt 匹配 *.txt: " + TO_STRING(REGEX_WILDCARD_MATCH("hello.txt", "*.txt")))
+PRINTLN("file123.log 匹配 file???.log: " + TO_STRING(REGEX_WILDCARD_MATCH("file123.log", "file???.log")))
+PRINTLN("test.py 匹配 *.txt: " + TO_STRING(REGEX_WILDCARD_MATCH("test.py", "*.txt")))
+PRINTLN("")
+
+// ============================================
+// 2. 提取数字
+// ============================================
+
+PRINTLN("2. 提取数字")
+Set TEXT1 "订单号: 12345, 金额: 299.99元, 数量: 3件"
+Set NUMBERS REGEX_EXTRACT_NUMBERS(TEXT1)
+PRINTLN("原文: " + TEXT1)
+PRINTLN("提取的数字: " + JSON_STRINGIFY(NUMBERS))
+PRINTLN("")
+
+// ============================================
+// 3. 提取单词
+// ============================================
+
+PRINTLN("3. 提取单词")
+Set TEXT2 "Hello, World! How are you?"
+Set WORDS REGEX_EXTRACT_WORDS(TEXT2)
+PRINTLN("原文: " + TEXT2)
+PRINTLN("提取的单词: " + JSON_STRINGIFY(WORDS))
+PRINTLN("")
+
+// ============================================
+// 4. 邮箱验证和提取
+// ============================================
+
+PRINTLN("4. 邮箱验证和提取")
+PRINTLN("alice@example.com 是邮箱: " + TO_STRING(REGEX_IS_EMAIL("alice@example.com")))
+PRINTLN("invalid-email 是邮箱: " + TO_STRING(REGEX_IS_EMAIL("invalid-email")))
+
+Set TEXT3 "联系方式: alice@example.com 或 bob@test.org"
+Set EMAILS REGEX_EXTRACT_EMAILS(TEXT3)
+PRINTLN("原文: " + TEXT3)
+PRINTLN("提取的邮箱: " + JSON_STRINGIFY(EMAILS))
+PRINTLN("")
+
+// ============================================
+// 5. URL 验证和提取
+// ============================================
+
+PRINTLN("5. URL 验证和提取")
+PRINTLN("https://example.com 是 URL: " + TO_STRING(REGEX_IS_URL("https://example.com")))
+PRINTLN("example.com 是 URL: " + TO_STRING(REGEX_IS_URL("example.com")))
+
+Set TEXT4 "参考: https://github.com 和 http://example.org"
+Set URLS REGEX_EXTRACT_URLS(TEXT4)
+PRINTLN("原文: " + TEXT4)
+PRINTLN("提取的 URL: " + JSON_STRINGIFY(URLS))
+PRINTLN("")
+
+// ============================================
+// 6. 电话号码验证
+// ============================================
+
+PRINTLN("6. 电话号码验证")
+PRINTLN("13812345678 是电话: " + TO_STRING(REGEX_IS_PHONE("13812345678")))
+PRINTLN("010-12345678 是电话: " + TO_STRING(REGEX_IS_PHONE("010-12345678")))
+PRINTLN("123 是电话: " + TO_STRING(REGEX_IS_PHONE("123")))
+PRINTLN("")
+
+// ============================================
+// 7. 字符类型验证
+// ============================================
+
+PRINTLN("7. 字符类型验证")
+PRINTLN("12345 是纯数字: " + TO_STRING(REGEX_IS_NUMERIC("12345")))
+PRINTLN("abc123 是纯数字: " + TO_STRING(REGEX_IS_NUMERIC("abc123")))
+PRINTLN("hello 是纯字母: " + TO_STRING(REGEX_IS_ALPHA("hello")))
+PRINTLN("hello123 是纯字母: " + TO_STRING(REGEX_IS_ALPHA("hello123")))
+PRINTLN("abc123 是字母数字: " + TO_STRING(REGEX_IS_ALPHANUMERIC("abc123")))
+PRINTLN("abc-123 是字母数字: " + TO_STRING(REGEX_IS_ALPHANUMERIC("abc-123")))
+PRINTLN("")
+
+// ============================================
+// 8. 查找匹配内容
+// ============================================
+
+PRINTLN("8. 查找匹配内容")
+Set TEXT5 "代码: {{name}}, 价格: {{price}}, 描述: {{desc}}"
+Set MATCHES REGEX_FIND_BETWEEN(TEXT5, "{{", "}}")
+PRINTLN("原文: " + TEXT5)
+PRINTLN("提取变量: " + JSON_STRINGIFY(MATCHES))
+PRINTLN("")
+
+// ============================================
+// 9. 查找包含特定文本的行
+// ============================================
+
+PRINTLN("9. 查找包含特定文本的行")
+Set TEXT6 "第一行
+错误: 文件未找到
+第三行
+错误: 权限不足
+第五行"
+Set ERROR_LINES REGEX_FIND_LINES_CONTAINING(TEXT6, "错误")
+PRINTLN("原文:")
+PRINTLN(TEXT6)
+PRINTLN("包含'错误'的行: " + JSON_STRINGIFY(ERROR_LINES))
+PRINTLN("")
+
+// ============================================
+// 10. 文本清理
+// ============================================
+
+PRINTLN("10. 文本清理")
+Set TEXT7 "Hello  World  123  !!!"
+PRINTLN("原文: '" + TEXT7 + "'")
+PRINTLN("删除空格: '" + REGEX_REMOVE_WHITESPACE(TEXT7) + "'")
+PRINTLN("删除数字: '" + REGEX_REMOVE_DIGITS(TEXT7) + "'")
+PRINTLN("保留字母数字: '" + REGEX_REMOVE_NON_ALPHANUMERIC(TEXT7) + "'")
+PRINTLN("")
+
+// ============================================
+// 11. 分句和分段
+// ============================================
+
+PRINTLN("11. 分句和分段")
+Set TEXT8 "这是第一句。这是第二句！这是第三句？"
+Set SENTENCES REGEX_SPLIT_SENTENCES(TEXT8)
+PRINTLN("原文: " + TEXT8)
+PRINTLN("分句结果:")
+Set I 0
+While (I < LEN(SENTENCES)) {
+    PRINTLN("  " + TO_STRING((I + 1)) + ". " + GET(SENTENCES, I))
+    Set I (I + 1)
+}
+PRINTLN("")
+
+// ============================================
+// 12. 字符统计
+// ============================================
+
+PRINTLN("12. 字符统计")
+Set TEXT9 "Hello World 123!!!"
+Set STATS REGEX_COUNT_CHARS(TEXT9)
+PRINTLN("原文: " + TEXT9)
+PRINTLN("统计结果:")
+PRINTLN("  总字符: " + TO_STRING(STATS["total"]))
+PRINTLN("  字母: " + TO_STRING(STATS["alpha"]))
+PRINTLN("  数字: " + TO_STRING(STATS["digit"]))
+PRINTLN("  空格: " + TO_STRING(STATS["space"]))
+PRINTLN("  其他: " + TO_STRING(STATS["other"]))
+PRINTLN("")
+
+// ============================================
+// 13. 模式计数
+// ============================================
+
+PRINTLN("13. 模式计数")
+Set TEXT10 "apple banana apple orange apple"
+Set COUNT REGEX_COUNT_MATCHES(TEXT10, "apple")
+PRINTLN("原文: " + TEXT10)
+PRINTLN("'apple' 出现次数: " + TO_STRING(COUNT))
+PRINTLN("")
+
+PRINTLN("✅ 演示完成！")

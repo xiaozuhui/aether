@@ -42,6 +42,15 @@ pub const CSV: &str = include_str!("../stdlib/csv.aether");
 /// 函数式编程工具
 pub const FUNCTIONAL: &str = include_str!("../stdlib/functional.aether");
 
+/// CLI 工具库
+pub const CLI_UTILS: &str = include_str!("../stdlib/cli_utils.aether");
+
+/// 文本模板引擎
+pub const TEXT_TEMPLATE: &str = include_str!("../stdlib/text_template.aether");
+
+/// 正则风格文本处理
+pub const REGEX_UTILS: &str = include_str!("../stdlib/regex_utils.aether");
+
 /// 所有标准库模块的列表
 pub const ALL_MODULES: &[(&str, &str)] = &[
     ("string_utils", STRING_UTILS),
@@ -57,6 +66,9 @@ pub const ALL_MODULES: &[(&str, &str)] = &[
     ("json", JSON),
     ("csv", CSV),
     ("functional", FUNCTIONAL),
+    ("cli_utils", CLI_UTILS),
+    ("text_template", TEXT_TEMPLATE),
+    ("regex_utils", REGEX_UTILS),
 ];
 
 /// 获取指定模块的代码
@@ -75,6 +87,9 @@ pub fn get_module(name: &str) -> Option<&'static str> {
         "json" => Some(JSON),
         "csv" => Some(CSV),
         "functional" => Some(FUNCTIONAL),
+        "cli_utils" => Some(CLI_UTILS),
+        "text_template" => Some(TEXT_TEMPLATE),
+        "regex_utils" => Some(REGEX_UTILS),
         _ => None,
     }
 }

@@ -1,0 +1,125 @@
+// ============================================
+// CLI Utils Demo - 命令行工具演示
+// ============================================
+
+PRINTLN(CLI_BOLD("========== CLI 工具演示 =========="))
+PRINTLN("")
+
+// ============================================
+// 1. 颜色输出
+// ============================================
+
+PRINTLN(CLI_BOLD("1. 颜色输出"))
+PRINTLN(CLI_RED("这是红色文本"))
+PRINTLN(CLI_GREEN("这是绿色文本"))
+PRINTLN(CLI_YELLOW("这是黄色文本"))
+PRINTLN(CLI_BLUE("这是蓝色文本"))
+PRINTLN(CLI_CYAN("这是青色文本"))
+PRINTLN(CLI_MAGENTA("这是品红色文本"))
+PRINTLN("")
+
+// 语义化颜色
+PRINTLN(CLI_SUCCESS("操作成功！"))
+PRINTLN(CLI_ERROR("操作失败！"))
+PRINTLN(CLI_WARNING("警告信息"))
+PRINTLN(CLI_INFO("提示信息"))
+PRINTLN("")
+
+// ============================================
+// 2. 参数解析
+// ============================================
+
+PRINTLN(CLI_BOLD("2. 参数解析"))
+Set ARGS ["--name", "Alice", "--age=30", "-vf", "file.txt", "extra"]
+PRINTLN("原始参数: " + JSON_STRINGIFY(ARGS))
+
+Set PARSED CLI_PARSE_ARGS(ARGS)
+PRINTLN("解析结果:")
+PRINTLN("  标志: " + JSON_STRINGIFY(PARSED["flags"]))
+PRINTLN("  选项: " + JSON_STRINGIFY(PARSED["options"]))
+PRINTLN("  位置参数: " + JSON_STRINGIFY(PARSED["args"]))
+PRINTLN("")
+
+Set NAME CLI_GET_OPTION(PARSED, "name", "匿名")
+PRINTLN("获取 name: " + NAME)
+PRINTLN("检查 -v 标志: " + TO_STRING(CLI_HAS_FLAG(PARSED, "v")))
+PRINTLN("")
+
+// ============================================
+// 3. 表格格式化
+// ============================================
+
+PRINTLN(CLI_BOLD("3. 表格格式化"))
+
+Set HEADERS ["姓名", "年龄", "城市"]
+
+Set ROW1 ["张三", "25", "北京"]
+Set ROW2 ["李四", "30", "上海"]
+Set ROW3 ["王五", "28", "广州"]
+Set ROWS [ROW1, ROW2, ROW3]
+
+Set TABLE_OPTIONS {}
+Set TABLE_OPTIONS["border"] True
+Set TABLE_OPTIONS["padding"] 1
+Set TABLE CLI_TABLE(HEADERS, ROWS, TABLE_OPTIONS)
+PRINTLN(TABLE)
+PRINTLN("")
+
+// ============================================
+// 4. 进度条
+// ============================================
+
+PRINTLN(CLI_BOLD("4. 进度条"))
+
+Set I 0
+While (I <= 100) {
+    Set BAR CLI_PROGRESS(I, 30)
+    PRINTLN(BAR)
+    Set I (I + 25)
+}
+PRINTLN("")
+
+Set PROGRESS_OPTIONS {}
+Set PROGRESS_OPTIONS["showPercent"] True
+Set PROGRESS_OPTIONS["showNumbers"] True
+Set BAR2 CLI_PROGRESS_BAR(75, 100, 40, PROGRESS_OPTIONS)
+PRINTLN(BAR2)
+PRINTLN("")
+
+// ============================================
+// 5. 帮助信息
+// ============================================
+
+PRINTLN(CLI_BOLD("5. 帮助信息生成"))
+
+Set OPT1 {}
+Set OPT1["flag"] "-h, --help"
+Set OPT1["description"] "显示帮助信息"
+
+Set OPT2 {}
+Set OPT2["flag"] "-v, --version"
+Set OPT2["description"] "显示版本号"
+
+Set OPT3 {}
+Set OPT3["flag"] "-o, --output"
+Set OPT3["description"] "指定输出文件"
+
+Set OPT4 {}
+Set OPT4["flag"] "-f, --force"
+Set OPT4["description"] "强制执行"
+
+Set OPTIONS_LIST [OPT1, OPT2, OPT3, OPT4]
+Set EXAMPLES_LIST ["mytool input.txt", "mytool -o output.txt input.txt", "mytool --force -o result.txt data.txt"]
+
+Set HELP_CONFIG {}
+Set HELP_CONFIG["name"] "mytool"
+Set HELP_CONFIG["version"] "1.0.0"
+Set HELP_CONFIG["description"] "一个示例命令行工具"
+Set HELP_CONFIG["usage"] "mytool [选项] <文件>"
+Set HELP_CONFIG["options"] OPTIONS_LIST
+Set HELP_CONFIG["examples"] EXAMPLES_LIST
+
+Set HELP CLI_HELP(HELP_CONFIG)
+PRINTLN(HELP)
+
+PRINTLN(CLI_SUCCESS("演示完成！"))
