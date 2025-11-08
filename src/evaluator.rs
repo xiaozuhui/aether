@@ -117,6 +117,22 @@ impl Evaluator {
         Evaluator { env, registry }
     }
 
+    /// Reset the environment (clear all variables and re-register built-ins)
+    ///
+    /// This is useful for engine pooling and global singleton patterns
+    /// where you want to reuse an engine instance but ensure isolation.
+    pub fn reset_env(&mut self) {
+        // Create new environment
+        self.env = Rc::new(RefCell::new(Environment::new()));
+
+        // Re-register built-in functions
+        for name in self.registry.names() {
+            self.env
+                .borrow_mut()
+                .set(name.clone(), Value::BuiltIn { name, arity: 0 });
+        }
+    }
+
     /// Evaluate a program
     pub fn eval_program(&mut self, program: &Program) -> EvalResult {
         let mut result = Value::Null;

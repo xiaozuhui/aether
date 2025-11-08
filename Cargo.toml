@@ -39,7 +39,10 @@ serde_json = "1.0"
 calamine = "0.31.0"        # Excel 读取
 rust_xlsxwriter = "0.91.0" # Excel 写入
 chrono = "0.4"             # 日期时间格式化
-lazy_static = "1.4"        # 全局句柄存储
+lazy_static = "1.4"        # 全局句柄存储和单例模式
+
+# 引擎池依赖
+crossbeam = "0.8" # 无锁队列，用于引擎池
 
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["html_reports"] }

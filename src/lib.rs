@@ -40,6 +40,82 @@
 //! let mut engine = Aether::with_all_permissions();
 //! ```
 //!
+//! ## High-Performance Engine Modes (New!)
+//!
+//! For **high-frequency, large-scale DSL execution**, Aether provides three optimized engine modes:
+//!
+//! ### 1. GlobalEngine - Global Singleton (Best for Single-Thread)
+//!
+//! ```rust
+//! use aether::engine::GlobalEngine;
+//!
+//! // Execute with isolated environment (variables cleared each time)
+//! let result = GlobalEngine::eval_isolated("Set X 10\n(X + 20)").unwrap();
+//! println!("Result: {}", result);
+//!
+//! // Benefits:
+//! // - ✅ Maximum performance (engine created only once)
+//! // - ✅ AST cache accumulates (up to 142x speedup!)
+//! // - ✅ Environment isolation (variables cleared between calls)
+//! // - ⚠️ Single-threaded (uses Mutex)
+//! ```
+//!
+//! ### 2. EnginePool - Engine Pool (Best for Multi-Thread)
+//!
+//! ```rust
+//! use aether::engine::EnginePool;
+//! use std::thread;
+//!
+//! // Create pool once (size = 2-4x CPU cores recommended)
+//! let pool = EnginePool::new(8);
+//!
+//! // Use across threads
+//! let handles: Vec<_> = (0..4).map(|i| {
+//!     let pool = pool.clone();
+//!     thread::spawn(move || {
+//!         let mut engine = pool.acquire(); // Auto-acquire
+//!         let code = format!("Set X {}\n(X * 2)", i);
+//!         engine.eval(&code)
+//!     }) // Auto-return on scope exit
+//! }).collect();
+//!
+//! // Benefits:
+//! // - ✅ Multi-thread safe (lock-free queue)
+//! // - ✅ RAII pattern (auto-return to pool)
+//! // - ✅ Environment isolation (cleared on acquire)
+//! // - ✅ AST cache per engine
+//! ```
+//!
+//! ### 3. ScopedEngine - Closure Style (Best for Simplicity)
+//!
+//! ```rust
+//! use aether::engine::ScopedEngine;
+//!
+//! // Closure style (like Py3o)
+//! let result = ScopedEngine::with(|engine| {
+//!     engine.eval("Set X 10")?;
+//!     engine.eval("(X + 20)")
+//! }).unwrap();
+//!
+//! // Or simplified version
+//! let result = ScopedEngine::eval("Set X 10\n(X + 20)").unwrap();
+//!
+//! // Benefits:
+//! // - ✅ Complete isolation (new engine each time)
+//! // - ✅ Clean API (auto lifetime management)
+//! // - ⚠️ Lower performance (no cache reuse)
+//! ```
+//!
+//! ### Mode Comparison
+//!
+//! | Feature | GlobalEngine | EnginePool | ScopedEngine |
+//! |---------|-------------|------------|--------------|
+//! | Performance | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+//! | Multi-thread | ❌ | ✅ | ✅ |
+//! | Isolation | ✅ | ✅ | ✅ |
+//! | AST Cache | ✅ | ✅ | ❌ |
+//! | Use Case | Single-thread high-freq | Multi-thread | Occasional |
+//!
 //! ### Selective Standard Library Loading (Recommended for DSL)
 //!
 //! For better performance, load only the stdlib modules you need:
@@ -95,6 +171,7 @@
 pub mod ast;
 pub mod builtins;
 pub mod cache;
+pub mod engine;
 pub mod environment;
 pub mod evaluator;
 pub mod lexer;
