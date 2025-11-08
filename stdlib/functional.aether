@@ -1,0 +1,701 @@
+// 函数式编程工具库
+// Functional Programming Utilities
+// 提供函数组合、高阶函数等函数式编程工具
+
+// ============================================================
+// 数组高阶函数增强
+// ============================================================
+
+// MAP_WITH_INDEX - 带索引的映射
+// 参数:
+//   ARR - 数组
+//   FUNC - 映射函数（接受元素和索引两个参数）
+// 返回: 映射后的新数组
+Func MAP_WITH_INDEX(ARR, FUNC) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        Set MAPPED FUNC(ITEM, I)
+        Set RESULT PUSH(RESULT, MAPPED)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// FILTER_WITH_INDEX - 带索引的过滤
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数（接受元素和索引两个参数）
+// 返回: 过滤后的新数组
+Func FILTER_WITH_INDEX(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (PREDICATE(ITEM, I)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// FOREACH - 遍历数组执行函数
+// 参数:
+//   ARR - 数组
+//   FUNC - 对每个元素执行的函数
+// 返回: Null
+Func FOREACH(ARR, FUNC) {
+    If (TYPE(ARR) != "Array") {
+        Return Null
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        FUNC(ITEM)
+        Set I (I + 1)
+    }
+    
+    Return Null
+}
+
+// FIND - 查找第一个满足条件的元素
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数
+// 返回: 第一个匹配的元素，如果没有找到返回 Null
+Func FIND(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return Null
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (PREDICATE(ITEM)) {
+            Return ITEM
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return Null
+}
+
+// FIND_INDEX - 查找第一个满足条件的元素的索引
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数
+// 返回: 索引，如果没有找到返回 -1
+Func FIND_INDEX(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return -1
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (PREDICATE(ITEM)) {
+            Return I
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return -1
+}
+
+// EVERY - 检查是否所有元素都满足条件
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数
+// 返回: True 或 False
+Func EVERY(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return False
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (!PREDICATE(ITEM)) {
+            Return False
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// SOME - 检查是否至少有一个元素满足条件
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数
+// 返回: True 或 False
+Func SOME(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return False
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (PREDICATE(ITEM)) {
+            Return True
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return False
+}
+
+// PARTITION - 根据条件将数组分成两部分
+// 参数:
+//   ARR - 数组
+//   PREDICATE - 谓词函数
+// 返回: 字典 {"true": 满足条件的元素数组, "false": 不满足条件的元素数组}
+Func PARTITION(ARR, PREDICATE) {
+    If (TYPE(ARR) != "Array") {
+        Return {"true": [], "false": []}
+    }
+    
+    Set TRUE_ARR []
+    Set FALSE_ARR []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (PREDICATE(ITEM)) {
+            Set TRUE_ARR PUSH(TRUE_ARR, ITEM)
+        } Else {
+            Set FALSE_ARR PUSH(FALSE_ARR, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return {"true": TRUE_ARR, "false": FALSE_ARR}
+}
+
+// ============================================================
+// 字典高阶函数
+// ============================================================
+
+// MAP_DICT - 映射字典的值
+// 参数:
+//   DICT - 字典
+//   FUNC - 映射函数（接受值和键两个参数）
+// 返回: 新字典
+Func MAP_DICT(DICT, FUNC) {
+    If (TYPE(DICT) != "Dict") {
+        Return {}
+    }
+    
+    Set RESULT {}
+    Set DICT_KEYS KEYS(DICT)
+    Set I 0
+    Set LEN_KEYS LEN(DICT_KEYS)
+    
+    While (I < LEN_KEYS) {
+        Set KEY DICT_KEYS[I]
+        Set VALUE DICT[KEY]
+        Set NEW_VALUE FUNC(VALUE, KEY)
+        Set RESULT[KEY] NEW_VALUE
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// FILTER_DICT - 过滤字典
+// 参数:
+//   DICT - 字典
+//   PREDICATE - 谓词函数（接受值和键两个参数）
+// 返回: 过滤后的新字典
+Func FILTER_DICT(DICT, PREDICATE) {
+    If (TYPE(DICT) != "Dict") {
+        Return {}
+    }
+    
+    Set RESULT {}
+    Set DICT_KEYS KEYS(DICT)
+    Set I 0
+    Set LEN_KEYS LEN(DICT_KEYS)
+    
+    While (I < LEN_KEYS) {
+        Set KEY DICT_KEYS[I]
+        Set VALUE DICT[KEY]
+        
+        If (PREDICATE(VALUE, KEY)) {
+            Set RESULT[KEY] VALUE
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// FOREACH_DICT - 遍历字典执行函数
+// 参数:
+//   DICT - 字典
+//   FUNC - 对每个键值对执行的函数
+// 返回: Null
+Func FOREACH_DICT(DICT, FUNC) {
+    If (TYPE(DICT) != "Dict") {
+        Return Null
+    }
+    
+    Set DICT_KEYS KEYS(DICT)
+    Set I 0
+    Set LEN_KEYS LEN(DICT_KEYS)
+    
+    While (I < LEN_KEYS) {
+        Set KEY DICT_KEYS[I]
+        Set VALUE DICT[KEY]
+        FUNC(KEY, VALUE)
+        Set I (I + 1)
+    }
+    
+    Return Null
+}
+
+// DICT_TO_ARRAY - 将字典转换为键值对数组
+// 参数:
+//   DICT - 字典
+// 返回: 数组，每个元素为 {"key": K, "value": V}
+Func DICT_TO_ARRAY(DICT) {
+    If (TYPE(DICT) != "Dict") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set DICT_KEYS KEYS(DICT)
+    Set I 0
+    Set LEN_KEYS LEN(DICT_KEYS)
+    
+    While (I < LEN_KEYS) {
+        Set KEY DICT_KEYS[I]
+        Set VALUE DICT[KEY]
+        Set PAIR {"key": KEY, "value": VALUE}
+        Set RESULT PUSH(RESULT, PAIR)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ARRAY_TO_DICT - 将键值对数组转换为字典
+// 参数:
+//   ARR - 数组，每个元素为 {"key": K, "value": V}
+// 返回: 字典
+Func ARRAY_TO_DICT(ARR) {
+    If (TYPE(ARR) != "Array") {
+        Return {}
+    }
+    
+    Set RESULT {}
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set PAIR ARR[I]
+        
+        If (TYPE(PAIR) == "Dict" && HAS(PAIR, "key") && HAS(PAIR, "value")) {
+            Set KEY PAIR["key"]
+            Set VALUE PAIR["value"]
+            Set RESULT[KEY] VALUE
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ============================================================
+// 数组实用函数
+// ============================================================
+
+// TAKE - 获取数组的前 N 个元素
+// 参数:
+//   ARR - 数组
+//   N - 数量
+// 返回: 新数组
+Func TAKE(ARR, N) {
+    If (TYPE(ARR) != "Array" || N <= 0) {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    Set LIMIT N
+    
+    If (LIMIT > LEN_ARR) {
+        Set LIMIT LEN_ARR
+    }
+    
+    While (I < LIMIT) {
+        Set ITEM ARR[I]
+        Set RESULT PUSH(RESULT, ITEM)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// DROP - 跳过数组的前 N 个元素
+// 参数:
+//   ARR - 数组
+//   N - 数量
+// 返回: 新数组
+Func DROP(ARR, N) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I N
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        Set RESULT PUSH(RESULT, ITEM)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CHUNK - 将数组分割成指定大小的块
+// 参数:
+//   ARR - 数组
+//   SIZE - 每块的大小
+// 返回: 二维数组
+Func CHUNK(ARR, SIZE) {
+    If (TYPE(ARR) != "Array" || SIZE <= 0) {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set CHUNK_ARR []
+        Set J 0
+        
+        While (J < SIZE && (I + J) < LEN_ARR) {
+            Set ITEM ARR[(I + J)]
+            Set CHUNK_ARR PUSH(CHUNK_ARR, ITEM)
+            Set J (J + 1)
+        }
+        
+        Set RESULT PUSH(RESULT, CHUNK_ARR)
+        Set I (I + SIZE)
+    }
+    
+    Return RESULT
+}
+
+// FLATTEN - 扁平化数组（一层）
+// 参数:
+//   ARR - 二维数组
+// 返回: 一维数组
+Func FLATTEN(ARR) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (TYPE(ITEM) == "Array") {
+            Set J 0
+            Set LEN_ITEM LEN(ITEM)
+            
+            While (J < LEN_ITEM) {
+                Set SUB_ITEM ITEM[J]
+                Set RESULT PUSH(RESULT, SUB_ITEM)
+                Set J (J + 1)
+            }
+        } Else {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// UNIQUE - 数组去重
+// 参数:
+//   ARR - 数组
+// 返回: 去重后的新数组
+Func UNIQUE(ARR) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        Set FOUND False
+        Set J 0
+        Set LEN_RESULT LEN(RESULT)
+        
+        While (J < LEN_RESULT) {
+            If (RESULT[J] == ITEM) {
+                Set FOUND True
+                Set J LEN_RESULT
+            }
+            Set J (J + 1)
+        }
+        
+        If (!FOUND) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// COMPACT - 移除数组中的 Null 值
+// 参数:
+//   ARR - 数组
+// 返回: 新数组
+Func COMPACT(ARR) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        
+        If (TYPE(ITEM) != "Null") {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ZIP - 将多个数组合并成元组数组
+// 参数:
+//   ARR1 - 第一个数组
+//   ARR2 - 第二个数组
+// 返回: 数组，每个元素为 [ARR1[i], ARR2[i]]
+Func ZIP(ARR1, ARR2) {
+    If (TYPE(ARR1) != "Array" || TYPE(ARR2) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set LEN1 LEN(ARR1)
+    Set LEN2 LEN(ARR2)
+    Set MIN_LEN LEN1
+    
+    If (LEN2 < MIN_LEN) {
+        Set MIN_LEN LEN2
+    }
+    
+    Set I 0
+    
+    While (I < MIN_LEN) {
+        Set ITEM1 ARR1[I]
+        Set ITEM2 ARR2[I]
+        Set PAIR [ITEM1, ITEM2]
+        Set RESULT PUSH(RESULT, PAIR)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ============================================================
+// 函数组合工具
+// ============================================================
+
+// IDENTITY - 恒等函数，返回输入值本身
+// 参数:
+//   VALUE - 任意值
+// 返回: 输入值
+Func IDENTITY(VALUE) {
+    Return VALUE
+}
+
+// CONSTANT - 创建一个总是返回指定值的函数
+// 参数:
+//   VALUE - 要返回的值
+// 返回: 返回该值的函数引用（在 Aether 中简化为直接返回值）
+Func CONSTANT(VALUE) {
+    Return VALUE
+}
+
+// NEGATE - 对谓词函数取反
+// 注意：Aether 中函数是一等公民但不支持高阶返回，这里作为概念函数
+// 参数:
+//   PREDICATE - 谓词函数
+// 返回: 取反的结果
+Func NEGATE(RESULT) {
+    Return !RESULT
+}
+
+// ============================================================
+// 数值工具函数
+// ============================================================
+
+// RANGE_ARRAY - 生成指定范围的数组
+// 参数:
+//   START - 起始值
+//   END - 结束值（不包含）
+//   STEP - 步长（默认为1）
+// 返回: 数组
+Func RANGE_ARRAY(START, END, STEP) {
+    Set ACTUAL_STEP STEP
+    
+    If (TYPE(STEP) != "Number" || STEP == 0) {
+        Set ACTUAL_STEP 1
+    }
+    
+    Set RESULT []
+    Set CURRENT START
+    
+    If (ACTUAL_STEP > 0) {
+        While (CURRENT < END) {
+            Set RESULT PUSH(RESULT, CURRENT)
+            Set CURRENT (CURRENT + ACTUAL_STEP)
+        }
+    } Else {
+        While (CURRENT > END) {
+            Set RESULT PUSH(RESULT, CURRENT)
+            Set CURRENT (CURRENT + ACTUAL_STEP)
+        }
+    }
+    
+    Return RESULT
+}
+
+// TIMES - 执行函数 N 次
+// 参数:
+//   N - 次数
+//   FUNC - 要执行的函数（接受索引参数）
+// 返回: 结果数组
+Func TIMES(N, FUNC) {
+    If (TYPE(N) != "Number" || N <= 0) {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    
+    While (I < N) {
+        Set VALUE FUNC(I)
+        Set RESULT PUSH(RESULT, VALUE)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ============================================================
+// 条件工具
+// ============================================================
+
+// COND - 条件选择（类似 switch-case）
+// 参数:
+//   VALUE - 要判断的值
+//   CONDITIONS - 条件数组，每个元素为 {"test": 测试值, "result": 结果值}
+//   DEFAULT - 默认值
+// 返回: 匹配的结果值或默认值
+Func COND(VALUE, CONDITIONS, DEFAULT) {
+    If (TYPE(CONDITIONS) != "Array") {
+        Return DEFAULT
+    }
+    
+    Set I 0
+    Set LEN_COND LEN(CONDITIONS)
+    
+    While (I < LEN_COND) {
+        Set CONDITION CONDITIONS[I]
+        
+        If (TYPE(CONDITION) == "Dict" && HAS(CONDITION, "test") && HAS(CONDITION, "result")) {
+            Set TEST CONDITION["test"]
+            
+            If (VALUE == TEST) {
+                Return CONDITION["result"]
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return DEFAULT
+}
+
+// DEFAULT_TO - 如果值为 Null，返回默认值
+// 参数:
+//   VALUE - 值
+//   DEFAULT - 默认值
+// 返回: VALUE 或 DEFAULT
+Func DEFAULT_TO(VALUE, DEFAULT) {
+    If (TYPE(VALUE) == "Null") {
+        Return DEFAULT
+    }
+    Return VALUE
+}
+
+PRINTLN("[stdlib] functional.aether loaded - Functional programming utilities")

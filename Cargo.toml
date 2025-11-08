@@ -21,6 +21,7 @@ num-rational = "0.4"
 num-traits = "0.2"
 num-bigint = "0.4"
 ureq = "3.1.2"
+serde_json = "1.0"
 
 # 报表生成依赖
 calamine = "0.31.0"      # Excel 读取

@@ -880,20 +880,119 @@ impl Evaluator {
             }
 
             Value::BuiltIn { name, .. } => {
-                // Get the built-in function from the registry
-                if let Some((func, _arity)) = self.registry.get(name) {
-                    // Call the built-in function
-                    func(&args)
-                } else {
-                    Err(RuntimeError::NotCallable(format!(
-                        "Built-in function '{}' not found",
-                        name
-                    )))
+                // Special handling for MAP, FILTER, and REDUCE
+                match name.as_str() {
+                    "MAP" => self.builtin_map(&args),
+                    "FILTER" => self.builtin_filter(&args),
+                    "REDUCE" => self.builtin_reduce(&args),
+                    _ => {
+                        // Get the built-in function from the registry
+                        if let Some((func, _arity)) = self.registry.get(name) {
+                            // Call the built-in function
+                            func(&args)
+                        } else {
+                            Err(RuntimeError::NotCallable(format!(
+                                "Built-in function '{}' not found",
+                                name
+                            )))
+                        }
+                    }
                 }
             }
 
             _ => Err(RuntimeError::NotCallable(func.type_name().to_string())),
         }
+    }
+
+    // 实现 MAP 内置函数
+    fn builtin_map(&mut self, args: &[Value]) -> EvalResult {
+        if args.len() != 2 {
+            return Err(RuntimeError::WrongArity {
+                expected: 2,
+                got: args.len(),
+            });
+        }
+
+        let arr = match &args[0] {
+            Value::Array(a) => a,
+            other => {
+                return Err(RuntimeError::TypeErrorDetailed {
+                    expected: "Array".to_string(),
+                    got: format!("{:?}", other),
+                })
+            }
+        };
+
+        let func = &args[1];
+
+        let mut result = Vec::new();
+        for item in arr {
+            let mapped = self.call_function(func, vec![item.clone()])?;
+            result.push(mapped);
+        }
+
+        Ok(Value::Array(result))
+    }
+
+    // 实现 FILTER 内置函数
+    fn builtin_filter(&mut self, args: &[Value]) -> EvalResult {
+        if args.len() != 2 {
+            return Err(RuntimeError::WrongArity {
+                expected: 2,
+                got: args.len(),
+            });
+        }
+
+        let arr = match &args[0] {
+            Value::Array(a) => a,
+            other => {
+                return Err(RuntimeError::TypeErrorDetailed {
+                    expected: "Array".to_string(),
+                    got: format!("{:?}", other),
+                })
+            }
+        };
+
+        let predicate = &args[1];
+
+        let mut result = Vec::new();
+        for item in arr {
+            let test_result = self.call_function(predicate, vec![item.clone()])?;
+            if test_result.is_truthy() {
+                result.push(item.clone());
+            }
+        }
+
+        Ok(Value::Array(result))
+    }
+
+    // 实现 REDUCE 内置函数
+    fn builtin_reduce(&mut self, args: &[Value]) -> EvalResult {
+        if args.len() != 3 {
+            return Err(RuntimeError::WrongArity {
+                expected: 3,
+                got: args.len(),
+            });
+        }
+
+        let arr = match &args[0] {
+            Value::Array(a) => a,
+            other => {
+                return Err(RuntimeError::TypeErrorDetailed {
+                    expected: "Array".to_string(),
+                    got: format!("{:?}", other),
+                })
+            }
+        };
+
+        let mut accumulator = args[1].clone();
+        let func = &args[2];
+
+        for item in arr {
+            accumulator = self.call_function(func, vec![accumulator, item.clone()])?;
+        }
+
+        Ok(accumulator)
     }
 }
 

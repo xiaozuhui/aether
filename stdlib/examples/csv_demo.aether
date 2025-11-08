@@ -1,0 +1,105 @@
+// stdlib/examples/csv_demo.aether
+// CSV 工具库使用示例
+
+PRINTLN("========== CSV 工具库示例 ==========")
+PRINTLN("")
+
+// ==================== CSV 解析 ====================
+PRINTLN("1. CSV 解析")
+Set CSV_TEXT "name,age,city\nAlice,30,Beijing\nBob,25,Shanghai\nCharlie,35,Guangzhou"
+
+PRINTLN("原始 CSV:")
+PRINTLN(CSV_TEXT)
+PRINTLN("")
+
+Set PARSED CSV_PARSE_DEFAULT(CSV_TEXT)
+PRINTLN("解析为数组: " + JSON_STRINGIFY(PARSED))
+PRINTLN("")
+
+// ==================== CSV 转字典数组 ====================
+PRINTLN("2. CSV 转字典数组")
+Set USERS CSV_TO_DICT_ARRAY_DEFAULT(CSV_TEXT)
+PRINTLN("用户数据: " + JSON_STRINGIFY(USERS, 2))
+PRINTLN("")
+
+// ==================== 字典数组转 CSV ====================
+PRINTLN("3. 字典数组转 CSV")
+Set NEW_USERS [{"name": "David", "age": "28", "city": "Shenzhen"}, {"name": "Eve", "age": "32", "city": "Hangzhou"}]
+
+Set HEADERS ["name", "age", "city"]
+Set NEW_CSV CSV_FROM_DICT_ARRAY_DEFAULT(NEW_USERS, HEADERS)
+PRINTLN("生成的 CSV:")
+PRINTLN(NEW_CSV)
+PRINTLN("")
+
+// ==================== CSV 列操作 ====================
+PRINTLN("4. CSV 列操作")
+Set NAMES CSV_COLUMN(USERS, "name")
+PRINTLN("所有名字: " + JSON_STRINGIFY(NAMES))
+
+Set AGES CSV_COLUMN(USERS, "age")
+PRINTLN("所有年龄: " + JSON_STRINGIFY(AGES))
+PRINTLN("")
+
+// ==================== CSV 过滤 ====================
+PRINTLN("5. CSV 过滤")
+Set BEIJING_USERS CSV_FILTER_ROWS(USERS, "city", "Beijing")
+PRINTLN("北京用户: " + JSON_STRINGIFY(BEIJING_USERS))
+PRINTLN("")
+
+// ==================== CSV 列选择 ====================
+PRINTLN("6. CSV 列选择")
+Set SELECTED CSV_SELECT_COLUMNS(USERS, ["name", "city"])
+PRINTLN("选择的列: " + JSON_STRINGIFY(SELECTED, 2))
+PRINTLN("")
+
+// ==================== CSV 统计 ====================
+PRINTLN("7. CSV 统计")
+Set ROW_COUNT CSV_ROW_COUNT(USERS)
+PRINTLN("行数: " + TO_STRING(ROW_COUNT))
+
+Set COL_COUNT CSV_COLUMN_COUNT(USERS)
+PRINTLN("列数: " + TO_STRING(COL_COUNT))
+
+Set COL_NAMES CSV_COLUMN_NAMES(USERS)
+PRINTLN("列名: " + JSON_STRINGIFY(COL_NAMES))
+PRINTLN("")
+
+// ==================== CSV 唯一值和统计 ====================
+PRINTLN("8. CSV 唯一值和统计")
+Set CITIES CSV_UNIQUE_VALUES(USERS, "city")
+PRINTLN("所有城市: " + JSON_STRINGIFY(CITIES))
+
+Set CITY_COUNTS CSV_COUNT_BY(USERS, "city")
+PRINTLN("城市统计: " + JSON_STRINGIFY(CITY_COUNTS))
+PRINTLN("")
+
+// ==================== CSV JOIN ====================
+PRINTLN("9. CSV JOIN")
+Set EMPLOYEES [{"id": "1", "name": "Alice", "dept_id": "A"}, {"id": "2", "name": "Bob", "dept_id": "B"}]
+
+Set DEPARTMENTS [{"dept_id": "A", "dept_name": "Engineering"}, {"dept_id": "B", "dept_name": "Sales"}]
+
+Set JOINED CSV_JOIN(EMPLOYEES, DEPARTMENTS, "dept_id")
+PRINTLN("JOIN 结果: " + JSON_STRINGIFY(JOINED, 2))
+PRINTLN("")
+
+// ==================== 完整工作流示例 ====================
+PRINTLN("10. 完整工作流示例")
+Set SALES_CSV "product,quantity,price\nApple,10,5.5\nBanana,15,3.2\nOrange,8,4.8"
+
+PRINTLN("销售数据:")
+PRINTLN(SALES_CSV)
+PRINTLN("")
+
+Set SALES CSV_TO_DICT_ARRAY_DEFAULT(SALES_CSV)
+PRINTLN("解析后: " + JSON_STRINGIFY(SALES, 2))
+
+Set PRODUCTS CSV_COLUMN(SALES, "product")
+PRINTLN("产品列表: " + JSON_STRINGIFY(PRODUCTS))
+
+Set APPLE_SALES CSV_FILTER_ROWS(SALES, "product", "Apple")
+PRINTLN("苹果销售: " + JSON_STRINGIFY(APPLE_SALES))
+PRINTLN("")
+
+PRINTLN("========== CSV 示例完成 ==========")

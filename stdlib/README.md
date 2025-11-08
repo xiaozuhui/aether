@@ -15,17 +15,27 @@ Aether 编程语言的标准库，提供丰富的工具函数，帮助开发者�
     - [传统方式（可选）](#传统方式可选)
     - [快速测试](#快速测试)
   - [库列表](#库列表)
-    - [String Utils (字符串工具)](#string-utils-字符串工具)
+    - [🆕 JSON (JSON 处理工具)](#-json-json-处理工具)
       - [核心函数](#核心函数)
-    - [Array Utils (数组工具)](#array-utils-数组工具)
+    - [🆕 CSV (CSV 数据处理)](#-csv-csv-数据处理)
       - [核心函数](#核心函数-1)
-    - [Validation (数据验证)](#validation-数据验证)
+    - [🆕 Functional (函数式编程工具)](#-functional-函数式编程工具)
       - [核心函数](#核心函数-2)
-    - [DateTime (日期时间)](#datetime-日期时间)
+    - [String Utils (字符串工具)](#string-utils-字符串工具)
       - [核心函数](#核心函数-3)
-    - [Testing (测试框架)](#testing-测试框架)
+    - [Array Utils (数组工具)](#array-utils-数组工具)
       - [核心函数](#核心函数-4)
+    - [Validation (数据验证)](#validation-数据验证)
+      - [核心函数](#核心函数-5)
+    - [DateTime (日期时间)](#datetime-日期时间)
+      - [核心函数](#核心函数-6)
+    - [Testing (测试框架)](#testing-测试框架)
+      - [核心函数](#核心函数-7)
   - [示例](#示例)
+    - [快速开始示例](#快速开始示例)
+    - [JSON 处理示例](#json-处理示例)
+    - [CSV 数据分析示例](#csv-数据分析示例)
+    - [函数式编程示例](#函数式编程示例)
     - [完整的用户注册验证示例](#完整的用户注册验证示例)
     - [数据处理示例](#数据处理示例)
   - [贡献](#贡献)
@@ -123,6 +133,73 @@ aether stdlib/examples/array_demo.aether
 ```
 
 ## 库列表
+
+### 🆕 JSON (JSON 处理工具)
+
+**文件**: `json.aether`
+
+提供现代化的 JSON 数据处理功能，包括格式化、路径访问、合并、过滤等高级操作。
+
+#### 核心函数
+
+| 函数 | 说明 | 示例 |
+|------|------|------|
+| `JSON_PRETTY(json_str, indent)` | 格式化 JSON | `JSON_PRETTY('{"a":1}', 2)` → 美化输出 |
+| `JSON_GET_PATH(obj, path)` | 路径访问 | `JSON_GET_PATH(obj, "user.name")` → 获取嵌套值 |
+| `JSON_MERGE(obj1, obj2)` | 深度合并 | `JSON_MERGE(obj1, obj2)` → 合并对象 |
+| `JSON_FILTER(arr, key, value)` | 过滤数组 | `JSON_FILTER(users, "age", 30)` → 筛选 |
+| `JSON_PLUCK(arr, key)` | 提取列值 | `JSON_PLUCK(users, "name")` → 获取所有名字 |
+| `JSON_FIND(arr, key, value)` | 查找对象 | `JSON_FIND(users, "id", 1)` → 查找 |
+| `JSON_COUNT(arr, key, value)` | 统计数量 | `JSON_COUNT(users, "role", "admin")` → 计数 |
+| `JSON_VALIDATE(str)` | 验证格式 | `JSON_VALIDATE('{"test":1}')` → `True` |
+| `JSON_SIZE(obj)` | 获取大小 | `JSON_SIZE({"a":1,"b":2})` → `2` |
+
+### 🆕 CSV (CSV 数据处理)
+
+**文件**: `csv.aether`
+
+提供强大的 CSV 数据解析、生成和操作功能，支持字典数组转换、列操作、过滤等。
+
+#### 核心函数
+
+| 函数 | 说明 | 示例 |
+|------|------|------|
+| `CSV_PARSE(text, delimiter)` | 解析 CSV | `CSV_PARSE(text, ",")` → 二维数组 |
+| `CSV_TO_DICT_ARRAY(text, delim)` | 转字典数组 | `CSV_TO_DICT_ARRAY(csv, ",")` → 带标题的数据 |
+| `CSV_FROM_DICT_ARRAY(data, headers, delim)` | 生成 CSV | `CSV_FROM_DICT_ARRAY(data, headers, ",")` |
+| `CSV_COLUMN(data, col)` | 提取列 | `CSV_COLUMN(users, "name")` → 列数据 |
+| `CSV_FILTER_ROWS(data, col, val)` | 过滤行 | `CSV_FILTER_ROWS(data, "age", 30)` |
+| `CSV_SELECT_COLUMNS(data, cols)` | 选择列 | `CSV_SELECT_COLUMNS(data, ["name","age"])` |
+| `CSV_UNIQUE_VALUES(data, col)` | 唯一值 | `CSV_UNIQUE_VALUES(data, "city")` |
+| `CSV_COUNT_BY(data, col)` | 按列统计 | `CSV_COUNT_BY(data, "status")` → 计数字典 |
+| `CSV_JOIN(data1, data2, key)` | 连接数据 | `CSV_JOIN(users, depts, "dept_id")` |
+
+### 🆕 Functional (函数式编程工具)
+
+**文件**: `functional.aether`
+
+提供函数式编程范式的高阶函数，提升代码表达能力和可组合性。
+
+#### 核心函数
+
+| 函数 | 说明 | 示例 |
+|------|------|------|
+| `FIND(arr, predicate)` | 查找元素 | `FIND(arr, IS_EVEN)` → 第一个偶数 |
+| `FIND_INDEX(arr, predicate)` | 查找索引 | `FIND_INDEX(arr, IS_EVEN)` → 索引 |
+| `EVERY(arr, predicate)` | 全部满足 | `EVERY(arr, IS_POSITIVE)` → `True/False` |
+| `SOME(arr, predicate)` | 部分满足 | `SOME(arr, IS_NEGATIVE)` → `True/False` |
+| `PARTITION(arr, predicate)` | 分区 | `PARTITION(arr, IS_EVEN)` → 分两组 |
+| `MAP_DICT(dict, func)` | 映射字典 | `MAP_DICT(scores, ADD_BONUS)` |
+| `FILTER_DICT(dict, predicate)` | 过滤字典 | `FILTER_DICT(scores, IS_PASS)` |
+| `TAKE(arr, n)` | 取前N个 | `TAKE(arr, 3)` → 前3个元素 |
+| `DROP(arr, n)` | 跳过N个 | `DROP(arr, 2)` → 去掉前2个 |
+| `CHUNK(arr, size)` | 分块 | `CHUNK(arr, 3)` → 每组3个 |
+| `FLATTEN(arr)` | 扁平化 | `FLATTEN([[1,2],[3,4]])` → `[1,2,3,4]` |
+| `UNIQUE(arr)` | 去重 | `UNIQUE([1,2,2,3])` → `[1,2,3]` |
+| `COMPACT(arr)` | 移除Null | `COMPACT([1,Null,2])` → `[1,2]` |
+| `ZIP(arr1, arr2)` | 配对 | `ZIP([1,2],[3,4])` → `[[1,3],[2,4]]` |
+| `RANGE_ARRAY(start, end, step)` | 范围数组 | `RANGE_ARRAY(0, 5, 1)` → `[0,1,2,3,4]` |
+| `TIMES(n, func)` | 执行N次 | `TIMES(5, SQUARE)` → 结果数组 |
 
 ### String Utils (字符串工具)
 
@@ -296,6 +373,76 @@ aether stdlib/examples/array_demo.aether
 | `MOCK_CALL_COUNT(mock)` | 获取调用次数 |
 
 ## 示例
+
+### 快速开始示例
+
+```bash
+# 运行 JSON 示例
+aether stdlib/examples/json_demo.aether
+
+# 运行 CSV 示例
+aether stdlib/examples/csv_demo.aether
+
+# 运行函数式编程示例
+aether stdlib/examples/functional_demo.aether
+```
+
+### JSON 处理示例
+
+```aether
+// 解析和操作 JSON 数据
+Set JSON_STR '{"users":[{"name":"Alice","age":30},{"name":"Bob","age":25}]}'
+Set DATA JSON_PARSE(JSON_STR)
+
+// 提取所有用户名
+Set USERS JSON_GET_PATH(DATA, "users")
+Set NAMES JSON_PLUCK(USERS, "name")
+Println(NAMES)  // ["Alice", "Bob"]
+
+// 过滤年龄大于等于30的用户
+Set OLDER_USERS JSON_FILTER(USERS, "age", 30)
+Println(JSON_STRINGIFY(OLDER_USERS))
+```
+
+### CSV 数据分析示例
+
+```aether
+// 加载 CSV 数据
+Set CSV_TEXT "product,sales,price
+Apple,100,5.5
+Banana,150,3.2
+Orange,80,4.8"
+
+// 转换为字典数组
+Set DATA CSV_TO_DICT_ARRAY_DEFAULT(CSV_TEXT)
+
+// 提取产品名称
+Set PRODUCTS CSV_COLUMN(DATA, "product")
+Println(PRODUCTS)  // ["Apple", "Banana", "Orange"]
+
+// 统计分析
+Set TOTAL_ROWS CSV_ROW_COUNT(DATA)
+Println("总行数: " + TOSTRING(TOTAL_ROWS))
+```
+
+### 函数式编程示例
+
+```aether
+// 数据处理管道
+Set RAW_DATA [1, 2, Null, 3, 4, 4, 5, Null, 6]
+
+// 清理和处理数据
+Set CLEANED COMPACT(RAW_DATA)      // 移除 Null
+Set UNIQUE_VALS UNIQUE(CLEANED)    // 去重
+Set FIRST_THREE TAKE(UNIQUE_VALS, 3)  // 取前3个
+
+Println(FIRST_THREE)  // [1, 2, 3]
+
+// 使用高阶函数
+Func IS_EVEN(N) { Return ((N % 2) == 0) }
+Set EVENS FILTER(UNIQUE_VALS, IS_EVEN)
+Println(EVENS)  // [2, 4, 6]
+```
 
 ### 完整的用户注册验证示例
 

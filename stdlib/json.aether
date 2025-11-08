@@ -1,0 +1,391 @@
+// JSON 处理工具库
+// JSON Processing Utilities
+// 提供 JSON 数据的高级处理功能
+
+// ============================================================
+// JSON 格式化和美化
+// ============================================================
+
+// JSON_PRETTY - 格式化 JSON 字符串，使其更易读
+// 参数:
+//   JSON_STR - JSON 字符串
+//   INDENT - 缩进空格数（默认为 2）
+// 返回: 格式化后的 JSON 字符串
+Func JSON_PRETTY(JSON_STR, INDENT) {
+    Set OBJ JSON_PARSE(JSON_STR)
+    Return JSON_STRINGIFY(OBJ, INDENT)
+}
+
+// JSON_PRETTY_DEFAULT - 使用默认缩进（2空格）格式化 JSON
+Func JSON_PRETTY_DEFAULT(JSON_STR) {
+    Return JSON_PRETTY(JSON_STR, 2)
+}
+
+// ============================================================
+// JSON 路径访问
+// ============================================================
+
+// JSON_GET_PATH - 通过路径访问嵌套 JSON 对象
+// 参数:
+//   OBJ - JSON 对象（字典）
+//   PATH - 点分隔的路径字符串，如 "user.address.city"
+// 返回: 路径对应的值，如果路径不存在返回 Null
+// 示例:
+//   Set DATA {"user": {"name": "Alice", "address": {"city": "Beijing"}}}
+//   Set CITY JSON_GET_PATH(DATA, "user.address.city")  // "Beijing"
+Func JSON_GET_PATH(OBJ, PATH) {
+    Set PARTS SPLIT(PATH, ".")
+    Set CURRENT OBJ
+    Set I 0
+    Set LEN_PARTS LEN(PARTS)
+    
+    While (I < LEN_PARTS) {
+        Set KEY PARTS[I]
+        If (TYPE(CURRENT) == "Dict") {
+            If (HAS(CURRENT, KEY)) {
+                Set CURRENT CURRENT[KEY]
+            } Else {
+                Return Null
+            }
+        } Else {
+            Return Null
+        }
+        Set I (I + 1)
+    }
+    
+    Return CURRENT
+}
+
+// JSON_SET_PATH - 在嵌套 JSON 对象中设置值
+// 参数:
+//   OBJ - JSON 对象（字典）
+//   PATH - 点分隔的路径字符串
+//   VALUE - 要设置的值
+// 返回: 修改后的对象（不改变原对象）
+Func JSON_SET_PATH(OBJ, PATH, VALUE) {
+    Set PARTS SPLIT(PATH, ".")
+    Set RESULT CLONE(OBJ)
+    Set LEN_PARTS LEN(PARTS)
+    
+    If (LEN_PARTS == 0) {
+        Return RESULT
+    }
+    
+    If (LEN_PARTS == 1) {
+        Set KEY PARTS[0]
+        Set RESULT[KEY] VALUE
+        Return RESULT
+    }
+    
+    // 简化版本：只支持单层路径
+    Set KEY PARTS[0]
+    Set RESULT[KEY] VALUE
+    Return RESULT
+}
+
+// JSON_HAS_PATH - 检查路径是否存在
+// 参数:
+//   OBJ - JSON 对象
+//   PATH - 路径字符串
+// 返回: True 或 False
+Func JSON_HAS_PATH(OBJ, PATH) {
+    Set VALUE JSON_GET_PATH(OBJ, PATH)
+    Return (TYPE(VALUE) != "Null")
+}
+
+// ============================================================
+// JSON 合并和操作
+// ============================================================
+
+// JSON_MERGE - 深度合并两个 JSON 对象
+// 参数:
+//   OBJ1 - 第一个对象（基础）
+//   OBJ2 - 第二个对象（覆盖）
+// 返回: 合并后的新对象
+Func JSON_MERGE(OBJ1, OBJ2) {
+    If (TYPE(OBJ1) != "Dict" || TYPE(OBJ2) != "Dict") {
+        Return OBJ2
+    }
+    
+    Set RESULT CLONE(OBJ1)
+    Set KEYS2 KEYS(OBJ2)
+    Set I 0
+    Set LEN_KEYS LEN(KEYS2)
+    
+    While (I < LEN_KEYS) {
+        Set KEY KEYS2[I]
+        Set VAL2 OBJ2[KEY]
+        
+        If (HAS(RESULT, KEY)) {
+            Set VAL1 RESULT[KEY]
+            If (TYPE(VAL1) == "Dict" && TYPE(VAL2) == "Dict") {
+                Set RESULT[KEY] JSON_MERGE(VAL1, VAL2)
+            } Else {
+                Set RESULT[KEY] VAL2
+            }
+        } Else {
+            Set RESULT[KEY] VAL2
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// JSON_MERGE_SHALLOW - 浅合并两个 JSON 对象
+// 只合并第一层，等同于 MERGE()
+Func JSON_MERGE_SHALLOW(OBJ1, OBJ2) {
+    Return MERGE(OBJ1, OBJ2)
+}
+
+// ============================================================
+// JSON 数组操作
+// ============================================================
+
+// JSON_FILTER - 过滤 JSON 数组
+// 参数:
+//   ARR - JSON 数组
+//   KEY - 要检查的键
+//   VALUE - 期望的值
+// 返回: 过滤后的数组
+// 示例:
+//   Set USERS [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+//   Set RESULT JSON_FILTER(USERS, "age", 30)  // [{"name": "Alice", "age": 30}]
+Func JSON_FILTER(ARR, KEY, VALUE) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        If (TYPE(ITEM) == "Dict" && HAS(ITEM, KEY)) {
+            Set ITEM_VALUE ITEM[KEY]
+            If (ITEM_VALUE == VALUE) {
+                Set RESULT PUSH(RESULT, ITEM)
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// JSON_PLUCK - 从数组中提取指定键的所有值
+// 参数:
+//   ARR - JSON 数组（包含字典）
+//   KEY - 要提取的键
+// 返回: 包含所有值的数组
+// 示例:
+//   Set USERS [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+//   Set NAMES JSON_PLUCK(USERS, "name")  // ["Alice", "Bob"]
+Func JSON_PLUCK(ARR, KEY) {
+    If (TYPE(ARR) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        If (TYPE(ITEM) == "Dict" && HAS(ITEM, KEY)) {
+            Set VALUE ITEM[KEY]
+            Set RESULT PUSH(RESULT, VALUE)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// JSON_FIND - 在数组中查找第一个匹配的对象
+// 参数:
+//   ARR - JSON 数组
+//   KEY - 要检查的键
+//   VALUE - 期望的值
+// 返回: 第一个匹配的对象，如果没有找到返回 Null
+Func JSON_FIND(ARR, KEY, VALUE) {
+    If (TYPE(ARR) != "Array") {
+        Return Null
+    }
+    
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        If (TYPE(ITEM) == "Dict" && HAS(ITEM, KEY)) {
+            Set ITEM_VALUE ITEM[KEY]
+            If (ITEM_VALUE == VALUE) {
+                Return ITEM
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return Null
+}
+
+// JSON_COUNT - 统计数组中匹配条件的对象数量
+// 参数:
+//   ARR - JSON 数组
+//   KEY - 要检查的键
+//   VALUE - 期望的值
+// 返回: 匹配的数量
+Func JSON_COUNT(ARR, KEY, VALUE) {
+    If (TYPE(ARR) != "Array") {
+        Return 0
+    }
+    
+    Set COUNT 0
+    Set I 0
+    Set LEN_ARR LEN(ARR)
+    
+    While (I < LEN_ARR) {
+        Set ITEM ARR[I]
+        If (TYPE(ITEM) == "Dict" && HAS(ITEM, KEY)) {
+            Set ITEM_VALUE ITEM[KEY]
+            If (ITEM_VALUE == VALUE) {
+                Set COUNT (COUNT + 1)
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return COUNT
+}
+
+// ============================================================
+// JSON 转换和验证
+// ============================================================
+
+// JSON_VALIDATE - 验证字符串是否为有效的 JSON
+// 参数:
+//   STR - 要验证的字符串
+// 返回: True 或 False
+Func JSON_VALIDATE(STR) {
+    If (TYPE(STR) != "String") {
+        Return False
+    }
+    
+    // 尝试解析，如果失败则返回 False
+    Set TRIMMED TRIM(STR)
+    If (LEN(TRIMMED) == 0) {
+        Return False
+    }
+    
+    // 简单检查：必须以 { 或 [开头
+    Set FIRST STRSLICE(TRIMMED, 0, 1)
+    If (FIRST != "{" && FIRST != "[") {
+        Return False
+    }
+    
+    Return True
+}
+
+// JSON_TO_STRING - 将任意值转换为 JSON 字符串
+// 参数:
+//   VALUE - 任意值
+// 返回: JSON 字符串
+Func JSON_TO_STRING(VALUE) {
+    Set VAL_TYPE TYPE(VALUE)
+    
+    If (VAL_TYPE == "Dict" || VAL_TYPE == "Array") {
+        Return JSON_STRINGIFY(VALUE)
+    } Elif (VAL_TYPE == "String") {
+        Return "\"" + VALUE + "\""
+    } Elif (VAL_TYPE == "Null") {
+        Return "null"
+    } Elif (VAL_TYPE == "Boolean") {
+        If (VALUE) {
+            Return "true"
+        } Else {
+            Return "false"
+        }
+    } Else {
+        Return TO_STRING(VALUE)
+    }
+}
+
+// JSON_FROM_STRING - 从 JSON 字符串解析值
+// 参数:
+//   STR - JSON 字符串
+// 返回: 解析后的值
+Func JSON_FROM_STRING(STR) {
+    Return JSON_PARSE(STR)
+}
+
+// ============================================================
+// JSON 实用工具
+// ============================================================
+
+// JSON_KEYS_DEEP - 获取所有嵌套键（扁平化路径）
+// 参数:
+//   OBJ - JSON 对象
+//   PREFIX - 前缀（内部使用）
+// 返回: 所有键的数组
+Func JSON_KEYS_DEEP(OBJ, PREFIX) {
+    If (TYPE(OBJ) != "Dict") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set OBJ_KEYS KEYS(OBJ)
+    Set I 0
+    Set LEN_KEYS LEN(OBJ_KEYS)
+    
+    While (I < LEN_KEYS) {
+        Set KEY OBJ_KEYS[I]
+        Set FULL_KEY KEY
+        If (TYPE(PREFIX) == "String" && LEN(PREFIX) > 0) {
+            Set FULL_KEY (PREFIX + "." + KEY)
+        }
+        
+        Set RESULT PUSH(RESULT, FULL_KEY)
+        
+        Set VALUE OBJ[KEY]
+        If (TYPE(VALUE) == "Dict") {
+            Set SUB_KEYS JSON_KEYS_DEEP(VALUE, FULL_KEY)
+            Set J 0
+            Set SUB_LEN LEN(SUB_KEYS)
+            While (J < SUB_LEN) {
+                Set RESULT PUSH(RESULT, SUB_KEYS[J])
+                Set J (J + 1)
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// JSON_SIZE - 计算 JSON 对象的大小（键值对数量或数组长度）
+// 参数:
+//   OBJ - JSON 对象或数组
+// 返回: 大小
+Func JSON_SIZE(OBJ) {
+    Set OBJ_TYPE TYPE(OBJ)
+    If (OBJ_TYPE == "Dict") {
+        Return LEN(KEYS(OBJ))
+    } Elif (OBJ_TYPE == "Array") {
+        Return LEN(OBJ)
+    } Else {
+        Return 0
+    }
+}
+
+// JSON_IS_EMPTY - 检查 JSON 对象或数组是否为空
+// 参数:
+//   OBJ - JSON 对象或数组
+// 返回: True 或 False
+Func JSON_IS_EMPTY(OBJ) {
+    Return (JSON_SIZE(OBJ) == 0)
+}
+

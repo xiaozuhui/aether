@@ -1,0 +1,175 @@
+// stdlib/examples/functional_demo.aether
+// 函数式编程工具库使用示例
+
+PRINTLN("========== 函数式编程工具示例 ==========")
+PRINTLN("")
+
+// ==================== 数组高阶函数 ====================
+PRINTLN("1. 数组高阶函数")
+Set NUMBERS [1, 2, 3, 4, 5]
+PRINTLN("原始数组: " + JSON_STRINGIFY(NUMBERS))
+
+// FIND - 查找第一个偶数
+Func IS_EVEN(N) {
+    Return ((N % 2) == 0)
+}
+Set FIRST_EVEN FIND(NUMBERS, IS_EVEN)
+PRINTLN("第一个偶数: " + TO_STRING(FIRST_EVEN))
+
+// FIND_INDEX
+Set EVEN_INDEX FIND_INDEX(NUMBERS, IS_EVEN)
+PRINTLN("第一个偶数的索引: " + TO_STRING(EVEN_INDEX))
+
+// EVERY - 检查是否所有数都小于10
+Func LESS_THAN_10(N) {
+    Return (N < 10)
+}
+Set ALL_LESS EVERY(NUMBERS, LESS_THAN_10)
+PRINTLN("所有数都小于10: " + TO_STRING(ALL_LESS))
+
+// SOME - 检查是否有数大于3
+Func GREATER_THAN_3(N) {
+    Return (N > 3)
+}
+Set HAS_GREATER SOME(NUMBERS, GREATER_THAN_3)
+PRINTLN("有数大于3: " + TO_STRING(HAS_GREATER))
+PRINTLN("")
+
+// ==================== PARTITION ====================
+PRINTLN("2. 数组分区")
+Set PARTITIONED PARTITION(NUMBERS, IS_EVEN)
+PRINTLN("偶数: " + JSON_STRINGIFY(PARTITIONED["true"]))
+PRINTLN("奇数: " + JSON_STRINGIFY(PARTITIONED["false"]))
+PRINTLN("")
+
+// ==================== 字典操作 ====================
+PRINTLN("3. 字典高阶函数")
+Set SCORES {"Alice": 85, "Bob": 92, "Charlie": 78}
+PRINTLN("原始分数: " + JSON_STRINGIFY(SCORES))
+
+// MAP_DICT - 给所有分数加5分
+Func ADD_BONUS(SCORE, NAME) {
+    Return (SCORE + 5)
+}
+Set BONUS_SCORES MAP_DICT(SCORES, ADD_BONUS)
+PRINTLN("加分后: " + JSON_STRINGIFY(BONUS_SCORES))
+
+// FILTER_DICT - 筛选及格的分数
+Func IS_PASS(SCORE, NAME) {
+    Return (SCORE >= 80)
+}
+Set PASSED FILTER_DICT(SCORES, IS_PASS)
+PRINTLN("及格分数: " + JSON_STRINGIFY(PASSED))
+PRINTLN("")
+
+// ==================== 数组实用函数 ====================
+PRINTLN("4. 数组实用函数")
+
+// TAKE 和 DROP
+Set ITEMS [1, 2, 3, 4, 5, 6, 7, 8]
+Set FIRST_THREE TAKE(ITEMS, 3)
+PRINTLN("前3个: " + JSON_STRINGIFY(FIRST_THREE))
+
+Set WITHOUT_FIRST_TWO DROP(ITEMS, 2)
+PRINTLN("去掉前2个: " + JSON_STRINGIFY(WITHOUT_FIRST_TWO))
+
+// CHUNK - 分块
+Set CHUNKS CHUNK(ITEMS, 3)
+PRINTLN("分成每组3个: " + JSON_STRINGIFY(CHUNKS))
+
+// FLATTEN - 扁平化
+Set NESTED [[1, 2], [3, 4], [5]]
+Set FLAT FLATTEN(NESTED)
+PRINTLN("扁平化: " + JSON_STRINGIFY(FLAT))
+
+// UNIQUE - 去重
+Set WITH_DUPS [1, 2, 2, 3, 3, 3, 4]
+Set UNIQUE_VALS UNIQUE(WITH_DUPS)
+PRINTLN("去重: " + JSON_STRINGIFY(UNIQUE_VALS))
+
+// COMPACT - 移除 Null
+Set WITH_NULLS [1, Null, 2, Null, 3]
+Set NO_NULLS COMPACT(WITH_NULLS)
+PRINTLN("移除 Null: " + JSON_STRINGIFY(NO_NULLS))
+PRINTLN("")
+
+// ==================== ZIP ====================
+PRINTLN("5. ZIP - 数组配对")
+Set NAMES ["Alice", "Bob", "Charlie"]
+Set AGES [30, 25, 35]
+Set PAIRED ZIP(NAMES, AGES)
+PRINTLN("配对结果: " + JSON_STRINGIFY(PAIRED))
+PRINTLN("")
+
+// ==================== 字典数组转换 ====================
+PRINTLN("6. 字典数组转换")
+Set DICT {"a": 1, "b": 2, "c": 3}
+Set AS_ARRAY DICT_TO_ARRAY(DICT)
+PRINTLN("字典转数组: " + JSON_STRINGIFY(AS_ARRAY))
+
+Set BACK_TO_DICT ARRAY_TO_DICT(AS_ARRAY)
+PRINTLN("数组转回字典: " + JSON_STRINGIFY(BACK_TO_DICT))
+PRINTLN("")
+
+// ==================== RANGE 和 TIMES ====================
+PRINTLN("7. RANGE 和 TIMES")
+Set RANGE1 RANGE_ARRAY(0, 5, 1)
+PRINTLN("0到5: " + JSON_STRINGIFY(RANGE1))
+
+Set RANGE2 RANGE_ARRAY(10, 0, -2)
+PRINTLN("10到0步长-2: " + JSON_STRINGIFY(RANGE2))
+
+// TIMES - 生成平方数
+Func SQUARE(N) {
+    Return (N * N)
+}
+Set SQUARES TIMES(5, SQUARE)
+PRINTLN("前5个平方数: " + JSON_STRINGIFY(SQUARES))
+PRINTLN("")
+
+// ==================== 条件工具 ====================
+PRINTLN("8. 条件工具")
+
+// COND - 条件选择
+Set DAY "Monday"
+Set CONDITIONS [{"test": "Monday", "result": "周一"}, {"test": "Tuesday", "result": "周二"}, {"test": "Wednesday", "result": "周三"}]
+Set DAY_CN COND(DAY, CONDITIONS, "未知")
+PRINTLN("星期: " + DAY_CN)
+
+// DEFAULT_TO
+Set VAL1 Null
+Set VAL2 "有值"
+PRINTLN("Null 的默认值: " + DEFAULT_TO(VAL1, "默认"))
+PRINTLN("非 Null 的值: " + DEFAULT_TO(VAL2, "默认"))
+PRINTLN("")
+
+// ==================== 实战示例：数据处理管道 ====================
+PRINTLN("9. 实战示例：数据处理管道")
+Set RAW_DATA [1, 2, Null, 3, 4, 4, 5, Null, 6, 7, 8]
+PRINTLN("原始数据: " + JSON_STRINGIFY(RAW_DATA))
+
+// 步骤1: 移除 Null
+Set STEP1 COMPACT(RAW_DATA)
+PRINTLN("移除Null: " + JSON_STRINGIFY(STEP1))
+
+// 步骤2: 去重
+Set STEP2 UNIQUE(STEP1)
+PRINTLN("去重: " + JSON_STRINGIFY(STEP2))
+
+// 步骤3: 过滤偶数
+Set STEP3 FILTER(STEP2, IS_EVEN)
+PRINTLN("只保留偶数: " + JSON_STRINGIFY(STEP3))
+
+// 步骤4: 每个数乘以10
+Func MUL_10(N) {
+    Return (N * 10)
+}
+Set STEP4 MAP(STEP3, MUL_10)
+PRINTLN("乘以10: " + JSON_STRINGIFY(STEP4))
+
+// 步骤5: 求和
+Set TOTAL SUM(STEP4)
+PRINTLN("总和: " + TO_STRING(TOTAL))
+PRINTLN("")
+
+PRINTLN("========== 函数式编程示例完成 ==========")

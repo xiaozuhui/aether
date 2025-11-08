@@ -1,0 +1,492 @@
+// CSV 数据处理工具库
+// CSV Data Processing Utilities
+// 提供 CSV 格式数据的解析、生成和操作功能
+
+// ============================================================
+// CSV 解析
+// ============================================================
+
+// CSV_PARSE - 解析 CSV 文本为二维数组
+// 参数:
+//   TEXT - CSV 文本字符串
+//   DELIMITER - 分隔符（默认为逗号","）
+// 返回: 二维数组，每行为一个数组
+// 示例:
+//   Set CSV_TEXT "name,age,city\nAlice,30,Beijing\nBob,25,Shanghai"
+//   Set DATA CSV_PARSE(CSV_TEXT, ",")
+//   // [["name","age","city"], ["Alice","30","Beijing"], ["Bob","25","Shanghai"]]
+Func CSV_PARSE(CSV_TEXT) {
+    If (TYPE(CSV_TEXT) != "String") {
+        Return []
+    }
+    
+    Set LINES SPLIT(CSV_TEXT, "\n")
+    Set RESULT []
+    Set I 0
+    Set LEN_LINES LEN(LINES)
+    
+    While (I < LEN_LINES) {
+        Set LINE TRIM(LINES[I])
+        If (LEN(LINE) > 0) {
+            Set ROW SPLIT(LINE, ",")
+            Set RESULT PUSH(RESULT, ROW)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_PARSE_DEFAULT - 使用默认分隔符（逗号）解析 CSV
+Func CSV_PARSE_DEFAULT(TEXT) {
+    Return CSV_PARSE(TEXT, ",")
+}
+
+// ============================================================
+// CSV 转换为字典数组
+// ============================================================
+
+// CSV_TO_DICT_ARRAY - 将 CSV 数据转换为字典数组
+// 参数:
+//   TEXT - CSV 文本（第一行为标题）
+//   DELIMITER - 分隔符（可选，默认为","）
+// 返回: 字典数组，每行数据为一个字典
+// 示例:
+//   Set CSV_TEXT "name,age,city\nAlice,30,Beijing\nBob,25,Shanghai"
+//   Set USERS CSV_TO_DICT_ARRAY(CSV_TEXT, ",")
+//   // [{"name":"Alice","age":"30","city":"Beijing"}, {"name":"Bob","age":"25","city":"Shanghai"}]
+Func CSV_TRANSPOSE(CSV_DATA) {
+    If (TYPE(CSV_DATA) != "Array" || LEN(CSV_DATA) == 0) {
+        Return []
+    }
+    
+    Set FIRST_ROW CSV_DATA[0]
+    Set NUM_COLS LEN(FIRST_ROW)
+    Set NUM_ROWS LEN(CSV_DATA)
+    
+    Set RESULT []
+    Set COL 0
+    
+    While (COL < NUM_COLS) {
+        Set NEW_ROW []
+        Set ROW 0
+        
+        While (ROW < NUM_ROWS) {
+            Set CURRENT_ROW CSV_DATA[ROW]
+            If (COL < LEN(CURRENT_ROW)) {
+                Set VALUE CURRENT_ROW[COL]
+                Set NEW_ROW PUSH(NEW_ROW, VALUE)
+            } Else {
+                Set NEW_ROW PUSH(NEW_ROW, "")
+            }
+            Set ROW (ROW + 1)
+        }
+        
+        Set RESULT PUSH(RESULT, NEW_ROW)
+        Set COL (COL + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_TO_DICT_ARRAY_DEFAULT - 使用默认分隔符转换
+Func CSV_TO_DICT_ARRAY_DEFAULT(TEXT) {
+    Return CSV_TO_DICT_ARRAY(TEXT, ",")
+}
+
+// ============================================================
+// 字典数组转 CSV
+// ============================================================
+
+// CSV_FROM_DICT_ARRAY - 将字典数组转换为 CSV 文本
+// 参数:
+//   DATA - 字典数组
+//   HEADERS - 列标题数组（可选）
+//   DELIMITER - 分隔符（默认为","）
+// 返回: CSV 文本字符串
+Func CSV_FROM_DICT_ARRAY(DATA, HEADERS, DELIMITER) {
+    If (TYPE(DATA) != "Array" || LEN(DATA) == 0) {
+        Return ""
+    }
+    
+    Set ACTUAL_HEADERS HEADERS
+    
+    // 如果没有提供标题，从第一行数据提取
+    If (TYPE(ACTUAL_HEADERS) != "Array" || LEN(ACTUAL_HEADERS) == 0) {
+        Set FIRST_ROW DATA[0]
+        If (TYPE(FIRST_ROW) == "Dict") {
+            Set ACTUAL_HEADERS KEYS(FIRST_ROW)
+        } Else {
+            Return ""
+        }
+    }
+    
+    // 构建标题行
+    Set RESULT JOIN(ACTUAL_HEADERS, DELIMITER)
+    Set RESULT (RESULT + "\n")
+    
+    // 构建数据行
+    Set I 0
+    Set ROW_COUNT LEN(DATA)
+    
+    While (I < ROW_COUNT) {
+        Set ROW_DATA DATA[I]
+        
+        If (TYPE(ROW_DATA) == "Dict") {
+            Set ROW_VALUES []
+            Set J 0
+            Set COL_COUNT LEN(ACTUAL_HEADERS)
+            
+            While (J < COL_COUNT) {
+                Set HEADER ACTUAL_HEADERS[J]
+                Set VALUE ""
+                
+                If (HAS(ROW_DATA, HEADER)) {
+                    Set VALUE ROW_DATA[HEADER]
+                    Set VALUE TO_STRING(VALUE)
+                }
+                
+                Set ROW_VALUES PUSH(ROW_VALUES, VALUE)
+                Set J (J + 1)
+            }
+            
+            Set ROW_LINE JOIN(ROW_VALUES, DELIMITER)
+            Set RESULT (RESULT + ROW_LINE)
+            
+            If (I < (ROW_COUNT - 1)) {
+                Set RESULT (RESULT + "\n")
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_FROM_DICT_ARRAY_DEFAULT - 使用默认分隔符生成 CSV
+Func CSV_FROM_DICT_ARRAY_DEFAULT(DATA, HEADERS) {
+    Return CSV_FROM_DICT_ARRAY(DATA, HEADERS, ",")
+}
+
+// ============================================================
+// CSV 数据操作
+// ============================================================
+
+// CSV_COLUMN - 从 CSV 数据中提取指定列
+// 参数:
+//   DATA - 字典数组或二维数组
+//   COL - 列名（字符串）或列索引（数字）
+// 返回: 指定列的值数组
+Func CSV_COLUMN(DATA, COL) {
+    If (TYPE(DATA) != "Array" || LEN(DATA) == 0) {
+        Return []
+    }
+    
+    Set RESULT []
+    Set FIRST_ITEM DATA[0]
+    
+    // 判断是字典数组还是二维数组
+    If (TYPE(FIRST_ITEM) == "Dict") {
+        // 字典数组，按列名提取
+        If (TYPE(COL) != "String") {
+            Return []
+        }
+        
+        Set I 0
+        Set LEN_DATA LEN(DATA)
+        
+        While (I < LEN_DATA) {
+            Set ROW DATA[I]
+            
+            If (HAS(ROW, COL)) {
+                Set VALUE ROW[COL]
+                Set RESULT PUSH(RESULT, VALUE)
+            } Else {
+                Set RESULT PUSH(RESULT, Null)
+            }
+            
+            Set I (I + 1)
+        }
+    } Else {
+        // 二维数组，按索引提取
+        If (TYPE(COL) != "Number") {
+            Return []
+        }
+        
+        Set I 0
+        Set LEN_DATA LEN(DATA)
+        
+        While (I < LEN_DATA) {
+            Set ROW DATA[I]
+            
+            If (TYPE(ROW) == "Array" && COL < LEN(ROW)) {
+                Set VALUE ROW[COL]
+                Set RESULT PUSH(RESULT, VALUE)
+            } Else {
+                Set RESULT PUSH(RESULT, Null)
+            }
+            
+            Set I (I + 1)
+        }
+    }
+    
+    Return RESULT
+}
+
+// CSV_FILTER_ROWS - 过滤 CSV 行
+// 参数:
+//   DATA - 字典数组
+//   COL - 列名
+//   VALUE - 匹配值
+// 返回: 过滤后的数组
+Func CSV_FILTER_ROWS(CSV_DATA, COL_INDEX, VALUE) {
+    If (TYPE(CSV_DATA) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_DATA LEN(CSV_DATA)
+    
+    While (I < LEN_DATA) {
+        Set ROW CSV_DATA[I]
+        If (TYPE(ROW) == "Array" && COL_INDEX < LEN(ROW)) {
+            Set CELL_VALUE ROW[COL_INDEX]
+            If (CELL_VALUE == VALUE) {
+                Set RESULT PUSH(RESULT, ROW)
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_SELECT_COLUMNS - 选择指定的列
+// 参数:
+//   DATA - 字典数组
+//   COLUMNS - 列名数组
+// 返回: 只包含指定列的新数组
+Func CSV_SELECT_COLUMNS(DATA, COLUMNS) {
+    If (TYPE(DATA) != "Array" || TYPE(COLUMNS) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN_DATA LEN(DATA)
+    
+    While (I < LEN_DATA) {
+        Set ROW DATA[I]
+        
+        If (TYPE(ROW) == "Dict") {
+            Set NEW_ROW {}
+            Set J 0
+            Set COL_COUNT LEN(COLUMNS)
+            
+            While (J < COL_COUNT) {
+                Set COL_NAME COLUMNS[J]
+                
+                If (HAS(ROW, COL_NAME)) {
+                    Set VALUE ROW[COL_NAME]
+                    Set NEW_ROW[COL_NAME] VALUE
+                }
+                
+                Set J (J + 1)
+            }
+            
+            Set RESULT PUSH(RESULT, NEW_ROW)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ============================================================
+// CSV 统计分析
+// ============================================================
+
+// CSV_ROW_COUNT - 获取数据行数
+// 参数:
+//   DATA - CSV 数据（数组）
+// 返回: 行数
+Func CSV_ROW_COUNT(DATA) {
+    If (TYPE(DATA) != "Array") {
+        Return 0
+    }
+    Return LEN(DATA)
+}
+
+// CSV_COLUMN_COUNT - 获取列数
+// 参数:
+//   DATA - CSV 数据
+// 返回: 列数
+Func CSV_COLUMN_COUNT(DATA) {
+    If (TYPE(DATA) != "Array" || LEN(DATA) == 0) {
+        Return 0
+    }
+    
+    Set FIRST_ROW DATA[0]
+    
+    If (TYPE(FIRST_ROW) == "Dict") {
+        Return LEN(KEYS(FIRST_ROW))
+    } Elif (TYPE(FIRST_ROW) == "Array") {
+        Return LEN(FIRST_ROW)
+    } Else {
+        Return 0
+    }
+}
+
+// CSV_COLUMN_NAMES - 获取列名列表
+// 参数:
+//   DATA - 字典数组
+// 返回: 列名数组
+Func CSV_COLUMN_NAMES(DATA) {
+    If (TYPE(DATA) != "Array" || LEN(DATA) == 0) {
+        Return []
+    }
+    
+    Set FIRST_ROW DATA[0]
+    
+    If (TYPE(FIRST_ROW) == "Dict") {
+        Return KEYS(FIRST_ROW)
+    } Else {
+        Return []
+    }
+}
+
+// CSV_UNIQUE_VALUES - 获取某列的唯一值
+// 参数:
+//   DATA - 字典数组
+//   COL - 列名
+// 返回: 唯一值数组
+Func CSV_UNIQUE_VALUES(DATA, COL) {
+    Set COLUMN_DATA CSV_COLUMN(DATA, COL)
+    Set RESULT []
+    Set I 0
+    Set LEN_DATA LEN(COLUMN_DATA)
+    
+    While (I < LEN_DATA) {
+        Set VALUE COLUMN_DATA[I]
+        Set FOUND False
+        Set J 0
+        
+        While (J < LEN(RESULT)) {
+            If (RESULT[J] == VALUE) {
+                Set FOUND True
+                Set J LEN(RESULT)
+            }
+            Set J (J + 1)
+        }
+        
+        If (!FOUND && TYPE(VALUE) != "Null") {
+            Set RESULT PUSH(RESULT, VALUE)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_COUNT_BY - 按列统计数量
+// 参数:
+//   DATA - 字典数组
+//   COL - 列名
+// 返回: 字典，键为值，值为出现次数
+Func CSV_COUNT_BY(DATA, COL) {
+    If (TYPE(DATA) != "Array") {
+        Return {}
+    }
+    
+    Set RESULT {}
+    Set I 0
+    Set LEN_DATA LEN(DATA)
+    
+    While (I < LEN_DATA) {
+        Set ROW DATA[I]
+        
+        If (TYPE(ROW) == "Dict" && HAS(ROW, COL)) {
+            Set VALUE ROW[COL]
+            Set VALUE_STR TO_STRING(VALUE)
+            
+            If (HAS(RESULT, VALUE_STR)) {
+                Set COUNT RESULT[VALUE_STR]
+                Set RESULT[VALUE_STR] (COUNT + 1)
+            } Else {
+                Set RESULT[VALUE_STR] 1
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ============================================================
+// CSV 实用工具
+// ============================================================
+
+// CSV_JOIN - 连接两个 CSV 数据集
+// 参数:
+//   DATA1 - 第一个数据集（字典数组）
+//   DATA2 - 第二个数据集（字典数组）
+//   KEY - 连接键（列名）
+// 返回: 连接后的数据集
+Func CSV_JOIN(CSV_DATA1, CSV_DATA2, COL_INDEX1, COL_INDEX2) {
+    If (TYPE(CSV_DATA1) != "Array" || TYPE(CSV_DATA2) != "Array") {
+        Return []
+    }
+    
+    Set RESULT []
+    Set I 0
+    Set LEN1 LEN(CSV_DATA1)
+    
+    While (I < LEN1) {
+        Set ROW1 CSV_DATA1[I]
+        If (TYPE(ROW1) == "Array" && COL_INDEX1 < LEN(ROW1)) {
+            Set KEY1 ROW1[COL_INDEX1]
+            
+            Set J 0
+            Set LEN2 LEN(CSV_DATA2)
+            While (J < LEN2) {
+                Set ROW2 CSV_DATA2[J]
+                If (TYPE(ROW2) == "Array" && COL_INDEX2 < LEN(ROW2)) {
+                    Set KEY2 ROW2[COL_INDEX2]
+                    
+                    If (KEY1 == KEY2) {
+                        Set JOINED_ROW []
+                        Set K 0
+                        While (K < LEN(ROW1)) {
+                            Set JOINED_ROW PUSH(JOINED_ROW, ROW1[K])
+                            Set K (K + 1)
+                        }
+                        Set K 0
+                        While (K < LEN(ROW2)) {
+                            Set JOINED_ROW PUSH(JOINED_ROW, ROW2[K])
+                            Set K (K + 1)
+                        }
+                        Set RESULT PUSH(RESULT, JOINED_ROW)
+                    }
+                }
+                Set J (J + 1)
+            }
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_SORT_BY - 按列排序（简单版本）
+// 注意：需要实现排序算法，这里返回原数据
+Func CSV_SORT_BY(DATA, COL) {
+    // TODO: 实现排序算法
+    Return DATA
+}
+
+PRINTLN("[stdlib] csv.aether loaded - CSV data processing utilities")

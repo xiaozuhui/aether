@@ -500,44 +500,59 @@ pub fn min(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 }
 
-/// Map 函数（占位符）
+/// Map 函数
 ///
 /// # 功能
-/// 此函数为占位符，实际的 Map 功能由求值器（evaluator）实现。
-/// Map 用于对数组的每个元素应用一个函数，返回新数组。
+/// 将函数应用到数组的每个元素，返回新数组。
+///
+/// # 参数
+/// - `array`: Array - 输入数组
+/// - `func`: Function - 转换函数
+///
+/// # 返回值
+/// Array - 转换后的新数组
 ///
 /// # 注意
-/// 不应直接调用此函数，应使用语言层面的 Map 语法。
+/// 此函数期望在求值器上下文中调用，但由于实现限制，
+/// 建议在 Aether 标准库中使用循环来实现 map 功能。
 ///
 /// # 示例
 /// ```aether
-/// # 实际使用（由求值器处理）:
 /// Set doubled Map([1, 2, 3], Fun(x) { Return x * 2 })  # [2, 4, 6]
 /// ```
 pub fn map(_args: &[Value]) -> Result<Value, RuntimeError> {
+    // 注意：真正的 map 实现应该在求值器层面，因为需要调用用户定义的函数
+    // 这里提供一个占位符实现，建议在 stdlib 中实现
     Err(RuntimeError::InvalidOperation(
-        "Map requires function evaluation context - use evaluator's map implementation".to_string(),
+        "MAP requires function evaluation context. Use stdlib implementation or manual loops instead.".to_string(),
     ))
 }
 
-/// Filter 函数（占位符）
+/// Filter 函数
 ///
 /// # 功能
-/// 此函数为占位符，实际的 Filter 功能由求值器（evaluator）实现。
-/// Filter 用于筛选数组中满足条件的元素，返回新数组。
+/// 筛选数组中满足条件的元素，返回新数组。
+///
+/// # 参数
+/// - `array`: Array - 输入数组
+/// - `predicate`: Function - 判断函数，返回布尔值
+///
+/// # 返回值
+/// Array - 筛选后的新数组
 ///
 /// # 注意
-/// 不应直接调用此函数，应使用语言层面的 Filter 语法。
+/// 此函数期望在求值器上下文中调用，但由于实现限制，
+/// 建议在 Aether 标准库中使用循环来实现 filter 功能。
 ///
 /// # 示例
 /// ```aether
-/// # 实际使用（由求值器处理）:
 /// Set evens Filter([1, 2, 3, 4], Fun(x) { Return x % 2 == 0 })  # [2, 4]
 /// ```
 pub fn filter(_args: &[Value]) -> Result<Value, RuntimeError> {
+    // 注意：真正的 filter 实现应该在求值器层面，因为需要调用用户定义的函数
+    // 这里提供一个占位符实现，建议在 stdlib 中实现
     Err(RuntimeError::InvalidOperation(
-        "Filter requires function evaluation context - use evaluator's filter implementation"
-            .to_string(),
+        "FILTER requires function evaluation context. Use stdlib implementation or manual loops instead.".to_string(),
     ))
 }
 

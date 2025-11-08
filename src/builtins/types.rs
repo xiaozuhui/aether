@@ -169,3 +169,32 @@ pub fn len(args: &[Value]) -> Result<Value, RuntimeError> {
         }),
     }
 }
+
+/// 深拷贝一个值
+///
+/// # 功能
+/// 创建值的深拷贝副本。对于复杂类型（Array、Dict），会递归拷贝所有嵌套内容。
+///
+/// # 参数
+/// - `value`: 要拷贝的值（任意类型）
+///
+/// # 返回值
+/// 原值的深拷贝副本
+///
+/// # 示例
+/// ```aether
+/// Set ORIG [1, 2, [3, 4]]
+/// Set COPY CLONE(ORIG)
+/// # 修改拷贝不影响原值
+/// ```
+pub fn clone(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::WrongArity {
+            expected: 1,
+            got: args.len(),
+        });
+    }
+
+    // Rust 的 Clone trait 会自动进行深拷贝
+    Ok(args[0].clone())
+}

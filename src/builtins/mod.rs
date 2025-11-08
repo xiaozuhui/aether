@@ -11,6 +11,7 @@ pub mod dict;
 pub mod filesystem;
 pub mod help;
 pub mod io;
+pub mod json;
 pub mod math;
 pub mod network;
 pub mod payroll;
@@ -232,6 +233,11 @@ impl BuiltInRegistry {
         registry.register("TYPE", types::type_of, 1);
         registry.register("TO_STRING", types::to_string, 1);
         registry.register("TO_NUMBER", types::to_number, 1);
+        registry.register("CLONE", types::clone, 1);
+
+        // JSON functions
+        registry.register("JSON_PARSE", json::json_parse, 1);
+        registry.register("JSON_STRINGIFY", json::json_stringify, 1); // Variadic: 1-2 args
 
         // Payroll functions - Basic salary calculations (7个)
         registry.register("CALC_HOURLY_PAY", payroll::basic::calc_hourly_pay, 2);

@@ -1,0 +1,89 @@
+// stdlib/examples/json_demo.aether
+// JSON 工具库使用示例
+
+PRINTLN("========== JSON 工具库示例 ==========")
+PRINTLN("")
+
+// ==================== JSON 解析和格式化 ====================
+PRINTLN("1. JSON 解析和格式化")
+Set JSON_STR "{\"name\":\"Alice\",\"age\":30,\"city\":\"Beijing\"}"
+PRINTLN("原始 JSON: " + JSON_STR)
+
+Set PARSED JSON_PARSE(JSON_STR)
+PRINTLN("解析后: " + TO_STRING(PARSED))
+
+Set PRETTY JSON_STRINGIFY(PARSED, 2)
+PRINTLN("格式化输出:")
+PRINTLN(PRETTY)
+PRINTLN("")
+
+// ==================== JSON 路径访问 ====================
+PRINTLN("2. JSON 路径访问")
+Set DATA {"user": {"name": "Bob", "age": 25, "address": {"city": "Shanghai", "zip": "200000"}}, "active": True}
+
+Set NAME JSON_GET_PATH(DATA, "user.name")
+PRINTLN("user.name = " + NAME)
+
+Set CITY JSON_GET_PATH(DATA, "user.address.city")
+PRINTLN("user.address.city = " + CITY)
+
+Set MISSING JSON_GET_PATH(DATA, "user.email")
+PRINTLN("user.email = " + TO_STRING(MISSING))
+PRINTLN("")
+
+// ==================== JSON 合并 ====================
+PRINTLN("3. JSON 合并")
+Set OBJ1 {"a": 1, "b": 2, "c": {"x": 10}}
+Set OBJ2 {"b": 3, "c": {"y": 20}, "d": 4}
+
+Set MERGED JSON_MERGE(OBJ1, OBJ2)
+PRINTLN("合并结果: " + JSON_STRINGIFY(MERGED))
+PRINTLN("")
+
+// ==================== JSON 数组操作 ====================
+PRINTLN("4. JSON 数组操作")
+Set USERS [{"name": "Alice", "age": 30, "role": "admin"}, {"name": "Bob", "age": 25, "role": "user"}, {"name": "Charlie", "age": 30, "role": "user"}]
+
+PRINTLN("原始用户列表: " + JSON_STRINGIFY(USERS))
+
+Set ADMINS JSON_FILTER(USERS, "role", "admin")
+PRINTLN("管理员: " + JSON_STRINGIFY(ADMINS))
+
+Set AGE_30 JSON_FILTER(USERS, "age", 30)
+PRINTLN("30岁用户: " + JSON_STRINGIFY(AGE_30))
+
+Set NAMES JSON_PLUCK(USERS, "name")
+PRINTLN("所有名字: " + JSON_STRINGIFY(NAMES))
+
+Set FOUND JSON_FIND(USERS, "name", "Bob")
+PRINTLN("查找 Bob: " + JSON_STRINGIFY(FOUND))
+
+Set COUNT JSON_COUNT(USERS, "age", 30)
+PRINTLN("30岁用户数量: " + TO_STRING(COUNT))
+PRINTLN("")
+
+// ==================== JSON 验证 ====================
+PRINTLN("5. JSON 验证")
+Set VALID_JSON "{\"test\": true}"
+Set INVALID_JSON "not a json"
+
+PRINTLN("验证 '" + VALID_JSON + "': " + TO_STRING(JSON_VALIDATE(VALID_JSON)))
+PRINTLN("验证 '" + INVALID_JSON + "': " + TO_STRING(JSON_VALIDATE(INVALID_JSON)))
+PRINTLN("")
+
+// ==================== JSON 工具函数 ====================
+PRINTLN("6. JSON 工具函数")
+Set TEST_OBJ {"a": 1, "b": {"c": 2, "d": 3}, "e": 4}
+
+Set SIZE JSON_SIZE(TEST_OBJ)
+PRINTLN("对象大小: " + TO_STRING(SIZE))
+
+Set IS_EMPTY JSON_IS_EMPTY(TEST_OBJ)
+PRINTLN("是否为空: " + TO_STRING(IS_EMPTY))
+
+Set EMPTY_OBJ {}
+Set EMPTY_CHECK JSON_IS_EMPTY(EMPTY_OBJ)
+PRINTLN("空对象检查: " + TO_STRING(EMPTY_CHECK))
+PRINTLN("")
+
+PRINTLN("========== JSON 示例完成 ==========")

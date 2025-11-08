@@ -33,6 +33,15 @@ pub const HEAP: &str = include_str!("../stdlib/heap.aether");
 /// 排序算法
 pub const SORTING: &str = include_str!("../stdlib/sorting.aether");
 
+/// JSON 处理工具
+pub const JSON: &str = include_str!("../stdlib/json.aether");
+
+/// CSV 数据处理
+pub const CSV: &str = include_str!("../stdlib/csv.aether");
+
+/// 函数式编程工具
+pub const FUNCTIONAL: &str = include_str!("../stdlib/functional.aether");
+
 /// 所有标准库模块的列表
 pub const ALL_MODULES: &[(&str, &str)] = &[
     ("string_utils", STRING_UTILS),
@@ -45,6 +54,9 @@ pub const ALL_MODULES: &[(&str, &str)] = &[
     ("stack", STACK),
     ("heap", HEAP),
     ("sorting", SORTING),
+    ("json", JSON),
+    ("csv", CSV),
+    ("functional", FUNCTIONAL),
 ];
 
 /// 获取指定模块的代码
@@ -60,6 +72,9 @@ pub fn get_module(name: &str) -> Option<&'static str> {
         "stack" => Some(STACK),
         "heap" => Some(HEAP),
         "sorting" => Some(SORTING),
+        "json" => Some(JSON),
+        "csv" => Some(CSV),
+        "functional" => Some(FUNCTIONAL),
         _ => None,
     }
 }

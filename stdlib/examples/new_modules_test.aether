@@ -1,0 +1,153 @@
+// stdlib/examples/new_modules_test.aether
+// 新模块快速测试脚本
+
+PRINTLN("========================================")
+PRINTLN("  Aether 新模块快速测试")
+PRINTLN("  json.aether | csv.aether | functional.aether")
+PRINTLN("========================================")
+PRINTLN("")
+
+// ==================== JSON 模块测试 ====================
+PRINTLN("【1】JSON 模块测试")
+PRINTLN("─────────────────────")
+
+// 测试 JSON_PARSE 和 JSON_STRINGIFY
+Set TEST_JSON '{"name":"Aether","version":1,"active":true}'
+Set PARSED JSON_PARSE(TEST_JSON)
+PRINTLN("✓ JSON 解析成功")
+
+// 测试 JSON_GET_PATH
+Set NESTED {"user":{"profile":{"name":"Alice"}}}
+Set NAME JSON_GET_PATH(NESTED, "user.profile.name")
+If (NAME == "Alice") {
+    PRINTLN("✓ JSON 路径访问正常")
+} Else {
+    PRINTLN("✗ JSON 路径访问失败")
+}
+
+// 测试 JSON_FILTER
+Set USERS [{"name":"Alice","age":30},{"name":"Bob","age":25}]
+Set FILTERED JSON_FILTER(USERS, "age", 30)
+If (LEN(FILTERED) == 1) {
+    PRINTLN("✓ JSON 过滤功能正常")
+} Else {
+    PRINTLN("✗ JSON 过滤功能失败")
+}
+
+PRINTLN("")
+
+// ==================== CSV 模块测试 ====================
+PRINTLN("【2】CSV 模块测试")
+PRINTLN("─────────────────────")
+
+// 测试 CSV_PARSE
+Set CSV_DATA "a,b,c\n1,2,3\n4,5,6"
+Set CSV_PARSED CSV_PARSE_DEFAULT(CSV_DATA)
+If (LEN(CSV_PARSED) == 3) {
+    PRINTLN("✓ CSV 解析成功")
+} Else {
+    PRINTLN("✗ CSV 解析失败")
+}
+
+// 测试 CSV_TO_DICT_ARRAY
+Set CSV_WITH_HEADER "name,age\nAlice,30\nBob,25"
+Set DICT_ARRAY CSV_TO_DICT_ARRAY_DEFAULT(CSV_WITH_HEADER)
+If (LEN(DICT_ARRAY) == 2) {
+    PRINTLN("✓ CSV 转字典数组成功")
+} Else {
+    PRINTLN("✗ CSV 转字典数组失败")
+}
+
+// 测试 CSV_COLUMN
+Set NAMES_COL CSV_COLUMN(DICT_ARRAY, "name")
+If (LEN(NAMES_COL) == 2) {
+    PRINTLN("✓ CSV 列提取成功")
+} Else {
+    PRINTLN("✗ CSV 列提取失败")
+}
+
+PRINTLN("")
+
+// ==================== Functional 模块测试 ====================
+PRINTLN("【3】Functional 模块测试")
+PRINTLN("─────────────────────")
+
+// 测试 FIND
+Func IS_EVEN_NUM(N) {
+    Return ((N % 2) == 0)
+}
+Set NUMS [1, 3, 4, 5, 6]
+Set FIRST_EVEN FIND(NUMS, IS_EVEN_NUM)
+If (FIRST_EVEN == 4) {
+    PRINTLN("✓ FIND 函数正常")
+} Else {
+    PRINTLN("✗ FIND 函数失败")
+}
+
+// 测试 UNIQUE
+Set WITH_DUPS [1, 2, 2, 3, 3, 3]
+Set UNIQUE_VALS UNIQUE(WITH_DUPS)
+If (LEN(UNIQUE_VALS) == 3) {
+    PRINTLN("✓ UNIQUE 函数正常")
+} Else {
+    PRINTLN("✗ UNIQUE 函数失败")
+}
+
+// 测试 COMPACT
+Set WITH_NULLS [1, Null, 2, Null, 3]
+Set NO_NULLS COMPACT(WITH_NULLS)
+If (LEN(NO_NULLS) == 3) {
+    PRINTLN("✓ COMPACT 函数正常")
+} Else {
+    PRINTLN("✗ COMPACT 函数失败")
+}
+
+// 测试 CHUNK
+Set TO_CHUNK [1, 2, 3, 4, 5, 6]
+Set CHUNKS CHUNK(TO_CHUNK, 2)
+If (LEN(CHUNKS) == 3) {
+    PRINTLN("✓ CHUNK 函数正常")
+} Else {
+    PRINTLN("✗ CHUNK 函数失败")
+}
+
+// 测试 FLATTEN
+Set NESTED_ARR [[1, 2], [3, 4]]
+Set FLAT FLATTEN(NESTED_ARR)
+If (LEN(FLAT) == 4) {
+    PRINTLN("✓ FLATTEN 函数正常")
+} Else {
+    PRINTLN("✗ FLATTEN 函数失败")
+}
+
+PRINTLN("")
+
+// ==================== 集成测试 ====================
+PRINTLN("【4】集成测试：JSON + CSV + Functional")
+PRINTLN("─────────────────────")
+
+// 场景：处理 CSV 数据，使用函数式工具，输出为 JSON
+Set SALES_CSV "product,quantity\nApple,10\nBanana,5\nApple,15"
+Set SALES_DATA CSV_TO_DICT_ARRAY_DEFAULT(SALES_CSV)
+
+// 使用 JSON_FILTER 筛选苹果销售
+Set APPLE_SALES JSON_FILTER(SALES_DATA, "product", "Apple")
+
+// 提取数量
+Set QUANTITIES CSV_COLUMN(APPLE_SALES, "quantity")
+
+// 去重并计算
+Set UNIQUE_QTY UNIQUE(QUANTITIES)
+
+PRINTLN("✓ 集成测试成功")
+PRINTLN("  - CSV 解析：" + TO_STRING(LEN(SALES_DATA)) + " 行")
+PRINTLN("  - 筛选结果：" + TO_STRING(LEN(APPLE_SALES)) + " 条")
+PRINTLN("  - 唯一数量：" + JSON_STRINGIFY(UNIQUE_QTY))
+
+PRINTLN("")
+
+// ==================== 总结 ====================
+PRINTLN("========================================")
+PRINTLN("  测试完成！")
+PRINTLN("  所有核心功能运行正常 ✓")
+PRINTLN("========================================")

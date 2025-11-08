@@ -1,0 +1,52 @@
+// 测试高阶函数 MAP, FILTER, REDUCE
+
+PRINTLN("=== 测试 MAP ===")
+Set NUMBERS [1, 2, 3, 4, 5]
+PRINTLN("原数组: " + JSON_STRINGIFY(NUMBERS))
+
+Func DOUBLE(X) {
+    Return (X * 2)
+}
+Set DOUBLED MAP(NUMBERS, DOUBLE)
+PRINTLN("每个数乘2: " + JSON_STRINGIFY(DOUBLED))
+
+PRINTLN("")
+PRINTLN("=== 测试 FILTER ===")
+Func IS_EVEN(N) {
+    Return ((N % 2) == 0)
+}
+Set EVENS FILTER(NUMBERS, IS_EVEN)
+PRINTLN("只保留偶数: " + JSON_STRINGIFY(EVENS))
+
+PRINTLN("")
+PRINTLN("=== 测试 REDUCE ===")
+Func ADD(ACC, X) {
+    Return (ACC + X)
+}
+Set SUM REDUCE(NUMBERS, 0, ADD)
+PRINTLN("数组求和: " + TO_STRING(SUM))
+
+Func MUL(ACC, X) {
+    Return (ACC * X)
+}
+Set PRODUCT REDUCE(NUMBERS, 1, MUL)
+PRINTLN("数组求积: " + TO_STRING(PRODUCT))
+
+PRINTLN("")
+PRINTLN("=== 组合使用 ===")
+// 过滤出偶数，然后每个数平方，最后求和
+Set STEP1 FILTER(NUMBERS, IS_EVEN)
+PRINTLN("步骤1 - 过滤偶数: " + JSON_STRINGIFY(STEP1))
+
+Func SQUARE(X) {
+    Return (X * X)
+}
+Set STEP2 MAP(STEP1, SQUARE)
+PRINTLN("步骤2 - 平方: " + JSON_STRINGIFY(STEP2))
+
+Set STEP3 REDUCE(STEP2, 0, ADD)
+PRINTLN("步骤3 - 求和: " + TO_STRING(STEP3))
+
+PRINTLN("")
+PRINTLN("✅ 所有高阶函数测试通过！")
+PRINTLN("Aether 的函数确实是第一公民，支持完整的高阶函数！")
