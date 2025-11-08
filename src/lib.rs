@@ -40,6 +40,48 @@
 //! let mut engine = Aether::with_all_permissions();
 //! ```
 //!
+//! ### Selective Standard Library Loading (Recommended for DSL)
+//!
+//! For better performance, load only the stdlib modules you need:
+//!
+//! ```
+//! use aether::Aether;
+//!
+//! // Load only string and array utilities
+//! let mut engine = Aether::new()
+//!     .with_stdlib_string_utils()
+//!     .unwrap()
+//!     .with_stdlib_array_utils()
+//!     .unwrap();
+//!
+//! // Or load data structures
+//! let mut engine2 = Aether::new()
+//!     .with_stdlib_set()
+//!     .unwrap()
+//!     .with_stdlib_queue()
+//!     .unwrap()
+//!     .with_stdlib_stack()
+//!     .unwrap();
+//!
+//! // Available modules:
+//! // - with_stdlib_string_utils()
+//! // - with_stdlib_array_utils()
+//! // - with_stdlib_validation()
+//! // - with_stdlib_datetime()
+//! // - with_stdlib_testing()
+//! // - with_stdlib_set()
+//! // - with_stdlib_queue()
+//! // - with_stdlib_stack()
+//! // - with_stdlib_heap()
+//! // - with_stdlib_sorting()
+//! // - with_stdlib_json()
+//! // - with_stdlib_csv()
+//! // - with_stdlib_functional()
+//! // - with_stdlib_cli_utils()
+//! // - with_stdlib_text_template()
+//! // - with_stdlib_regex_utils()
+//! ```
+//!
 //! ## As a Standalone Language (Command-Line Tool)
 //!
 //! The `aether` command-line tool automatically enables all IO permissions,
@@ -137,6 +179,138 @@ impl Aether {
     /// Load all standard library modules
     pub fn load_all_stdlib(&mut self) -> Result<(), String> {
         stdlib::preload_stdlib(self)
+    }
+
+    // ============================================================
+    // Chainable stdlib module loading methods
+    // ============================================================
+
+    /// Load string utilities module (chainable)
+    pub fn with_stdlib_string_utils(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("string_utils") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load array utilities module (chainable)
+    pub fn with_stdlib_array_utils(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("array_utils") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load validation module (chainable)
+    pub fn with_stdlib_validation(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("validation") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load datetime module (chainable)
+    pub fn with_stdlib_datetime(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("datetime") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load testing framework module (chainable)
+    pub fn with_stdlib_testing(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("testing") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load set data structure module (chainable)
+    pub fn with_stdlib_set(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("set") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load queue data structure module (chainable)
+    pub fn with_stdlib_queue(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("queue") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load stack data structure module (chainable)
+    pub fn with_stdlib_stack(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("stack") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load heap data structure module (chainable)
+    pub fn with_stdlib_heap(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("heap") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load sorting algorithms module (chainable)
+    pub fn with_stdlib_sorting(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("sorting") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load JSON processing module (chainable)
+    pub fn with_stdlib_json(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("json") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load CSV processing module (chainable)
+    pub fn with_stdlib_csv(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("csv") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load functional programming utilities module (chainable)
+    pub fn with_stdlib_functional(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("functional") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load CLI utilities module (chainable)
+    pub fn with_stdlib_cli_utils(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("cli_utils") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load text template engine module (chainable)
+    pub fn with_stdlib_text_template(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("text_template") {
+            self.eval(code)?;
+        }
+        Ok(self)
+    }
+
+    /// Load regex utilities module (chainable)
+    pub fn with_stdlib_regex_utils(mut self) -> Result<Self, String> {
+        if let Some(code) = stdlib::get_module("regex_utils") {
+            self.eval(code)?;
+        }
+        Ok(self)
     }
 
     /// Evaluate Aether code and return the result
