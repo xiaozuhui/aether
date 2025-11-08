@@ -180,7 +180,7 @@ impl Evaluator {
                                 "Cannot index {} with {}",
                                 obj.type_name(),
                                 idx.type_name()
-                            )))
+                            )));
                         }
                     };
 
@@ -207,14 +207,14 @@ impl Evaluator {
             }
 
             Stmt::GeneratorDef { name, params, body } => {
-                let gen = Value::Generator {
+                let r#gen = Value::Generator {
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
                     state: GeneratorState::NotStarted,
                 };
-                self.env.borrow_mut().set(name.clone(), gen.clone());
-                Ok(gen)
+                self.env.borrow_mut().set(name.clone(), r#gen.clone());
+                Ok(r#gen)
             }
 
             Stmt::LazyDef { name, expr } => {
@@ -919,7 +919,7 @@ impl Evaluator {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Array".to_string(),
                     got: format!("{:?}", other),
-                })
+                });
             }
         };
 
@@ -949,7 +949,7 @@ impl Evaluator {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Array".to_string(),
                     got: format!("{:?}", other),
-                })
+                });
             }
         };
 
@@ -981,7 +981,7 @@ impl Evaluator {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Array".to_string(),
                     got: format!("{:?}", other),
-                })
+                });
             }
         };
 

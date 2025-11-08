@@ -438,4 +438,3 @@ Func TEMPLATE_BATCH_RENDER(TEMPLATES) {
     Return RESULTS
 }
 
-PRINTLN("[stdlib] text_template.aether loaded - Text template engine for code generation")

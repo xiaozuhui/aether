@@ -615,4 +615,3 @@ Func REGEX_COUNT_CHARS(TEXT) {
     Return STATS
 }
 
-PRINTLN("[stdlib] regex_utils.aether loaded - Regex-like text processing utilities")

@@ -511,4 +511,3 @@ Func REPEAT(STR, COUNT) {
     Return RESULT
 }
 
-PRINTLN("[stdlib] cli_utils.aether loaded - CLI utilities for command-line programs")

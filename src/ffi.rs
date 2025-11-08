@@ -28,7 +28,7 @@ pub enum AetherErrorCode {
 /// Create a new Aether engine instance
 ///
 /// Returns: Pointer to AetherHandle (must be freed with aether_free)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_new() -> *mut AetherHandle {
     let engine = Box::new(Aether::new());
     Box::into_raw(engine) as *mut AetherHandle
@@ -37,7 +37,7 @@ pub extern "C" fn aether_new() -> *mut AetherHandle {
 /// Create a new Aether engine with all IO permissions enabled
 ///
 /// Returns: Pointer to AetherHandle (must be freed with aether_free)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_new_with_permissions() -> *mut AetherHandle {
     let engine = Box::new(Aether::with_all_permissions());
     Box::into_raw(engine) as *mut AetherHandle
@@ -54,7 +54,7 @@ pub extern "C" fn aether_new_with_permissions() -> *mut AetherHandle {
 /// # Returns
 /// - 0 (Success) if evaluation succeeded
 /// - Non-zero error code if evaluation failed
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_eval(
     handle: *mut AetherHandle,
     code: *const c_char,
@@ -120,14 +120,14 @@ pub extern "C" fn aether_eval(
 /// Get the version string of Aether
 ///
 /// Returns: C string with version (must NOT be freed)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_version() -> *const c_char {
     static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
     VERSION.as_ptr() as *const c_char
 }
 
 /// Free an Aether engine handle
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_free(handle: *mut AetherHandle) {
     if !handle.is_null() {
         unsafe {
@@ -137,7 +137,7 @@ pub extern "C" fn aether_free(handle: *mut AetherHandle) {
 }
 
 /// Free a string allocated by Aether
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn aether_free_string(s: *mut c_char) {
     if !s.is_null() {
         unsafe {

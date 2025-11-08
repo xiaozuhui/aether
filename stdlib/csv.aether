@@ -489,4 +489,3 @@ Func CSV_SORT_BY(DATA, COL) {
     Return DATA
 }
 
-PRINTLN("[stdlib] csv.aether loaded - CSV data processing utilities")

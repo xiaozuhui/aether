@@ -698,4 +698,3 @@ Func DEFAULT_TO(VALUE, DEFAULT) {
     Return VALUE
 }
 
-PRINTLN("[stdlib] functional.aether loaded - Functional programming utilities")

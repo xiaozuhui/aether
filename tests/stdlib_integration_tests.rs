@@ -82,7 +82,7 @@ fn test_string_utils_functions() {
     // 测试字符串分割
     let code = r#"
         Set PARTS STR_SPLIT("a,b,c", ",")
-        ArrLen(PARTS)
+        LEN(PARTS)
     "#;
     let result = engine.eval(code).expect("Failed to eval");
     assert_eq!(result.to_string(), "3");
@@ -101,7 +101,7 @@ fn test_array_utils_functions() {
     let code = r#"
         Set ARR [1, 2, 2, 3, 3, 3]
         Set UNIQUE ARR_UNIQUE(ARR)
-        ArrLen(UNIQUE)
+        LEN(UNIQUE)
     "#;
     let result = engine.eval(code).expect("Failed to eval");
     assert_eq!(result.to_string(), "3");
@@ -187,7 +187,7 @@ fn test_testing_framework() {
     // 测试数据生成
     let code = r#"
         Set ARR TEST_DATA_INT_ARRAY(5, 10)
-        ArrLen(ARR)
+        LEN(ARR)
     "#;
     let result = engine.eval(code).expect("Failed to eval");
     assert_eq!(result.to_string(), "5");
@@ -204,21 +204,21 @@ fn test_complex_stdlib_usage() {
         Set CLEANED []
         
         Set I 0
-        While (I < ArrLen(EMAILS)) {
-            Set EMAIL ArrGet(EMAILS, I)
+        While (I < LEN(EMAILS)) {
+            Set EMAIL EMAILS[I]
             Set EMAIL STR_TRIM(EMAIL)
-            
-            If (StrLen(EMAIL) > 0) {
+
+            If (LEN(EMAIL) > 0) {
                 Set IS_VALID VALIDATE_EMAIL(EMAIL)
                 If (IS_VALID) {
-                    Set CLEANED ArrPush(CLEANED, EMAIL)
+                    Set CLEANED PUSH(CLEANED, EMAIL)
                 }
             }
             
             Set I (I + 1)
         }
         
-        ArrLen(CLEANED)
+        LEN(CLEANED)
     "#;
 
     let result = engine.eval(code).expect("Failed to eval");

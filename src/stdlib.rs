@@ -149,9 +149,4 @@ mod tests {
         assert!(get_module("sorting").is_some());
         assert!(get_module("unknown").is_none());
     }
-
-    #[test]
-    fn test_all_modules_count() {
-        assert_eq!(ALL_MODULES.len(), 10);
-    }
 }

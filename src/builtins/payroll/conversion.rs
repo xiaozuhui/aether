@@ -14,7 +14,6 @@ fn get_number(val: &Value) -> Result<f64, RuntimeError> {
     }
 }
 
-
 /// 年薪转月薪
 pub fn annual_to_monthly(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.is_empty() {
