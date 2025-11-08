@@ -439,9 +439,35 @@ impl Evaluator {
                 .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone())),
 
             Expr::Binary { left, op, right } => {
-                let left_val = self.eval_expression(left)?;
-                let right_val = self.eval_expression(right)?;
-                self.eval_binary_op(&left_val, op, &right_val)
+                // Short-circuit evaluation for And and Or
+                match op {
+                    BinOp::And => {
+                        let left_val = self.eval_expression(left)?;
+                        if !left_val.is_truthy() {
+                            // Short-circuit: left is falsy, return left without evaluating right
+                            Ok(left_val)
+                        } else {
+                            // left is truthy, return right value
+                            self.eval_expression(right)
+                        }
+                    }
+                    BinOp::Or => {
+                        let left_val = self.eval_expression(left)?;
+                        if left_val.is_truthy() {
+                            // Short-circuit: left is truthy, return left without evaluating right
+                            Ok(left_val)
+                        } else {
+                            // left is falsy, return right value
+                            self.eval_expression(right)
+                        }
+                    }
+                    // For other operators, evaluate both sides
+                    _ => {
+                        let left_val = self.eval_expression(left)?;
+                        let right_val = self.eval_expression(right)?;
+                        self.eval_binary_op(&left_val, op, &right_val)
+                    }
+                }
             }
 
             Expr::Unary { op, expr } => {
@@ -483,6 +509,21 @@ impl Evaluator {
                         arr.get(idx).cloned().ok_or_else(|| {
                             RuntimeError::InvalidOperation(format!("Index {} out of bounds", idx))
                         })
+                    }
+                    (Value::String(s), Value::Number(n)) => {
+                        let idx = n as usize;
+                        let chars: Vec<char> = s.chars().collect();
+                        chars
+                            .get(idx)
+                            .cloned()
+                            .map(|ch| Value::String(ch.to_string()))
+                            .ok_or_else(|| {
+                                RuntimeError::InvalidOperation(format!(
+                                    "Index {} out of bounds (string length: {})",
+                                    idx,
+                                    chars.len()
+                                ))
+                            })
                     }
                     (Value::Dict(dict), Value::String(key)) => {
                         dict.get(&key).cloned().ok_or_else(|| {

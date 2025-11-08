@@ -1,0 +1,175 @@
+// 测试 Aether 语言改进
+// 1. Or/And/Not 关键字支持
+// 2. 短路求值
+// 3. 字符串下标访问
+
+PRINTLN("=== 测试 1: Or/And/Not 关键字 ===")
+
+// 使用 And 关键字
+Set A True
+Set B False
+Set RESULT1 A And B
+PRINTLN("True And False = " + TO_STRING(RESULT1))
+
+// 使用 Or 关键字
+Set RESULT2 A Or B
+PRINTLN("True Or False = " + TO_STRING(RESULT2))
+
+// 使用 Not 关键字
+Set RESULT3 Not A
+PRINTLN("Not True = " + TO_STRING(RESULT3))
+
+// 使用符号形式 &&, ||, !
+Set RESULT4 True && False
+PRINTLN("True && False = " + TO_STRING(RESULT4))
+
+Set RESULT5 True || False
+PRINTLN("True || False = " + TO_STRING(RESULT5))
+
+Set RESULT6 !True
+PRINTLN("!True = " + TO_STRING(RESULT6))
+
+PRINTLN("")
+PRINTLN("=== 测试 2: 短路求值 ===")
+
+// 定义一个会产生副作用的函数
+Set CALL_COUNT 0
+Func SIDE_EFFECT() {
+    Set CALL_COUNT CALL_COUNT + 1
+    PRINTLN("  SIDE_EFFECT 被调用，CALL_COUNT = " + TO_STRING(CALL_COUNT))
+    Return True
+}
+
+// 测试 And 短路：如果左边为 False，右边不应该被求值
+PRINTLN("测试 And 短路 (False And SIDE_EFFECT())：")
+Set CALL_COUNT 0
+Set RESULT7 False And SIDE_EFFECT()
+PRINTLN("  结果: " + TO_STRING(RESULT7))
+If (CALL_COUNT == 0) {
+    PRINTLN("  ✓ 短路成功：右边没有被求值")
+} Else {
+    PRINTLN("  ✗ 短路失败：右边被求值了")
+}
+
+// 测试 And 不短路：如果左边为 True，右边应该被求值
+PRINTLN("测试 And 不短路 (True And SIDE_EFFECT())：")
+Set CALL_COUNT 0
+Set RESULT8 True And SIDE_EFFECT()
+PRINTLN("  结果: " + TO_STRING(RESULT8))
+If (CALL_COUNT == 1) {
+    PRINTLN("  ✓ 正确：右边被求值了")
+} Else {
+    PRINTLN("  ✗ 错误：右边没有被求值")
+}
+
+// 测试 Or 短路：如果左边为 True，右边不应该被求值
+PRINTLN("测试 Or 短路 (True Or SIDE_EFFECT())：")
+Set CALL_COUNT 0
+Set RESULT9 True Or SIDE_EFFECT()
+PRINTLN("  结果: " + TO_STRING(RESULT9))
+If (CALL_COUNT == 0) {
+    PRINTLN("  ✓ 短路成功：右边没有被求值")
+} Else {
+    PRINTLN("  ✗ 短路失败：右边被求值了")
+}
+
+// 测试 Or 不短路：如果左边为 False，右边应该被求值
+PRINTLN("测试 Or 不短路 (False Or SIDE_EFFECT())：")
+Set CALL_COUNT 0
+Set RESULT10 False Or SIDE_EFFECT()
+PRINTLN("  结果: " + TO_STRING(RESULT10))
+If (CALL_COUNT == 1) {
+    PRINTLN("  ✓ 正确：右边被求值了")
+} Else {
+    PRINTLN("  ✗ 错误：右边没有被求值")
+}
+
+PRINTLN("")
+PRINTLN("=== 测试 3: 字符串下标访问 ===")
+
+Set STR "Hello, World!"
+PRINTLN("字符串: \"" + STR + "\"")
+
+// 测试单个字符访问
+Set CHAR0 STR[0]
+PRINTLN("STR[0] = \"" + CHAR0 + "\"")
+
+Set CHAR7 STR[7]
+PRINTLN("STR[7] = \"" + CHAR7 + "\"")
+
+Set CHAR_LAST STR[12]
+PRINTLN("STR[12] = \"" + CHAR_LAST + "\"")
+
+// 测试中文字符串
+Set CHINESE "你好世界"
+PRINTLN("")
+PRINTLN("中文字符串: \"" + CHINESE + "\"")
+Set CH0 CHINESE[0]
+PRINTLN("CHINESE[0] = \"" + CH0 + "\"")
+Set CH1 CHINESE[1]
+PRINTLN("CHINESE[1] = \"" + CH1 + "\"")
+
+// 用循环遍历字符串
+PRINTLN("")
+PRINTLN("遍历字符串 \"Aether\":")
+Set WORD "Aether"
+Set I 0
+While (I < 6) {
+    Set CH WORD[I]
+    PRINTLN("  [" + TO_STRING(I) + "] = \"" + CH + "\"")
+    Set I I + 1
+}
+
+// 组合应用：使用字符串索引重写之前的括号匹配
+PRINTLN("")
+PRINTLN("=== 组合应用: 简化的括号匹配 ===")
+Func CHECK_BRACKETS_V2(STR) {
+    Set STACK []
+    Set I 0
+    Set LEN_ LEN(STR)
+    
+    While (I < LEN_) {
+        Set CHAR STR[I]  // 直接使用字符串索引！
+        
+        If (CHAR == "(" Or CHAR == "[" Or CHAR == "{") {
+            Set STACK STACK_PUSH(STACK, CHAR)
+        } Elif (CHAR == ")" Or CHAR == "]" Or CHAR == "}") {
+            If (LEN(STACK) == 0) {
+                Return False
+            }
+            
+            Set STACK STACK_POP(STACK)["stack"]
+            Set TOP STACK[LEN(STACK) - 1]
+            
+            Set MATCH False
+            If (CHAR == ")" And TOP == "(") {
+                Set MATCH True
+            } Elif (CHAR == "]" And TOP == "[") {
+                Set MATCH True
+            } Elif (CHAR == "}" And TOP == "{") {
+                Set MATCH True
+            }
+            
+            If (Not MATCH) {
+                Return False
+            }
+        }
+        
+        Set I I + 1
+    }
+    
+    Return LEN(STACK) == 0
+}
+
+Set TEST1 "(()[]{})([)]"
+PRINTLN("测试: \"" + TEST1 + "\"")
+Set RESULT11 CHECK_BRACKETS_V2(TEST1)
+PRINTLN("结果: " + TO_STRING(RESULT11))
+
+Set TEST2 "{[()]}"
+PRINTLN("测试: \"" + TEST2 + "\"")
+Set RESULT12 CHECK_BRACKETS_V2(TEST2)
+PRINTLN("结果: " + TO_STRING(RESULT12))
+
+PRINTLN("")
+PRINTLN("=== 所有测试完成 ===")

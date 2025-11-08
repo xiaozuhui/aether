@@ -140,6 +140,11 @@ impl Token {
             "Export" => Token::Export,
             "Throw" => Token::Throw,
 
+            // Logical operators as keywords
+            "And" => Token::And,
+            "Or" => Token::Or,
+            "Not" => Token::Not,
+
             // Boolean literals (uppercase per Aether design)
             "True" => Token::Boolean(true),
             "False" => Token::Boolean(false),
