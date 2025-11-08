@@ -1,0 +1,91 @@
+// stdlib/examples/set_demo.aether
+// Set（集合）数据结构示例
+
+PRINTLN("=== Aether Set（集合）示例 ===")
+PRINTLN("")
+
+// 创建集合
+PRINTLN("1. 创建集合")
+Set SET1 SET_NEW()
+PRINTLN("空集合: " + SET_TO_STRING(SET1))
+
+// 添加元素
+Set SET1 SET_ADD(SET1, 1)
+Set SET1 SET_ADD(SET1, 2)
+Set SET1 SET_ADD(SET1, 3)
+Set SET1 SET_ADD(SET1, 2)  // 重复元素不会被添加
+PRINTLN("添加元素后: " + SET_TO_STRING(SET1))
+PRINTLN("")
+
+// 从数组创建集合
+PRINTLN("2. 从数组创建集合")
+Set ARR [1, 2, 3, 2, 4, 3, 5]
+Set SET2 SET_FROM_ARRAY(ARR)
+PRINTLN("原数组: " + TO_STRING(ARR))
+PRINTLN("去重后的集合: " + SET_TO_STRING(SET2))
+PRINTLN("")
+
+// 基本操作
+PRINTLN("3. 基本操作")
+PRINTLN("集合大小: " + TO_STRING(SET_SIZE(SET2)))
+PRINTLN("是否包含 3: " + TO_STRING(SET_CONTAINS(SET2, 3)))
+PRINTLN("是否包含 10: " + TO_STRING(SET_CONTAINS(SET2, 10)))
+
+Set SET2 SET_REMOVE(SET2, 3)
+PRINTLN("移除 3 后: " + SET_TO_STRING(SET2))
+PRINTLN("")
+
+// 集合运算
+PRINTLN("4. 集合运算")
+Set SET_A SET_FROM_ARRAY([1, 2, 3, 4, 5])
+Set SET_B SET_FROM_ARRAY([4, 5, 6, 7, 8])
+
+PRINTLN("集合 A: " + SET_TO_STRING(SET_A))
+PRINTLN("集合 B: " + SET_TO_STRING(SET_B))
+PRINTLN("")
+
+Set UNION SET_UNION(SET_A, SET_B)
+PRINTLN("并集 A ∪ B: " + SET_TO_STRING(UNION))
+
+Set INTERSECTION SET_INTERSECTION(SET_A, SET_B)
+PRINTLN("交集 A ∩ B: " + SET_TO_STRING(INTERSECTION))
+
+Set DIFFERENCE SET_DIFFERENCE(SET_A, SET_B)
+PRINTLN("差集 A - B: " + SET_TO_STRING(DIFFERENCE))
+
+Set SYM_DIFF SET_SYMMETRIC_DIFFERENCE(SET_A, SET_B)
+PRINTLN("对称差集: " + SET_TO_STRING(SYM_DIFF))
+PRINTLN("")
+
+// 集合关系
+PRINTLN("5. 集合关系")
+Set SET_C SET_FROM_ARRAY([2, 3, 4])
+PRINTLN("集合 C: " + SET_TO_STRING(SET_C))
+PRINTLN("C 是 A 的子集: " + TO_STRING(SET_IS_SUBSET(SET_C, SET_A)))
+PRINTLN("A 是 C 的超集: " + TO_STRING(SET_IS_SUPERSET(SET_A, SET_C)))
+PRINTLN("A 和 B 不相交: " + TO_STRING(SET_IS_DISJOINT(SET_A, SET_B)))
+PRINTLN("")
+
+// 高级操作
+PRINTLN("6. 过滤和映射")
+Set NUMBERS SET_FROM_ARRAY([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+PRINTLN("原集合: " + SET_TO_STRING(NUMBERS))
+
+// 定义过滤函数：保留偶数
+Func IS_EVEN(N) {
+    Return (N % 2 == 0)
+}
+
+Set EVENS SET_FILTER(NUMBERS, IS_EVEN)
+PRINTLN("偶数集合: " + SET_TO_STRING(EVENS))
+
+// 定义映射函数：平方
+Func SQUARE(N) {
+    Return (N * N)
+}
+
+Set SQUARES SET_MAP(SET_FROM_ARRAY([1, 2, 3, 4, 5]), SQUARE)
+PRINTLN("平方集合: " + SET_TO_STRING(SQUARES))
+
+PRINTLN("")
+PRINTLN("=== 示例完成 ===")

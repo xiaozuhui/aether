@@ -1,16 +1,4 @@
-这是个很好的想法！既然 Aether 已经有了丰富的内置功能，完全可以用 Aether 本身来构建更高层次的库和工具。让我先看看现有的功能和示例，然后给你一些建议。
 
-读取 [](file:///Users/xuzh/codes/Aether/docs/USER_GUIDE.md#1-1)，行 1 到 100
-
-读取 [](file:///Users/xuzh/codes/Aether/examples/final_showcase.aether)
-
-搜索 `fn |function` (`**/examples/*.aether`) 文本，无结果
-
-搜索 `Function` (`**/examples/*.aether`) 文本，无结果
-
-读取 [](file:///Users/xuzh/codes/Aether/examples/payroll_demo.aether#1-1)，行 1 到 50
-
-基于我看到的 Aether 现有功能，我有以下几个建议，可以用 Aether 本身来构建实用的库：
 
 ## 💡 建议方向
 

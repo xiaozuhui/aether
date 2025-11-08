@@ -1,0 +1,138 @@
+// stdlib/examples/stack_demo.aether
+// Stack（栈）数据结构示例
+
+PRINTLN("=== Aether Stack（栈）示例 ===")
+PRINTLN("")
+
+// 创建栈
+PRINTLN("1. 创建和基本操作")
+Set STACK STACK_NEW()
+PRINTLN("创建空栈: " + STACK_TO_STRING(STACK))
+
+// 压栈
+Set STACK STACK_PUSH(STACK, 10)
+Set STACK STACK_PUSH(STACK, 20)
+Set STACK STACK_PUSH(STACK, 30)
+PRINTLN("压入 3 个元素: " + STACK_TO_STRING(STACK))
+PRINTLN("栈大小: " + TO_STRING(STACK_SIZE(STACK)))
+PRINTLN("")
+
+// 查看栈顶
+PRINTLN("2. 查看元素")
+PRINTLN("栈顶元素: " + TO_STRING(STACK_PEEK(STACK)))
+PRINTLN("栈底元素: " + TO_STRING(STACK_PEEK_BOTTOM(STACK)))
+PRINTLN("栈顶第2个元素: " + TO_STRING(STACK_PEEK_N(STACK, 1)))
+PRINTLN("")
+
+// 出栈
+PRINTLN("3. 出栈操作")
+Set RESULT STACK_POP(STACK)
+Set STACK RESULT["stack"]
+PRINTLN("出栈元素: " + TO_STRING(RESULT["value"]))
+PRINTLN("出栈后: " + STACK_TO_STRING(STACK))
+
+Set RESULT STACK_POP(STACK)
+Set STACK RESULT["stack"]
+PRINTLN("再次出栈: " + TO_STRING(RESULT["value"]))
+PRINTLN("当前栈: " + STACK_TO_STRING(STACK))
+PRINTLN("")
+
+// 栈操作
+PRINTLN("4. 高级栈操作")
+Set STACK STACK_PUSH(STACK, 40)
+Set STACK STACK_PUSH(STACK, 50)
+Set STACK STACK_PUSH(STACK, 60)
+PRINTLN("重新压栈: " + STACK_TO_STRING(STACK))
+
+Set STACK STACK_SWAP_TOP(STACK)
+PRINTLN("交换栈顶两元素: " + STACK_TO_STRING(STACK))
+
+Set STACK STACK_ROTATE_UP(STACK)
+PRINTLN("栈底移到栈顶: " + STACK_TO_STRING(STACK))
+
+Set STACK STACK_ROTATE_DOWN(STACK)
+PRINTLN("栈顶移到栈底: " + STACK_TO_STRING(STACK))
+PRINTLN("")
+
+// 实际应用1：括号匹配
+PRINTLN("5. 实际应用：括号匹配检查")
+
+Func CHECK_BRACKETS(STR) {
+    Set STACK STACK_NEW()
+    Set LEN_ LEN(STR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set CHAR STRSLICE(STR, I, I + 1)
+        
+        If (CHAR == "(" || CHAR == "[" || CHAR == "{") {
+            Set STACK STACK_PUSH(STACK, CHAR)
+        } Else {
+            If (CHAR == ")" || CHAR == "]" || CHAR == "}") {
+                If (STACK_IS_EMPTY(STACK)) {
+                    Return False
+                }
+                
+                Set RESULT STACK_POP(STACK)
+                Set STACK RESULT["stack"]
+                Set TOP RESULT["value"]
+                
+                If (CHAR == ")" && TOP != "(") {
+                    Return False
+                }
+                If (CHAR == "]" && TOP != "[") {
+                    Return False
+                }
+                If (CHAR == "}" && TOP != "{") {
+                    Return False
+                }
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return STACK_IS_EMPTY(STACK)
+}
+
+Set TEST1 "(()[]{})"
+Set TEST2 "([)]"
+Set TEST3 "{[()]}"
+
+PRINTLN("检查 '" + TEST1 + "': " + TO_STRING(CHECK_BRACKETS(TEST1)))
+PRINTLN("检查 '" + TEST2 + "': " + TO_STRING(CHECK_BRACKETS(TEST2)))
+PRINTLN("检查 '" + TEST3 + "': " + TO_STRING(CHECK_BRACKETS(TEST3)))
+PRINTLN("")
+
+// 实际应用2：逆波兰表达式计算
+PRINTLN("6. 实际应用：后缀表达式计算器（简化版）")
+// 计算: 5 3 + 2 * (即 (5+3)*2 = 16)
+Set CALC_STACK STACK_NEW()
+Set CALC_STACK STACK_PUSH(CALC_STACK, 5)
+Set CALC_STACK STACK_PUSH(CALC_STACK, 3)
+
+Set RESULT STACK_POP(CALC_STACK)
+Set CALC_STACK RESULT["stack"]
+Set B RESULT["value"]
+
+Set RESULT STACK_POP(CALC_STACK)
+Set CALC_STACK RESULT["stack"]
+Set A RESULT["value"]
+
+Set CALC_STACK STACK_PUSH(CALC_STACK, A + B)
+Set CALC_STACK STACK_PUSH(CALC_STACK, 2)
+
+Set RESULT STACK_POP(CALC_STACK)
+Set CALC_STACK RESULT["stack"]
+Set B RESULT["value"]
+
+Set RESULT STACK_POP(CALC_STACK)
+Set CALC_STACK RESULT["stack"]
+Set A RESULT["value"]
+
+Set CALC_STACK STACK_PUSH(CALC_STACK, A * B)
+
+PRINTLN("后缀表达式 '5 3 + 2 *' 的结果: " + TO_STRING(STACK_PEEK(CALC_STACK)))
+
+PRINTLN("")
+PRINTLN("=== 示例完成 ===")

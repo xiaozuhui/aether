@@ -1,0 +1,450 @@
+// stdlib/heap.aether
+// Aether 堆（Heap）数据结构库
+// 实现最小堆和最大堆，基于数组的完全二叉树
+
+// ==================== 辅助函数 ====================
+
+// 获取父节点索引
+Func HEAP_PARENT(INDEX) {
+    Return FLOOR((INDEX - 1) / 2)
+}
+
+// 获取左子节点索引
+Func HEAP_LEFT_CHILD(INDEX) {
+    Return (2 * INDEX + 1)
+}
+
+// 获取右子节点索引
+Func HEAP_RIGHT_CHILD(INDEX) {
+    Return (2 * INDEX + 2)
+}
+
+// 交换数组中两个元素的位置
+Func HEAP_SWAP(ARR, I, J) {
+    Set NEW_ARR []
+    Set K 0
+    Set LEN_ LEN(ARR)
+    
+    While (K < LEN_) {
+        If (K == I) {
+            Set NEW_ARR PUSH(NEW_ARR, ARR[J])
+        } Else {
+            If (K == J) {
+                Set NEW_ARR PUSH(NEW_ARR, ARR[I])
+            } Else {
+                Set NEW_ARR PUSH(NEW_ARR, ARR[K])
+            }
+        }
+        Set K (K + 1)
+    }
+    
+    Return NEW_ARR
+}
+
+// ==================== 创建堆 ====================
+
+// 创建一个空的最小堆
+Func MIN_HEAP_NEW() {
+    Return []
+}
+
+// 创建一个空的最大堆
+Func MAX_HEAP_NEW() {
+    Return []
+}
+
+// 从数组创建最小堆
+Func MIN_HEAP_FROM_ARRAY(ARR) {
+    Set HEAP ARR
+    Set LEN_ LEN(HEAP)
+    Set I FLOOR(LEN_ / 2 - 1)
+    
+    While (I >= 0) {
+        Set HEAP MIN_HEAP_SIFT_DOWN(HEAP, I)
+        Set I (I - 1)
+    }
+    
+    Return HEAP
+}
+
+// 从数组创建最大堆
+Func MAX_HEAP_FROM_ARRAY(ARR) {
+    Set HEAP ARR
+    Set LEN_ LEN(HEAP)
+    Set I FLOOR(LEN_ / 2 - 1)
+    
+    While (I >= 0) {
+        Set HEAP MAX_HEAP_SIFT_DOWN(HEAP, I)
+        Set I (I - 1)
+    }
+    
+    Return HEAP
+}
+
+// ==================== 最小堆操作 ====================
+
+// 向最小堆插入元素
+Func MIN_HEAP_INSERT(HEAP, VALUE) {
+    Set NEW_HEAP PUSH(HEAP, VALUE)
+    Return MIN_HEAP_SIFT_UP(NEW_HEAP, LEN(NEW_HEAP) - 1)
+}
+
+// 从最小堆提取最小值
+// 返回 {"heap": 新堆, "value": 最小值}
+Func MIN_HEAP_EXTRACT(HEAP) {
+    If (LEN(HEAP) == 0) {
+        Return {"heap": [], "value": Null}
+    }
+    
+    If (LEN(HEAP) == 1) {
+        Return {"heap": [], "value": HEAP[0]}
+    }
+    
+    Set MIN_VAL HEAP[0]
+    Set LEN_ LEN(HEAP)
+    
+    // 将最后一个元素移到根
+    Set NEW_HEAP []
+    Set NEW_HEAP PUSH(NEW_HEAP, HEAP[LEN_ - 1])
+    Set I 1
+    
+    While (I < (LEN_ - 1)) {
+        Set NEW_HEAP PUSH(NEW_HEAP, HEAP[I])
+        Set I (I + 1)
+    }
+    
+    Set NEW_HEAP MIN_HEAP_SIFT_DOWN(NEW_HEAP, 0)
+    
+    Return {"heap": NEW_HEAP, "value": MIN_VAL}
+}
+
+// 查看最小堆的最小值（不移除）
+Func MIN_HEAP_PEEK(HEAP) {
+    If (LEN(HEAP) == 0) {
+        Return Null
+    }
+    Return HEAP[0]
+}
+
+// 最小堆上浮操作
+Func MIN_HEAP_SIFT_UP(HEAP, INDEX) {
+    If (INDEX <= 0) {
+        Return HEAP
+    }
+    
+    Set PARENT HEAP_PARENT(INDEX)
+    
+    If (HEAP[INDEX] < HEAP[PARENT]) {
+        Set NEW_HEAP HEAP_SWAP(HEAP, INDEX, PARENT)
+        Set RESULT MIN_HEAP_SIFT_UP(NEW_HEAP, PARENT)
+        Return RESULT
+    }
+    
+    Return HEAP
+}
+
+// 最小堆下沉操作
+Func MIN_HEAP_SIFT_DOWN(HEAP, INDEX) {
+    Set LEN_ LEN(HEAP)
+    Set SMALLEST INDEX
+    Set LEFT HEAP_LEFT_CHILD(INDEX)
+    Set RIGHT HEAP_RIGHT_CHILD(INDEX)
+    
+    // 使用嵌套 If 避免短路求值问题
+    If (LEFT < LEN_) {
+        If (HEAP[LEFT] < HEAP[SMALLEST]) {
+            Set SMALLEST LEFT
+        }
+    }
+    
+    If (RIGHT < LEN_) {
+        If (HEAP[RIGHT] < HEAP[SMALLEST]) {
+            Set SMALLEST RIGHT
+        }
+    }
+    
+    If (SMALLEST != INDEX) {
+        Set NEW_HEAP HEAP_SWAP(HEAP, INDEX, SMALLEST)
+        Set RESULT MIN_HEAP_SIFT_DOWN(NEW_HEAP, SMALLEST)
+        Return RESULT
+    }
+    
+    Return HEAP
+}
+
+// ==================== 最大堆操作 ====================
+
+// 向最大堆插入元素
+Func MAX_HEAP_INSERT(HEAP, VALUE) {
+    Set NEW_HEAP PUSH(HEAP, VALUE)
+    Return MAX_HEAP_SIFT_UP(NEW_HEAP, LEN(NEW_HEAP) - 1)
+}
+
+// 从最大堆提取最大值
+// 返回 {"heap": 新堆, "value": 最大值}
+Func MAX_HEAP_EXTRACT(HEAP) {
+    If (LEN(HEAP) == 0) {
+        Return {"heap": [], "value": Null}
+    }
+    
+    If (LEN(HEAP) == 1) {
+        Return {"heap": [], "value": HEAP[0]}
+    }
+    
+    Set MAX_VAL HEAP[0]
+    Set LEN_ LEN(HEAP)
+    
+    // 将最后一个元素移到根
+    Set NEW_HEAP []
+    Set NEW_HEAP PUSH(NEW_HEAP, HEAP[LEN_ - 1])
+    Set I 1
+    
+    While (I < (LEN_ - 1)) {
+        Set NEW_HEAP PUSH(NEW_HEAP, HEAP[I])
+        Set I (I + 1)
+    }
+    
+    Set NEW_HEAP MAX_HEAP_SIFT_DOWN(NEW_HEAP, 0)
+    
+    Return {"heap": NEW_HEAP, "value": MAX_VAL}
+}
+
+// 查看最大堆的最大值（不移除）
+Func MAX_HEAP_PEEK(HEAP) {
+    If (LEN(HEAP) == 0) {
+        Return Null
+    }
+    Return HEAP[0]
+}
+
+// 最大堆上浮操作
+Func MAX_HEAP_SIFT_UP(HEAP, INDEX) {
+    If (INDEX <= 0) {
+        Return HEAP
+    }
+    
+    Set PARENT HEAP_PARENT(INDEX)
+    
+    If (HEAP[INDEX] > HEAP[PARENT]) {
+        Set NEW_HEAP HEAP_SWAP(HEAP, INDEX, PARENT)
+        Set RESULT MAX_HEAP_SIFT_UP(NEW_HEAP, PARENT)
+        Return RESULT
+    }
+    
+    Return HEAP
+}
+
+// 最大堆下沉操作
+Func MAX_HEAP_SIFT_DOWN(HEAP, INDEX) {
+    Set LEN_ LEN(HEAP)
+    Set LARGEST INDEX
+    Set LEFT HEAP_LEFT_CHILD(INDEX)
+    Set RIGHT HEAP_RIGHT_CHILD(INDEX)
+    
+    // 使用嵌套 If 避免短路求值问题
+    If (LEFT < LEN_) {
+        If (HEAP[LEFT] > HEAP[LARGEST]) {
+            Set LARGEST LEFT
+        }
+    }
+    
+    If (RIGHT < LEN_) {
+        If (HEAP[RIGHT] > HEAP[LARGEST]) {
+            Set LARGEST RIGHT
+        }
+    }
+    
+    If (LARGEST != INDEX) {
+        Set NEW_HEAP HEAP_SWAP(HEAP, INDEX, LARGEST)
+        Set RESULT MAX_HEAP_SIFT_DOWN(NEW_HEAP, LARGEST)
+        Return RESULT
+    }
+    
+    Return HEAP
+}
+
+// ==================== 通用堆操作 ====================
+
+// 获取堆的大小
+Func HEAP_SIZE(HEAP) {
+    Return LEN(HEAP)
+}
+
+// 检查堆是否为空
+Func HEAP_IS_EMPTY(HEAP) {
+    Return LEN(HEAP) == 0
+}
+
+// 清空堆
+Func HEAP_CLEAR() {
+    Return []
+}
+
+// 将堆转换为数组
+Func HEAP_TO_ARRAY(HEAP) {
+    Return HEAP
+}
+
+// ==================== 堆排序 ====================
+
+// 使用最小堆进行升序排序
+Func HEAP_SORT_ASC(ARR) {
+    Set HEAP MIN_HEAP_FROM_ARRAY(ARR)
+    Set RESULT []
+    
+    While (!HEAP_IS_EMPTY(HEAP)) {
+        Set EXTRACT_RESULT MIN_HEAP_EXTRACT(HEAP)
+        Set HEAP EXTRACT_RESULT["heap"]
+        Set RESULT PUSH(RESULT, EXTRACT_RESULT["value"])
+    }
+    
+    Return RESULT
+}
+
+// 使用最大堆进行降序排序
+Func HEAP_SORT_DESC(ARR) {
+    Set HEAP MAX_HEAP_FROM_ARRAY(ARR)
+    Set RESULT []
+    
+    While (!HEAP_IS_EMPTY(HEAP)) {
+        Set EXTRACT_RESULT MAX_HEAP_EXTRACT(HEAP)
+        Set HEAP EXTRACT_RESULT["heap"]
+        Set RESULT PUSH(RESULT, EXTRACT_RESULT["value"])
+    }
+    
+    Return RESULT
+}
+
+// ==================== 高级操作 ====================
+
+// 获取最小堆的前K个最小元素
+Func MIN_HEAP_GET_K_MIN(HEAP, K) {
+    Set RESULT []
+    Set TEMP_HEAP HEAP
+    Set COUNT 0
+    
+    While (COUNT < K && !HEAP_IS_EMPTY(TEMP_HEAP)) {
+        Set EXTRACT_RESULT MIN_HEAP_EXTRACT(TEMP_HEAP)
+        Set TEMP_HEAP EXTRACT_RESULT["heap"]
+        Set RESULT PUSH(RESULT, EXTRACT_RESULT["value"])
+        Set COUNT (COUNT + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取最大堆的前K个最大元素
+Func MAX_HEAP_GET_K_MAX(HEAP, K) {
+    Set RESULT []
+    Set TEMP_HEAP HEAP
+    Set COUNT 0
+    
+    While (COUNT < K && !HEAP_IS_EMPTY(TEMP_HEAP)) {
+        Set EXTRACT_RESULT MAX_HEAP_EXTRACT(TEMP_HEAP)
+        Set TEMP_HEAP EXTRACT_RESULT["heap"]
+        Set RESULT PUSH(RESULT, EXTRACT_RESULT["value"])
+        Set COUNT (COUNT + 1)
+    }
+    
+    Return RESULT
+}
+
+// 验证是否为有效的最小堆
+Func MIN_HEAP_IS_VALID(HEAP) {
+    Set LEN_ LEN(HEAP)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set LEFT HEAP_LEFT_CHILD(I)
+        Set RIGHT HEAP_RIGHT_CHILD(I)
+        
+        // 使用嵌套 If 避免短路求值问题
+        If (LEFT < LEN_) {
+            If (HEAP[LEFT] < HEAP[I]) {
+                Return False
+            }
+        }
+        
+        If (RIGHT < LEN_) {
+            If (HEAP[RIGHT] < HEAP[I]) {
+                Return False
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 验证是否为有效的最大堆
+Func MAX_HEAP_IS_VALID(HEAP) {
+    Set LEN_ LEN(HEAP)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set LEFT HEAP_LEFT_CHILD(I)
+        Set RIGHT HEAP_RIGHT_CHILD(I)
+        
+        // 使用嵌套 If 避免短路求值问题
+        If (LEFT < LEN_) {
+            If (HEAP[LEFT] > HEAP[I]) {
+                Return False
+            }
+        }
+        
+        If (RIGHT < LEN_) {
+            If (HEAP[RIGHT] > HEAP[I]) {
+                Return False
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 将最小堆转换为字符串表示
+Func MIN_HEAP_TO_STRING(HEAP) {
+    If (HEAP_IS_EMPTY(HEAP)) {
+        Return "MinHeap[]"
+    }
+    
+    Set RESULT "MinHeap["
+    Set LEN_ LEN(HEAP)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT (RESULT + TO_STRING(HEAP[I]))
+        If (I < (LEN_ - 1)) {
+            Set RESULT (RESULT + ", ")
+        }
+        Set I (I + 1)
+    }
+    
+    Set RESULT (RESULT + "]")
+    Return RESULT
+}
+
+// 将最大堆转换为字符串表示
+Func MAX_HEAP_TO_STRING(HEAP) {
+    If (HEAP_IS_EMPTY(HEAP)) {
+        Return "MaxHeap[]"
+    }
+    
+    Set RESULT "MaxHeap["
+    Set LEN_ LEN(HEAP)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT (RESULT + TO_STRING(HEAP[I]))
+        If (I < (LEN_ - 1)) {
+            Set RESULT (RESULT + ", ")
+        }
+        Set I (I + 1)
+    }
+    
+    Set RESULT (RESULT + "]")
+    Return RESULT
+}

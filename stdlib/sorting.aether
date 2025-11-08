@@ -1,0 +1,551 @@
+// stdlib/sorting.aether
+// Aether 排序算法库
+// 提供多种排序算法，支持数组排序
+
+// ==================== 辅助函数 ====================
+
+// 交换数组中两个元素
+Func SORT_SWAP(ARR, I, J) {
+    Set TEMP ARR[I]
+    Set NEW_ARR []
+    Set K 0
+    Set LEN_ LEN(ARR)
+    
+    While (K < LEN_) {
+        If (K == I) {
+            Set NEW_ARR PUSH(NEW_ARR, ARR[J])
+        } Else {
+            If (K == J) {
+                Set NEW_ARR PUSH(NEW_ARR, TEMP)
+            } Else {
+                Set NEW_ARR PUSH(NEW_ARR, ARR[K])
+            }
+        }
+        Set K (K + 1)
+    }
+    
+    Return NEW_ARR
+}
+
+// 复制数组
+Func SORT_COPY_ARRAY(ARR) {
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT PUSH(RESULT, ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 获取数组切片
+Func SORT_SLICE(ARR, START, END) {
+    Set RESULT []
+    Set I START
+    
+    While (I < END && I < LEN(ARR)) {
+        Set RESULT PUSH(RESULT, ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 冒泡排序 ====================
+
+// 冒泡排序（升序）
+Func BUBBLE_SORT(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set J 0
+        While (J < (LEN_ - I - 1)) {
+            If (SORTED[J] > SORTED[J + 1]) {
+                Set SORTED SORT_SWAP(SORTED, J, J + 1)
+            }
+            Set J (J + 1)
+        }
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// 冒泡排序（降序）
+Func BUBBLE_SORT_DESC(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set J 0
+        While (J < (LEN_ - I - 1)) {
+            If (SORTED[J] < SORTED[J + 1]) {
+                Set SORTED SORT_SWAP(SORTED, J, J + 1)
+            }
+            Set J (J + 1)
+        }
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// ==================== 选择排序 ====================
+
+// 选择排序（升序）
+Func SELECTION_SORT(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set MIN_IDX I
+        Set J (I + 1)
+        
+        While (J < LEN_) {
+            If (SORTED[J] < SORTED[MIN_IDX]) {
+                Set MIN_IDX J
+            }
+            Set J (J + 1)
+        }
+        
+        If (MIN_IDX != I) {
+            Set SORTED SORT_SWAP(SORTED, I, MIN_IDX)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// 选择排序（降序）
+Func SELECTION_SORT_DESC(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set MAX_IDX I
+        Set J (I + 1)
+        
+        While (J < LEN_) {
+            If (SORTED[J] > SORTED[MAX_IDX]) {
+                Set MAX_IDX J
+            }
+            Set J (J + 1)
+        }
+        
+        If (MAX_IDX != I) {
+            Set SORTED SORT_SWAP(SORTED, I, MAX_IDX)
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// ==================== 插入排序 ====================
+
+// 插入排序（升序）
+Func INSERTION_SORT(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 1
+    
+    While (I < LEN_) {
+        Set KEY SORTED[I]
+        Set J (I - 1)
+        
+        While (J >= 0 && SORTED[J] > KEY) {
+            // 向右移动元素
+            Set NEW_ARR []
+            Set K 0
+            While (K < LEN_) {
+                If (K == (J + 1)) {
+                    Set NEW_ARR PUSH(NEW_ARR, SORTED[J])
+                } Else {
+                    Set NEW_ARR PUSH(NEW_ARR, SORTED[K])
+                }
+                Set K (K + 1)
+            }
+            Set SORTED NEW_ARR
+            Set J (J - 1)
+        }
+        
+        // 插入 KEY
+        Set NEW_ARR []
+        Set K 0
+        While (K < LEN_) {
+            If (K == (J + 1)) {
+                Set NEW_ARR PUSH(NEW_ARR, KEY)
+            } Else {
+                Set NEW_ARR PUSH(NEW_ARR, SORTED[K])
+            }
+            Set K (K + 1)
+        }
+        Set SORTED NEW_ARR
+        
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// 插入排序（降序）
+Func INSERTION_SORT_DESC(ARR) {
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Set LEN_ LEN(SORTED)
+    Set I 1
+    
+    While (I < LEN_) {
+        Set KEY SORTED[I]
+        Set J (I - 1)
+        
+        While (J >= 0 && SORTED[J] < KEY) {
+            // 向右移动元素
+            Set NEW_ARR []
+            Set K 0
+            While (K < LEN_) {
+                If (K == (J + 1)) {
+                    Set NEW_ARR PUSH(NEW_ARR, SORTED[J])
+                } Else {
+                    Set NEW_ARR PUSH(NEW_ARR, SORTED[K])
+                }
+                Set K (K + 1)
+            }
+            Set SORTED NEW_ARR
+            Set J (J - 1)
+        }
+        
+        // 插入 KEY
+        Set NEW_ARR []
+        Set K 0
+        While (K < LEN_) {
+            If (K == (J + 1)) {
+                Set NEW_ARR PUSH(NEW_ARR, KEY)
+            } Else {
+                Set NEW_ARR PUSH(NEW_ARR, SORTED[K])
+            }
+            Set K (K + 1)
+        }
+        Set SORTED NEW_ARR
+        
+        Set I (I + 1)
+    }
+    
+    Return SORTED
+}
+
+// ==================== 归并排序 ====================
+
+// 合并两个已排序的数组（升序）
+Func MERGE_SORTED(LEFT, RIGHT) {
+    Set RESULT []
+    Set I 0
+    Set J 0
+    Set LEFT_LEN LEN(LEFT)
+    Set RIGHT_LEN LEN(RIGHT)
+    
+    While (I < LEFT_LEN && J < RIGHT_LEN) {
+        If (LEFT[I] <= RIGHT[J]) {
+            Set RESULT PUSH(RESULT, LEFT[I])
+            Set I (I + 1)
+        } Else {
+            Set RESULT PUSH(RESULT, RIGHT[J])
+            Set J (J + 1)
+        }
+    }
+    
+    While (I < LEFT_LEN) {
+        Set RESULT PUSH(RESULT, LEFT[I])
+        Set I (I + 1)
+    }
+    
+    While (J < RIGHT_LEN) {
+        Set RESULT PUSH(RESULT, RIGHT[J])
+        Set J (J + 1)
+    }
+    
+    Return RESULT
+}
+
+// 合并两个已排序的数组（降序）
+Func MERGE_SORTED_DESC(LEFT, RIGHT) {
+    Set RESULT []
+    Set I 0
+    Set J 0
+    Set LEFT_LEN LEN(LEFT)
+    Set RIGHT_LEN LEN(RIGHT)
+    
+    While (I < LEFT_LEN && J < RIGHT_LEN) {
+        If (LEFT[I] >= RIGHT[J]) {
+            Set RESULT PUSH(RESULT, LEFT[I])
+            Set I (I + 1)
+        } Else {
+            Set RESULT PUSH(RESULT, RIGHT[J])
+            Set J (J + 1)
+        }
+    }
+    
+    While (I < LEFT_LEN) {
+        Set RESULT PUSH(RESULT, LEFT[I])
+        Set I (I + 1)
+    }
+    
+    While (J < RIGHT_LEN) {
+        Set RESULT PUSH(RESULT, RIGHT[J])
+        Set J (J + 1)
+    }
+    
+    Return RESULT
+}
+
+// 归并排序（升序）
+Func MERGE_SORT(ARR) {
+    Set LEN_ LEN(ARR)
+    
+    If (LEN_ <= 1) {
+        Return ARR
+    }
+    
+    Set MID FLOOR(LEN_ / 2)
+    Set LEFT SORT_SLICE(ARR, 0, MID)
+    Set RIGHT SORT_SLICE(ARR, MID, LEN_)
+    
+    Set LEFT_SORTED MERGE_SORT(LEFT)
+    Set RIGHT_SORTED MERGE_SORT(RIGHT)
+    
+    Return MERGE_SORTED(LEFT_SORTED, RIGHT_SORTED)
+}
+
+// 归并排序（降序）
+Func MERGE_SORT_DESC(ARR) {
+    Set LEN_ LEN(ARR)
+    
+    If (LEN_ <= 1) {
+        Return ARR
+    }
+    
+    Set MID FLOOR(LEN_ / 2)
+    Set LEFT SORT_SLICE(ARR, 0, MID)
+    Set RIGHT SORT_SLICE(ARR, MID, LEN_)
+    
+    Set LEFT_SORTED MERGE_SORT_DESC(LEFT)
+    Set RIGHT_SORTED MERGE_SORT_DESC(RIGHT)
+    
+    Return MERGE_SORTED_DESC(LEFT_SORTED, RIGHT_SORTED)
+}
+
+// ==================== 快速排序 ====================
+
+// 快速排序分区函数（升序）
+Func QUICK_SORT_PARTITION(ARR, LOW, HIGH) {
+    Set PIVOT ARR[HIGH]
+    Set I (LOW - 1)
+    Set J LOW
+    Set CURRENT ARR
+    
+    While (J < HIGH) {
+        If (CURRENT[J] <= PIVOT) {
+            Set I (I + 1)
+            Set CURRENT SORT_SWAP(CURRENT, I, J)
+        }
+        Set J (J + 1)
+    }
+    
+    Set CURRENT SORT_SWAP(CURRENT, I + 1, HIGH)
+    Return {"array": CURRENT, "pivot_index": (I + 1)}
+}
+
+// 快速排序辅助函数（升序）
+Func QUICK_SORT_HELPER(ARR, LOW, HIGH) {
+    If (LOW < HIGH) {
+        Set PARTITION_RESULT QUICK_SORT_PARTITION(ARR, LOW, HIGH)
+        Set ARR PARTITION_RESULT["array"]
+        Set PI PARTITION_RESULT["pivot_index"]
+        
+        Set ARR QUICK_SORT_HELPER(ARR, LOW, PI - 1)
+        Set ARR QUICK_SORT_HELPER(ARR, PI + 1, HIGH)
+    }
+    
+    Return ARR
+}
+
+// 快速排序（升序）
+Func QUICK_SORT(ARR) {
+    Set LEN_ LEN(ARR)
+    If (LEN_ <= 1) {
+        Return ARR
+    }
+    
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Return QUICK_SORT_HELPER(SORTED, 0, LEN_ - 1)
+}
+
+// 快速排序分区函数（降序）
+Func QUICK_SORT_PARTITION_DESC(ARR, LOW, HIGH) {
+    Set PIVOT ARR[HIGH]
+    Set I (LOW - 1)
+    Set J LOW
+    Set CURRENT ARR
+    
+    While (J < HIGH) {
+        If (CURRENT[J] >= PIVOT) {
+            Set I (I + 1)
+            Set CURRENT SORT_SWAP(CURRENT, I, J)
+        }
+        Set J (J + 1)
+    }
+    
+    Set CURRENT SORT_SWAP(CURRENT, I + 1, HIGH)
+    Return {"array": CURRENT, "pivot_index": (I + 1)}
+}
+
+// 快速排序辅助函数（降序）
+Func QUICK_SORT_HELPER_DESC(ARR, LOW, HIGH) {
+    If (LOW < HIGH) {
+        Set PARTITION_RESULT QUICK_SORT_PARTITION_DESC(ARR, LOW, HIGH)
+        Set ARR PARTITION_RESULT["array"]
+        Set PI PARTITION_RESULT["pivot_index"]
+        
+        Set ARR QUICK_SORT_HELPER_DESC(ARR, LOW, PI - 1)
+        Set ARR QUICK_SORT_HELPER_DESC(ARR, PI + 1, HIGH)
+    }
+    
+    Return ARR
+}
+
+// 快速排序（降序）
+Func QUICK_SORT_DESC(ARR) {
+    Set LEN_ LEN(ARR)
+    If (LEN_ <= 1) {
+        Return ARR
+    }
+    
+    Set SORTED SORT_COPY_ARRAY(ARR)
+    Return QUICK_SORT_HELPER_DESC(SORTED, 0, LEN_ - 1)
+}
+
+// ==================== 堆排序 ====================
+// 注意：堆排序功能已移至 heap.aether
+// 请使用 HEAP_SORT_ASC 和 HEAP_SORT_DESC 函数
+
+// ==================== 计数排序 ====================
+
+// 计数排序（仅适用于非负整数，升序）
+Func COUNTING_SORT(ARR) {
+    Set LEN_ LEN(ARR)
+    If (LEN_ <= 1) {
+        Return ARR
+    }
+    
+    // 找到最大值
+    Set MAX ARR[0]
+    Set I 1
+    While (I < LEN_) {
+        If (ARR[I] > MAX) {
+            Set MAX ARR[I]
+        }
+        Set I (I + 1)
+    }
+    
+    // 创建计数数组
+    Set COUNT_SIZE (FLOOR(MAX) + 1)
+    Set COUNT []
+    Set I 0
+    While (I < COUNT_SIZE) {
+        Set COUNT PUSH(COUNT, 0)
+        Set I (I + 1)
+    }
+    
+    // 统计每个元素出现的次数
+    Set I 0
+    While (I < LEN_) {
+        Set VAL FLOOR(ARR[I])
+        Set OLD_COUNT COUNT[VAL]
+        Set NEW_COUNT []
+        Set J 0
+        While (J < COUNT_SIZE) {
+            If (J == VAL) {
+                Set NEW_COUNT PUSH(NEW_COUNT, OLD_COUNT + 1)
+            } Else {
+                Set NEW_COUNT PUSH(NEW_COUNT, COUNT[J])
+            }
+            Set J (J + 1)
+        }
+        Set COUNT NEW_COUNT
+        Set I (I + 1)
+    }
+    
+    // 构建排序后的数组
+    Set RESULT []
+    Set I 0
+    While (I < COUNT_SIZE) {
+        Set J 0
+        While (J < COUNT[I]) {
+            Set RESULT PUSH(RESULT, I)
+            Set J (J + 1)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 检查数组是否已排序 ====================
+
+// 检查数组是否升序排列
+Func IS_SORTED_ASC(ARR) {
+    Set LEN_ LEN(ARR)
+    If (LEN_ <= 1) {
+        Return True
+    }
+    
+    Set I 1
+    While (I < LEN_) {
+        If (ARR[I] < ARR[I - 1]) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 检查数组是否降序排列
+Func IS_SORTED_DESC(ARR) {
+    Set LEN_ LEN(ARR)
+    If (LEN_ <= 1) {
+        Return True
+    }
+    
+    Set I 1
+    While (I < LEN_) {
+        If (ARR[I] > ARR[I - 1]) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// ==================== 通用排序接口 ====================
+
+// 通用排序函数，默认使用快速排序（升序）
+Func SORT(ARR) {
+    Return QUICK_SORT(ARR)
+}
+
+// 通用排序函数（降序）
+Func SORT_DESC(ARR) {
+    Return QUICK_SORT_DESC(ARR)
+}

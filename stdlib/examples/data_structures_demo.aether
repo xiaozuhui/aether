@@ -1,0 +1,210 @@
+// stdlib/examples/data_structures_demo.aether
+// 数据结构综合应用示例
+
+PRINTLN("=== Aether 数据结构综合应用示例 ===")
+PRINTLN("")
+
+// ==================== 场景1：Web请求处理系统 ====================
+PRINTLN("【场景1：Web请求处理系统】")
+PRINTLN("使用队列管理待处理的HTTP请求")
+PRINTLN("")
+
+Set REQUEST_QUEUE QUEUE_NEW()
+Set REQUEST_QUEUE QUEUE_ENQUEUE(REQUEST_QUEUE, "GET /api/users")
+Set REQUEST_QUEUE QUEUE_ENQUEUE(REQUEST_QUEUE, "POST /api/login")
+Set REQUEST_QUEUE QUEUE_ENQUEUE(REQUEST_QUEUE, "GET /api/products")
+Set REQUEST_QUEUE QUEUE_ENQUEUE(REQUEST_QUEUE, "DELETE /api/session")
+
+PRINTLN("待处理请求: " + QUEUE_TO_STRING(REQUEST_QUEUE))
+
+Set PROCESSED 0
+While (!QUEUE_IS_EMPTY(REQUEST_QUEUE) && PROCESSED < 2) {
+    Set RESULT QUEUE_DEQUEUE(REQUEST_QUEUE)
+    Set REQUEST_QUEUE RESULT["queue"]
+    PRINTLN("处理请求: " + RESULT["value"])
+    Set PROCESSED (PROCESSED + 1)
+}
+
+PRINTLN("剩余请求: " + QUEUE_TO_STRING(REQUEST_QUEUE))
+PRINTLN("")
+
+// ==================== 场景2：表达式求值 ====================
+PRINTLN("【场景2：表达式求值器】")
+PRINTLN("使用栈实现简单的后缀表达式计算")
+PRINTLN("")
+
+// 计算: 10 5 + 3 * 2 - (即 (10+5)*3-2 = 43)
+Func EVAL_POSTFIX(EXPR) {
+    Set STACK STACK_NEW()
+    Set LEN_ LEN(EXPR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set TOKEN EXPR[I]
+        Set TOKEN_TYPE TYPE(TOKEN)
+        
+        If (TOKEN_TYPE == "Number") {
+            Set STACK STACK_PUSH(STACK, TOKEN)
+        } Else {
+            Set RESULT2 STACK_POP(STACK)
+            Set STACK RESULT2["stack"]
+            Set B RESULT2["value"]
+            
+            Set RESULT1 STACK_POP(STACK)
+            Set STACK RESULT1["stack"]
+            Set A RESULT1["value"]
+            
+            If (TOKEN == "+") {
+                Set STACK STACK_PUSH(STACK, A + B)
+            } Else {
+                If (TOKEN == "*") {
+                    Set STACK STACK_PUSH(STACK, A * B)
+                } Else {
+                    If (TOKEN == "-") {
+                        Set STACK STACK_PUSH(STACK, A - B)
+                    }
+                }
+            }
+        }
+        
+        Set I (I + 1)
+    }
+    
+    Return STACK_PEEK(STACK)
+}
+
+Set EXPRESSION [10, 5, "+", 3, "*", 2, "-"]
+PRINTLN("后缀表达式: " + TO_STRING(EXPRESSION))
+PRINTLN("计算结果: " + TO_STRING(EVAL_POSTFIX(EXPRESSION)))
+PRINTLN("")
+
+// ==================== 场景3：去重和集合运算 ====================
+PRINTLN("【场景3：用户权限管理】")
+PRINTLN("使用集合管理用户权限")
+PRINTLN("")
+
+Set ADMIN_PERMS SET_FROM_ARRAY(["read", "write", "delete", "admin", "manage_users"])
+Set USER_PERMS SET_FROM_ARRAY(["read", "write", "comment"])
+Set GUEST_PERMS SET_FROM_ARRAY(["read", "comment"])
+
+PRINTLN("管理员权限: " + SET_TO_STRING(ADMIN_PERMS))
+PRINTLN("普通用户权限: " + SET_TO_STRING(USER_PERMS))
+PRINTLN("访客权限: " + SET_TO_STRING(GUEST_PERMS))
+PRINTLN("")
+
+Set COMMON_PERMS SET_INTERSECTION(USER_PERMS, GUEST_PERMS)
+PRINTLN("用户和访客共有权限: " + SET_TO_STRING(COMMON_PERMS))
+
+Set ADMIN_ONLY SET_DIFFERENCE(ADMIN_PERMS, USER_PERMS)
+PRINTLN("仅管理员拥有的权限: " + SET_TO_STRING(ADMIN_ONLY))
+PRINTLN("")
+
+// ==================== 场景4：优先级任务调度 ====================
+PRINTLN("【场景4：任务调度系统】")
+PRINTLN("使用最小堆实现优先级队列（数值越小优先级越高）")
+PRINTLN("")
+
+Set TASK_HEAP MIN_HEAP_NEW()
+Set TASK_HEAP MIN_HEAP_INSERT(TASK_HEAP, 5)  // 任务5: 低优先级
+Set TASK_HEAP MIN_HEAP_INSERT(TASK_HEAP, 1)  // 任务1: 紧急
+Set TASK_HEAP MIN_HEAP_INSERT(TASK_HEAP, 3)  // 任务3: 高优先级
+Set TASK_HEAP MIN_HEAP_INSERT(TASK_HEAP, 2)  // 任务2: 很高优先级
+Set TASK_HEAP MIN_HEAP_INSERT(TASK_HEAP, 4)  // 任务4: 中优先级
+
+PRINTLN("任务优先级队列: " + MIN_HEAP_TO_STRING(TASK_HEAP))
+PRINTLN("")
+
+PRINTLN("执行任务（按优先级）:")
+Set COUNT 0
+While (!HEAP_IS_EMPTY(TASK_HEAP) && COUNT < 3) {
+    Set RESULT MIN_HEAP_EXTRACT(TASK_HEAP)
+    Set TASK_HEAP RESULT["heap"]
+    PRINTLN("  执行优先级 " + TO_STRING(RESULT["value"]) + " 的任务")
+    Set COUNT (COUNT + 1)
+}
+PRINTLN("")
+
+// ==================== 场景5：数据排序和分析 ====================
+PRINTLN("【场景5：销售数据分析】")
+PRINTLN("使用排序算法分析销售数据")
+PRINTLN("")
+
+Set SALES_DATA [1250, 980, 2100, 1560, 890, 1780, 2340, 1120, 1670, 1450]
+PRINTLN("原始销售数据: " + TO_STRING(SALES_DATA))
+
+Set SORTED_SALES QUICK_SORT(SALES_DATA)
+PRINTLN("排序后（升序）: " + TO_STRING(SORTED_SALES))
+
+Set LEN_SALES LEN(SORTED_SALES)
+Set MEDIAN 0
+If (LEN_SALES % 2 == 0) {
+    Set MEDIAN ((SORTED_SALES[LEN_SALES / 2 - 1] + SORTED_SALES[LEN_SALES / 2]) / 2)
+} Else {
+    Set MEDIAN SORTED_SALES[FLOOR(LEN_SALES / 2)]
+}
+
+PRINTLN("最低销售额: " + TO_STRING(SORTED_SALES[0]))
+PRINTLN("最高销售额: " + TO_STRING(SORTED_SALES[LEN_SALES - 1]))
+PRINTLN("中位数: " + TO_STRING(MEDIAN))
+PRINTLN("")
+
+// ==================== 场景6：数据去重和统计 ====================
+PRINTLN("【场景6：网站访问统计】")
+PRINTLN("使用集合去重，统计独立访客")
+PRINTLN("")
+
+Set VISITS [101, 102, 101, 103, 102, 104, 101, 105, 103, 106]
+PRINTLN("访问记录（用户ID）: " + TO_STRING(VISITS))
+
+Set UNIQUE_VISITORS SET_FROM_ARRAY(VISITS)
+PRINTLN("独立访客: " + SET_TO_STRING(UNIQUE_VISITORS))
+PRINTLN("独立访客数: " + TO_STRING(SET_SIZE(UNIQUE_VISITORS)))
+PRINTLN("总访问次数: " + TO_STRING(LEN(VISITS)))
+PRINTLN("")
+
+// ==================== 场景7：Top K 问题 ====================
+PRINTLN("【场景7：热门商品排行榜】")
+PRINTLN("使用最大堆找出销量最高的商品")
+PRINTLN("")
+
+Set PRODUCT_SALES [450, 320, 890, 560, 720, 980, 340, 650, 410, 770]
+PRINTLN("商品销量: " + TO_STRING(PRODUCT_SALES))
+
+Set SALES_HEAP MAX_HEAP_FROM_ARRAY(PRODUCT_SALES)
+Set TOP_3 MAX_HEAP_GET_K_MAX(SALES_HEAP, 3)
+
+PRINTLN("销量Top 3:")
+PRINTLN("  第1名: " + TO_STRING(TOP_3[0]))
+PRINTLN("  第2名: " + TO_STRING(TOP_3[1]))
+PRINTLN("  第3名: " + TO_STRING(TOP_3[2]))
+PRINTLN("")
+
+// ==================== 场景8：撤销操作 ====================
+PRINTLN("【场景8：文本编辑器撤销功能】")
+PRINTLN("使用栈实现操作历史")
+PRINTLN("")
+
+Set HISTORY STACK_NEW()
+Set CONTENT "Hello"
+
+PRINTLN("初始内容: " + CONTENT)
+
+// 操作1: 添加 " World"
+Set HISTORY STACK_PUSH(HISTORY, CONTENT)
+Set CONTENT (CONTENT + " World")
+PRINTLN("操作1后: " + CONTENT)
+
+// 操作2: 添加 "!"
+Set HISTORY STACK_PUSH(HISTORY, CONTENT)
+Set CONTENT (CONTENT + "!")
+PRINTLN("操作2后: " + CONTENT)
+
+// 撤销
+PRINTLN("执行撤销...")
+Set RESULT STACK_POP(HISTORY)
+Set HISTORY RESULT["stack"]
+Set CONTENT RESULT["value"]
+PRINTLN("撤销后: " + CONTENT)
+
+PRINTLN("")
+PRINTLN("=== 综合示例完成 ===")

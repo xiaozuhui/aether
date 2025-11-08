@@ -8,7 +8,62 @@
 
 ### 新增功能 ✨
 
-#### 大整数支持 🔢 (NEW)
+#### 标准库数据结构扩展 � (NEW)
+
+Aether 标准库新增 5 个数据结构和算法库，120+ 个新函数！
+
+**新增库**：
+
+- **Set（集合）**：`stdlib/set.aether` - 集合运算、去重、关系判断
+- **Queue（队列）**：`stdlib/queue.aether` - FIFO 队列、批量操作
+- **Stack（栈）**：`stdlib/stack.aether` - LIFO 栈、栈操作、表达式求值
+- **Heap（堆）**：`stdlib/heap.aether` - 最小堆/最大堆、优先级队列、Top K
+- **Sorting（排序）**：`stdlib/sorting.aether` - 9 种排序算法（快排、归并、堆排序等）
+
+**新增示例**：
+
+- `stdlib/examples/set_demo.aether` - 集合操作示例
+- `stdlib/examples/queue_demo.aether` - 队列应用示例
+- `stdlib/examples/stack_demo.aether` - 栈应用示例（括号匹配、表达式求值）
+- `stdlib/examples/heap_demo.aether` - 堆应用示例（优先级队列）
+- `stdlib/examples/sorting_demo.aether` - 排序算法对比
+- `stdlib/examples/data_structures_demo.aether` - 8 个综合应用场景
+
+**特性**：
+
+- 纯函数式、不可变数据结构
+- 统一的命名规范
+- 详细的文档和注释
+- 实际应用场景演示
+
+**文档**：
+
+- 查看 `docs/STDLIB_EXTENSION_SUMMARY.md` 了解详情
+- 更新了 `stdlib/README.md` 包含所有新库
+
+#### 类和接口设计方案 🎨 (DESIGN)
+
+为 Aether 引入面向对象特性制定了详细设计方案！
+
+**设计文档**：`docs/CLASS_INTERFACE_DESIGN.md`
+
+**核心设计**：
+
+- 基于字典的轻量级类实现
+- 单继承 + 多接口
+- 简洁的语法，与 Aether 风格一致
+- 渐进式引入，保持向后兼容
+
+**计划特性**：
+
+- 类定义（Class）和实例化
+- 继承（Extends）和方法重写
+- 接口（Interface）和实现（Implements）
+- 静态方法、访问控制、属性
+
+**实施路线图**：分 5 个阶段，预计 11-15 周完成
+
+#### 大整数支持 🔢
 
 Aether 现在支持任意精度的大整数运算！
 

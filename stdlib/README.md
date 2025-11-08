@@ -12,6 +12,11 @@ Aether 编程语言的标准库，提供丰富的工具函数，帮助开发者�
   - [Validation (数据验证)](#validation-数据验证)
   - [DateTime (日期时间)](#datetime-日期时间)
   - [Testing (测试框架)](#testing-测试框架)
+  - [Set (集合)](#set-集合)
+  - [Queue (队列)](#queue-队列)
+  - [Stack (栈)](#stack-栈)
+  - [Heap (堆)](#heap-堆)
+  - [Sorting (排序算法)](#sorting-排序算法)
 - [示例](#示例)
 - [贡献](#贡献)
 
@@ -364,6 +369,147 @@ Func PROCESS_SALES_DATA(RAW_DATA) {
 4. **示例**：
    - 在 `examples/` 目录下提供使用示例
    - 示例要清晰易懂
+
+---
+
+### Set (集合)
+
+**文件**: `stdlib/set.aether`
+
+集合数据结构，保证元素唯一性，提供集合运算。
+
+#### 主要函数
+
+- `SET_NEW()` - 创建空集合
+- `SET_FROM_ARRAY(ARR)` - 从数组创建集合（自动去重）
+- `SET_ADD(SET, ITEM)` - 添加元素
+- `SET_REMOVE(SET, ITEM)` - 移除元素
+- `SET_CONTAINS(SET, ITEM)` - 检查是否包含元素
+- `SET_SIZE(SET)` - 获取集合大小
+- `SET_UNION(SET1, SET2)` - 并集
+- `SET_INTERSECTION(SET1, SET2)` - 交集
+- `SET_DIFFERENCE(SET1, SET2)` - 差集
+- `SET_IS_SUBSET(SET1, SET2)` - 检查子集关系
+
+**示例**: `stdlib/examples/set_demo.aether`
+
+---
+
+### Queue (队列)
+
+**文件**: `stdlib/queue.aether`
+
+先进先出（FIFO）队列数据结构。
+
+#### 主要函数
+
+- `QUEUE_NEW()` - 创建空队列
+- `QUEUE_ENQUEUE(QUEUE, ITEM)` - 入队
+- `QUEUE_DEQUEUE(QUEUE)` - 出队，返回 `{"queue": 新队列, "value": 值}`
+- `QUEUE_PEEK(QUEUE)` - 查看队首元素
+- `QUEUE_SIZE(QUEUE)` - 获取队列大小
+- `QUEUE_IS_EMPTY(QUEUE)` - 检查是否为空
+- `QUEUE_ENQUEUE_ALL(QUEUE, ARR)` - 批量入队
+- `QUEUE_DEQUEUE_N(QUEUE, N)` - 批量出队
+
+**示例**: `stdlib/examples/queue_demo.aether`
+
+---
+
+### Stack (栈)
+
+**文件**: `stdlib/stack.aether`
+
+后进先出（LIFO）栈数据结构。
+
+#### 主要函数
+
+- `STACK_NEW()` - 创建空栈
+- `STACK_PUSH(STACK, ITEM)` - 压栈
+- `STACK_POP(STACK)` - 出栈，返回 `{"stack": 新栈, "value": 值}`
+- `STACK_PEEK(STACK)` - 查看栈顶元素
+- `STACK_SIZE(STACK)` - 获取栈大小
+- `STACK_IS_EMPTY(STACK)` - 检查是否为空
+- `STACK_SWAP_TOP(STACK)` - 交换栈顶两元素
+- `STACK_ROTATE_UP(STACK)` - 栈底移到栈顶
+- `STACK_ROTATE_DOWN(STACK)` - 栈顶移到栈底
+
+**示例**: `stdlib/examples/stack_demo.aether`
+
+---
+
+### Heap (堆)
+
+**文件**: `stdlib/heap.aether`
+
+最小堆和最大堆数据结构，适用于优先级队列和堆排序。
+
+#### 主要函数
+
+**最小堆**:
+
+- `MIN_HEAP_NEW()` - 创建空最小堆
+- `MIN_HEAP_FROM_ARRAY(ARR)` - 从数组创建最小堆
+- `MIN_HEAP_INSERT(HEAP, VALUE)` - 插入元素
+- `MIN_HEAP_EXTRACT(HEAP)` - 提取最小值
+- `MIN_HEAP_PEEK(HEAP)` - 查看最小值
+- `MIN_HEAP_GET_K_MIN(HEAP, K)` - 获取前K个最小元素
+
+**最大堆**:
+
+- `MAX_HEAP_NEW()` - 创建空最大堆
+- `MAX_HEAP_FROM_ARRAY(ARR)` - 从数组创建最大堆
+- `MAX_HEAP_INSERT(HEAP, VALUE)` - 插入元素
+- `MAX_HEAP_EXTRACT(HEAP)` - 提取最大值
+- `MAX_HEAP_PEEK(HEAP)` - 查看最大值
+- `MAX_HEAP_GET_K_MAX(HEAP, K)` - 获取前K个最大元素
+
+**堆排序**:
+
+- `HEAP_SORT_ASC(ARR)` - 升序堆排序
+- `HEAP_SORT_DESC(ARR)` - 降序堆排序
+
+**示例**: `stdlib/examples/heap_demo.aether`
+
+---
+
+### Sorting (排序算法)
+
+**文件**: `stdlib/sorting.aether`
+
+多种排序算法实现，适用于数组排序。
+
+#### 排序算法
+
+**简单排序**（适合小数据集）:
+
+- `BUBBLE_SORT(ARR)` / `BUBBLE_SORT_DESC(ARR)` - 冒泡排序 O(n²)
+- `SELECTION_SORT(ARR)` / `SELECTION_SORT_DESC(ARR)` - 选择排序 O(n²)
+- `INSERTION_SORT(ARR)` / `INSERTION_SORT_DESC(ARR)` - 插入排序 O(n²)
+
+**高效排序**（适合大数据集）:
+
+- `MERGE_SORT(ARR)` / `MERGE_SORT_DESC(ARR)` - 归并排序 O(n log n)
+- `QUICK_SORT(ARR)` / `QUICK_SORT_DESC(ARR)` - 快速排序 O(n log n) 平均
+- `HEAP_SORT(ARR)` / `HEAP_SORT_DESC(ARR)` - 堆排序 O(n log n)
+
+**特殊排序**:
+
+- `COUNTING_SORT(ARR)` - 计数排序 O(n+k)，仅适用于非负整数
+
+**通用接口**:
+
+- `SORT(ARR)` - 通用排序（默认快速排序，升序）
+- `SORT_DESC(ARR)` - 通用排序（降序）
+
+**辅助函数**:
+
+- `IS_SORTED_ASC(ARR)` - 检查是否升序
+- `IS_SORTED_DESC(ARR)` - 检查是否降序
+
+**示例**: `stdlib/examples/sorting_demo.aether`
+
+---
 
 ## 许可证
 

@@ -1,0 +1,268 @@
+// stdlib/set.aether
+// Aether 集合（Set）数据结构库
+// 提供集合的基本操作，使用数组实现，确保元素唯一性
+
+// ==================== 创建集合 ====================
+
+// 创建一个空集合
+Func SET_NEW() {
+    Return []
+}
+
+// 从数组创建集合（自动去重）
+Func SET_FROM_ARRAY(ARR) {
+    Set RESULT []
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM ARR[I]
+        If (!SET_CONTAINS(RESULT, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 基本操作 ====================
+
+// 向集合中添加元素（如果不存在）
+// 返回新的集合
+Func SET_ADD(SET, ITEM) {
+    If (SET_CONTAINS(SET, ITEM)) {
+        Return SET
+    }
+    Return PUSH(SET, ITEM)
+}
+
+// 从集合中移除元素
+// 返回新的集合
+Func SET_REMOVE(SET, ITEM) {
+    Set RESULT []
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (SET[I] != ITEM) {
+            Set RESULT PUSH(RESULT, SET[I])
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 检查集合是否包含元素
+Func SET_CONTAINS(SET, ITEM) {
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (SET[I] == ITEM) {
+            Return True
+        }
+        Set I (I + 1)
+    }
+    
+    Return False
+}
+
+// 获取集合大小
+Func SET_SIZE(SET) {
+    Return LEN(SET)
+}
+
+// 检查集合是否为空
+Func SET_IS_EMPTY(SET) {
+    Return LEN(SET) == 0
+}
+
+// 清空集合
+Func SET_CLEAR() {
+    Return []
+}
+
+// ==================== 集合运算 ====================
+
+// 并集：返回包含两个集合所有元素的新集合
+Func SET_UNION(SET1, SET2) {
+    Set RESULT SET1
+    Set LEN_ LEN(SET2)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM SET2[I]
+        If (!SET_CONTAINS(RESULT, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 交集：返回两个集合共有的元素
+Func SET_INTERSECTION(SET1, SET2) {
+    Set RESULT []
+    Set LEN_ LEN(SET1)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM SET1[I]
+        If (SET_CONTAINS(SET2, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 差集：返回在第一个集合但不在第二个集合的元素
+Func SET_DIFFERENCE(SET1, SET2) {
+    Set RESULT []
+    Set LEN_ LEN(SET1)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM SET1[I]
+        If (!SET_CONTAINS(SET2, ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 对称差集：返回只在其中一个集合的元素
+Func SET_SYMMETRIC_DIFFERENCE(SET1, SET2) {
+    Set DIFF1 SET_DIFFERENCE(SET1, SET2)
+    Set DIFF2 SET_DIFFERENCE(SET2, SET1)
+    Return SET_UNION(DIFF1, DIFF2)
+}
+
+// ==================== 集合关系 ====================
+
+// 检查第一个集合是否是第二个集合的子集
+Func SET_IS_SUBSET(SET1, SET2) {
+    Set LEN_ LEN(SET1)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (!SET_CONTAINS(SET2, SET1[I])) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 检查第一个集合是否是第二个集合的超集
+Func SET_IS_SUPERSET(SET1, SET2) {
+    Return SET_IS_SUBSET(SET2, SET1)
+}
+
+// 检查两个集合是否不相交（没有共同元素）
+Func SET_IS_DISJOINT(SET1, SET2) {
+    Set LEN_ LEN(SET1)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (SET_CONTAINS(SET2, SET1[I])) {
+            Return False
+        }
+        Set I (I + 1)
+    }
+    
+    Return True
+}
+
+// 检查两个集合是否相等
+Func SET_EQUALS(SET1, SET2) {
+    If (LEN(SET1) != LEN(SET2)) {
+        Return False
+    }
+    
+    Return SET_IS_SUBSET(SET1, SET2)
+}
+
+// ==================== 实用函数 ====================
+
+// 将集合转换为数组
+Func SET_TO_ARRAY(SET) {
+    Return SET
+}
+
+// 遍历集合，对每个元素应用函数
+// FUNC 应该接受一个参数（元素）
+Func SET_FOREACH(SET, FUNC) {
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        FUNC(SET[I])
+        Set I (I + 1)
+    }
+}
+
+// 过滤集合，返回满足条件的元素组成的新集合
+// PREDICATE 应该接受一个参数并返回 True/False
+Func SET_FILTER(SET, PREDICATE) {
+    Set RESULT []
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM SET[I]
+        If (PREDICATE(ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 映射集合，对每个元素应用函数，返回新集合
+// MAPPER 应该接受一个参数并返回转换后的值
+Func SET_MAP(SET, MAPPER) {
+    Set RESULT []
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set MAPPED MAPPER(SET[I])
+        If (!SET_CONTAINS(RESULT, MAPPED)) {
+            Set RESULT PUSH(RESULT, MAPPED)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 将集合转换为字符串表示
+Func SET_TO_STRING(SET) {
+    If (SET_IS_EMPTY(SET)) {
+        Return "{}"
+    }
+    
+    Set RESULT "{"
+    Set LEN_ LEN(SET)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT (RESULT + TO_STRING(SET[I]))
+        If (I < (LEN_ - 1)) {
+            Set RESULT (RESULT + ", ")
+        }
+        Set I (I + 1)
+    }
+    
+    Set RESULT (RESULT + "}")
+    Return RESULT
+}

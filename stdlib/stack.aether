@@ -1,0 +1,342 @@
+// stdlib/stack.aether
+// Aether 栈（Stack）数据结构库
+// 实现后进先出（LIFO）栈，使用数组实现
+
+// ==================== 创建栈 ====================
+
+// 创建一个空栈
+Func STACK_NEW() {
+    Return []
+}
+
+// 从数组创建栈
+Func STACK_FROM_ARRAY(ARR) {
+    Return ARR
+}
+
+// ==================== 基本操作 ====================
+
+// 压栈：在栈顶添加元素
+// 返回新的栈
+Func STACK_PUSH(STACK, ITEM) {
+    Return PUSH(STACK, ITEM)
+}
+
+// 出栈：移除并返回栈顶元素
+// 返回一个字典：{"stack": 新栈, "value": 出栈的值}
+// 如果栈为空，返回 {"stack": [], "value": Null}
+Func STACK_POP(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return {"stack": [], "value": Null}
+    }
+    
+    Set LEN_ LEN(STACK)
+    Set LAST STACK[LEN_ - 1]
+    Set NEW_STACK []
+    Set I 0
+    
+    While (I < (LEN_ - 1)) {
+        Set NEW_STACK PUSH(NEW_STACK, STACK[I])
+        Set I (I + 1)
+    }
+    
+    Return {"stack": NEW_STACK, "value": LAST}
+}
+
+// 查看栈顶元素（不移除）
+Func STACK_PEEK(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return Null
+    }
+    Set LEN_ LEN(STACK)
+    Return STACK[LEN_ - 1]
+}
+
+// 查看栈底元素
+Func STACK_PEEK_BOTTOM(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return Null
+    }
+    Return STACK[0]
+}
+
+// 获取栈的大小
+Func STACK_SIZE(STACK) {
+    Return LEN(STACK)
+}
+
+// 检查栈是否为空
+Func STACK_IS_EMPTY(STACK) {
+    Return LEN(STACK) == 0
+}
+
+// 清空栈
+Func STACK_CLEAR() {
+    Return []
+}
+
+// ==================== 高级操作 ====================
+
+// 检查栈是否包含元素
+Func STACK_CONTAINS(STACK, ITEM) {
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (STACK[I] == ITEM) {
+            Return True
+        }
+        Set I (I + 1)
+    }
+    
+    Return False
+}
+
+// 获取元素在栈中的位置（从栈底开始，0开始），如果不存在返回 -1
+Func STACK_INDEX_OF(STACK, ITEM) {
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        If (STACK[I] == ITEM) {
+            Return I
+        }
+        Set I (I + 1)
+    }
+    
+    Return -1
+}
+
+// 获取栈顶的第N个元素（0是栈顶，1是次顶，以此类推）
+Func STACK_PEEK_N(STACK, N) {
+    Set LEN_ LEN(STACK)
+    If (N < 0 || N >= LEN_) {
+        Return Null
+    }
+    Return STACK[LEN_ - 1 - N]
+}
+
+// 将栈转换为数组（栈底在前，栈顶在后）
+Func STACK_TO_ARRAY(STACK) {
+    Return STACK
+}
+
+// 反转栈
+Func STACK_REVERSE(STACK) {
+    Set RESULT []
+    Set LEN_ LEN(STACK)
+    Set I (LEN_ - 1)
+    
+    While (I >= 0) {
+        Set RESULT PUSH(RESULT, STACK[I])
+        Set I (I - 1)
+    }
+    
+    Return RESULT
+}
+
+// ==================== 批量操作 ====================
+
+// 批量压栈：将数组中的所有元素压入栈
+Func STACK_PUSH_ALL(STACK, ARR) {
+    Set RESULT STACK
+    Set LEN_ LEN(ARR)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT PUSH(RESULT, ARR[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 批量出栈：移除并返回指定数量的元素
+// 返回一个字典：{"stack": 新栈, "values": 出栈的元素数组（最后出栈的在前）}
+Func STACK_POP_N(STACK, N) {
+    If (N <= 0) {
+        Return {"stack": STACK, "values": []}
+    }
+    
+    Set MAX_N N
+    Set LEN_ LEN(STACK)
+    If (N > LEN_) {
+        Set MAX_N LEN_
+    }
+    
+    Set VALUES []
+    Set I 0
+    
+    While (I < MAX_N) {
+        Set VALUES PUSH(VALUES, STACK[LEN_ - 1 - I])
+        Set I (I + 1)
+    }
+    
+    Set NEW_STACK []
+    Set J 0
+    
+    While (J < (LEN_ - MAX_N)) {
+        Set NEW_STACK PUSH(NEW_STACK, STACK[J])
+        Set J (J + 1)
+    }
+    
+    Return {"stack": NEW_STACK, "values": VALUES}
+}
+
+// ==================== 实用函数 ====================
+
+// 遍历栈，对每个元素应用函数（从栈底到栈顶）
+// FUNC 应该接受两个参数（索引，元素）
+Func STACK_FOREACH(STACK, FUNC) {
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        FUNC(I, STACK[I])
+        Set I (I + 1)
+    }
+}
+
+// 从栈顶遍历栈，对每个元素应用函数
+// FUNC 应该接受两个参数（深度，元素）
+Func STACK_FOREACH_FROM_TOP(STACK, FUNC) {
+    Set LEN_ LEN(STACK)
+    Set I (LEN_ - 1)
+    Set DEPTH 0
+    
+    While (I >= 0) {
+        FUNC(DEPTH, STACK[I])
+        Set I (I - 1)
+        Set DEPTH (DEPTH + 1)
+    }
+}
+
+// 过滤栈，返回满足条件的元素组成的新栈
+// PREDICATE 应该接受一个参数并返回 True/False
+Func STACK_FILTER(STACK, PREDICATE) {
+    Set RESULT []
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set ITEM STACK[I]
+        If (PREDICATE(ITEM)) {
+            Set RESULT PUSH(RESULT, ITEM)
+        }
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 映射栈，对每个元素应用函数，返回新栈
+// MAPPER 应该接受一个参数并返回转换后的值
+Func STACK_MAP(STACK, MAPPER) {
+    Set RESULT []
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT PUSH(RESULT, MAPPER(STACK[I]))
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 将栈转换为字符串表示
+Func STACK_TO_STRING(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return "Stack[]"
+    }
+    
+    Set RESULT "Stack["
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT (RESULT + TO_STRING(STACK[I]))
+        If (I < (LEN_ - 1)) {
+            Set RESULT (RESULT + ", ")
+        }
+        Set I (I + 1)
+    }
+    
+    Set RESULT (RESULT + "] <-TOP")
+    Return RESULT
+}
+
+// 复制栈
+Func STACK_CLONE(STACK) {
+    Set RESULT []
+    Set LEN_ LEN(STACK)
+    Set I 0
+    
+    While (I < LEN_) {
+        Set RESULT PUSH(RESULT, STACK[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 交换栈顶的两个元素
+// 返回新的栈，如果元素少于2个则返回原栈
+Func STACK_SWAP_TOP(STACK) {
+    Set LEN_ LEN(STACK)
+    If (LEN_ < 2) {
+        Return STACK
+    }
+    
+    Set NEW_STACK []
+    Set I 0
+    
+    While (I < (LEN_ - 2)) {
+        Set NEW_STACK PUSH(NEW_STACK, STACK[I])
+        Set I (I + 1)
+    }
+    
+    Set NEW_STACK PUSH(NEW_STACK, STACK[LEN_ - 1])
+    Set NEW_STACK PUSH(NEW_STACK, STACK[LEN_ - 2])
+    
+    Return NEW_STACK
+}
+
+// 旋转栈：将栈顶元素移到栈底
+Func STACK_ROTATE_DOWN(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return STACK
+    }
+    
+    Set LEN_ LEN(STACK)
+    Set TOP STACK[LEN_ - 1]
+    Set RESULT [TOP]
+    Set I 0
+    
+    While (I < (LEN_ - 1)) {
+        Set RESULT PUSH(RESULT, STACK[I])
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// 旋转栈：将栈底元素移到栈顶
+Func STACK_ROTATE_UP(STACK) {
+    If (STACK_IS_EMPTY(STACK)) {
+        Return STACK
+    }
+    
+    Set LEN_ LEN(STACK)
+    Set BOTTOM STACK[0]
+    Set RESULT []
+    Set I 1
+    
+    While (I < LEN_) {
+        Set RESULT PUSH(RESULT, STACK[I])
+        Set I (I + 1)
+    }
+    
+    Set RESULT PUSH(RESULT, BOTTOM)
+    Return RESULT
+}
