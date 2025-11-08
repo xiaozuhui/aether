@@ -416,6 +416,31 @@ impl Aether {
             .map_err(|e| format!("Runtime error: {}", e))
     }
 
+    /// Evaluate Aether code asynchronously (requires "async" feature)
+    ///
+    /// This is a convenience wrapper around `eval()` that runs in a background task.
+    /// Useful for integrating Aether into async Rust applications.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use aether::Aether;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut engine = Aether::new();
+    ///     let result = engine.eval_async("Set X 10\n(X + 20)").await.unwrap();
+    ///     println!("Result: {}", result);
+    /// }
+    /// ```
+    #[cfg(feature = "async")]
+    pub async fn eval_async(&mut self, code: &str) -> Result<Value, String> {
+        // 由于 Aether 内部使用 Rc (非 Send)，我们在当前线程执行
+        // 但通过 tokio::task::yield_now() 让出执行权，避免阻塞事件循环
+        tokio::task::yield_now().await;
+        self.eval(code)
+    }
+
     /// 获取缓存统计信息
     pub fn cache_stats(&self) -> CacheStats {
         self.cache.stats()

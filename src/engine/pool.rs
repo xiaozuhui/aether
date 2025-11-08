@@ -183,6 +183,27 @@ impl PooledEngine {
             .unwrap()
             .set_optimization(constant_folding, dead_code, tail_recursion);
     }
+
+    /// 异步执行 Aether 代码（requires "async" feature）
+    ///
+    /// # 示例
+    ///
+    /// ```no_run
+    /// use aether::engine::EnginePool;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut pool = EnginePool::new(4);
+    ///     let mut engine = pool.acquire();
+    ///     let result = engine.eval_async("Set X 10\n(X + 20)").await.unwrap();
+    ///     println!("Result: {}", result);
+    /// }
+    /// ```
+    #[cfg(feature = "async")]
+    pub async fn eval_async(&mut self, code: &str) -> Result<Value, String> {
+        tokio::task::yield_now().await;
+        self.eval(code)
+    }
 }
 
 impl Drop for PooledEngine {

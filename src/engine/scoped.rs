@@ -189,6 +189,59 @@ impl ScopedEngine {
     pub fn eval_with_all_permissions(code: &str) -> Result<Value, String> {
         Self::with_all_permissions(|engine| engine.eval(code))
     }
+
+    /// 使用闭包异步执行代码（requires "async" feature）
+    ///
+    /// # 示例
+    ///
+    /// ```no_run
+    /// use aether::engine::ScopedEngine;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let result = ScopedEngine::with_async(|engine| async move {
+    ///         engine.eval("Set X 10")?;
+    ///         engine.eval("(X + 20)")
+    ///     }).await.unwrap();
+    ///     println!("Result: {}", result);
+    /// }
+    /// ```
+    #[cfg(feature = "async")]
+    pub async fn with_async<F, Fut, T>(f: F) -> Result<T, String>
+    where
+        F: FnOnce(&mut Aether) -> Fut,
+        Fut: std::future::Future<Output = Result<T, String>>,
+    {
+        tokio::task::yield_now().await;
+        let mut engine = Aether::new();
+        f(&mut engine).await
+    }
+
+    /// 异步执行代码（简化版，requires "async" feature）
+    ///
+    /// # 示例
+    ///
+    /// ```no_run
+    /// use aether::engine::ScopedEngine;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let result = ScopedEngine::eval_async("Set X 10\n(X + 20)").await.unwrap();
+    ///     println!("Result: {}", result);
+    /// }
+    /// ```
+    #[cfg(feature = "async")]
+    pub async fn eval_async(code: &str) -> Result<Value, String> {
+        tokio::task::yield_now().await;
+        Self::eval(code)
+    }
+
+    /// 异步执行代码（启用所有权限，requires "async" feature）
+    #[cfg(feature = "async")]
+    pub async fn eval_with_all_permissions_async(code: &str) -> Result<Value, String> {
+        tokio::task::yield_now().await;
+        Self::eval_with_all_permissions(code)
+    }
 }
 
 #[cfg(test)]

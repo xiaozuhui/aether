@@ -171,6 +171,36 @@ impl GlobalEngine {
                 .set_optimization(constant_folding, dead_code, tail_recursion);
         });
     }
+
+    /// 使用全局引擎异步执行代码（隔离环境）
+    ///
+    /// 异步版本的 `eval_isolated()`，适合在 async/await 应用中使用。
+    ///
+    /// # 示例
+    ///
+    /// ```no_run
+    /// use aether::engine::GlobalEngine;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let result = GlobalEngine::eval_isolated_async("Set X 10\n(X + 20)").await.unwrap();
+    ///     println!("Result: {}", result);
+    /// }
+    /// ```
+    #[cfg(feature = "async")]
+    pub async fn eval_isolated_async(code: &str) -> Result<Value, String> {
+        tokio::task::yield_now().await;
+        Self::eval_isolated(code)
+    }
+
+    /// 使用全局引擎异步执行代码（非隔离）
+    ///
+    /// 异步版本的 `eval()`，变量会在多次调用间保留。
+    #[cfg(feature = "async")]
+    pub async fn eval_async(code: &str) -> Result<Value, String> {
+        tokio::task::yield_now().await;
+        Self::eval(code)
+    }
 }
 
 #[cfg(test)]
