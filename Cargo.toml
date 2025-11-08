@@ -11,7 +11,14 @@ homepage = "https://github.com/xiaozuhui/aether"
 readme = "README.md"
 keywords = ["dsl", "interpreter", "scripting", "embedded", "language"]
 categories = ["parser-implementations", "development-tools", "embedded"]
-exclude = ["target/*", ".git/*", ".github/*", "benches/*", "examples/*.aether"]
+exclude = [
+    "target/*",
+    ".git/*",
+    ".github/*",
+    "benches/*",
+    "examples/*.aether",
+    "docs/*",
+]
 
 [lib]
 name = "aether"

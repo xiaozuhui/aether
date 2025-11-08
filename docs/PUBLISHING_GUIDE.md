@@ -6,11 +6,11 @@
 
 ### 1. 注册 crates.io 账号
 
-访问 https://crates.io/ 并使用 GitHub 账号登录。
+访问 <https://crates.io/> 并使用 GitHub 账号登录。
 
 ### 2. 获取 API Token
 
-1. 登录后，访问 https://crates.io/settings/tokens
+1. 登录后，访问 <https://crates.io/settings/tokens>
 2. 点击 "New Token"
 3. 输入 token 名称（如 "aether-publishing"）
 4. 复制生成的 token
@@ -64,6 +64,7 @@ categories = ["parser-implementations"]  # 分类
 ### 3. 更新 README.md
 
 确保 README.md 包含：
+
 - 项目简介
 - 快速开始示例
 - 安装说明
@@ -124,7 +125,7 @@ cargo publish
 
 ### 4. 验证发布
 
-访问 https://crates.io/crates/aether 确认发布成功。
+访问 <https://crates.io/crates/aether> 确认发布成功。
 
 ## 📥 在其他项目中使用
 
@@ -211,6 +212,7 @@ version = "0.2.1"  # 遵循语义化版本
 ```
 
 版本号规则：
+
 - **主版本号** (0.x.x): 不兼容的 API 变更
 - **次版本号** (x.1.x): 向后兼容的功能新增
 - **修订号** (x.x.1): 向后兼容的问题修正
@@ -246,11 +248,11 @@ cargo publish
 
 ### 查看下载统计
 
-访问 https://crates.io/crates/aether/stats
+访问 <https://crates.io/crates/aether/stats>
 
 ### 更新文档
 
-文档会自动发布到 https://docs.rs/aether
+文档会自动发布到 <https://docs.rs/aether>
 
 ### 监控 Issues 和 PR
 
