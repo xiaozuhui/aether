@@ -318,7 +318,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -402,7 +402,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -434,7 +434,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -466,7 +466,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -572,7 +572,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -590,7 +590,7 @@ impl Parser {
                         found: self.current_token.clone(),
                         line: self.current_line,
                         column: self.current_column,
-                    })
+                    });
                 }
             };
 
@@ -714,7 +714,7 @@ impl Parser {
                             found: self.current_token.clone(),
                             line: self.current_line,
                             column: self.current_column,
-                        })
+                        });
                     }
                 };
 
@@ -756,7 +756,7 @@ impl Parser {
                         found: self.current_token.clone(),
                         line: self.current_line,
                         column: self.current_column,
-                    })
+                    });
                 }
             };
             self.next_token();
@@ -788,7 +788,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -817,7 +817,7 @@ impl Parser {
                     found: self.current_token.clone(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -957,6 +957,7 @@ impl Parser {
             Token::Not => self.parse_unary_expression(UnaryOp::Not),
             Token::If => self.parse_if_expression(),
             Token::Func => self.parse_lambda_expression(),
+            Token::Lambda => self.parse_lambda_arrow_expression(),
             _ => Err(ParseError::InvalidExpression {
                 message: "Unexpected token in expression".to_string(),
                 line: self.current_line,
@@ -1051,7 +1052,7 @@ impl Parser {
                         found: self.current_token.clone(),
                         line: self.current_line,
                         column: self.current_column,
-                    })
+                    });
                 }
             };
 
@@ -1107,7 +1108,7 @@ impl Parser {
                     message: "Invalid binary operator".to_string(),
                     line: self.current_line,
                     column: self.current_column,
-                })
+                });
             }
         };
 
@@ -1225,6 +1226,48 @@ impl Parser {
         let body = self.parse_block()?;
 
         self.expect_token(Token::RightBrace)?;
+
+        Ok(Expr::Lambda { params, body })
+    }
+
+    /// Parse lambda arrow expression: Lambda X -> expr or Lambda (X, Y) -> expr
+    fn parse_lambda_arrow_expression(&mut self) -> Result<Expr, ParseError> {
+        self.next_token(); // skip 'Lambda'
+
+        let params = if self.current_token == Token::LeftParen {
+            // Multiple parameters: Lambda (X, Y) -> expr
+            self.next_token(); // skip '('
+            let params = self.parse_parameter_list()?;
+            self.expect_token(Token::RightParen)?;
+            params
+        } else {
+            // Single parameter: Lambda X -> expr
+            match &self.current_token {
+                Token::Identifier(name) => {
+                    self.validate_identifier_internal(name, true)?;
+                    let param = name.clone();
+                    self.next_token();
+                    vec![param]
+                }
+                _ => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "identifier or '('".to_string(),
+                        found: self.current_token.clone(),
+                        line: self.current_line,
+                        column: self.current_column,
+                    });
+                }
+            }
+        };
+
+        // Expect arrow
+        self.expect_token(Token::Arrow)?;
+
+        // Parse the expression body
+        let expr = self.parse_expression(Precedence::Lowest)?;
+
+        // Wrap the expression in a Return statement
+        let body = vec![Stmt::Return(expr)];
 
         Ok(Expr::Lambda { params, body })
     }

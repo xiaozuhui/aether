@@ -431,3 +431,166 @@ description"""
         _ => panic!("Expected string"),
     }
 }
+
+// ========== Lambda Arrow Syntax Tests ==========
+
+#[test]
+fn test_lambda_arrow_single_param() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set DOUBLE Lambda X -> X * 2
+        DOUBLE(5)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(10.0));
+}
+
+#[test]
+fn test_lambda_arrow_multiple_params() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set ADD Lambda (A, B) -> A + B
+        ADD(3, 7)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(10.0));
+}
+
+#[test]
+fn test_lambda_arrow_with_map() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set NUMBERS [1, 2, 3, 4, 5]
+        Set SQUARED MAP(NUMBERS, Lambda X -> X * X)
+        SQUARED
+    "#,
+        )
+        .unwrap();
+
+    match result {
+        Value::Array(arr) => {
+            assert_eq!(arr.len(), 5);
+            assert_eq!(arr[0], Value::Number(1.0));
+            assert_eq!(arr[1], Value::Number(4.0));
+            assert_eq!(arr[2], Value::Number(9.0));
+            assert_eq!(arr[3], Value::Number(16.0));
+            assert_eq!(arr[4], Value::Number(25.0));
+        }
+        _ => panic!("Expected array"),
+    }
+}
+
+#[test]
+fn test_lambda_arrow_with_filter() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set NUMBERS [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        Set EVENS FILTER(NUMBERS, Lambda X -> X % 2 == 0)
+        EVENS
+    "#,
+        )
+        .unwrap();
+
+    match result {
+        Value::Array(arr) => {
+            assert_eq!(arr.len(), 5);
+            assert_eq!(arr[0], Value::Number(2.0));
+            assert_eq!(arr[1], Value::Number(4.0));
+            assert_eq!(arr[2], Value::Number(6.0));
+            assert_eq!(arr[3], Value::Number(8.0));
+            assert_eq!(arr[4], Value::Number(10.0));
+        }
+        _ => panic!("Expected array"),
+    }
+}
+
+#[test]
+fn test_lambda_arrow_inline_call() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        (Lambda X -> X + 10)(5)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(15.0));
+}
+
+#[test]
+fn test_lambda_arrow_nested() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set MAKE_ADDER Lambda X -> Lambda Y -> X + Y
+        Set ADD_5 MAKE_ADDER(5)
+        ADD_5(3)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(8.0));
+}
+
+#[test]
+fn test_lambda_arrow_complex_expression() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set CALC Lambda (X, Y) -> (X * 2) + (Y * 3)
+        CALC(10, 20)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(80.0));
+}
+
+#[test]
+fn test_lambda_both_syntaxes() {
+    let mut engine = Aether::new();
+
+    // Test that both syntaxes work
+    let result1 = engine
+        .eval(
+            r#"
+        Set F1 Func(X) { Return (X * 2) }
+        F1(5)
+    "#,
+        )
+        .unwrap();
+
+    let result2 = engine
+        .eval(
+            r#"
+        Set F2 Lambda X -> X * 2
+        F2(5)
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result1, result2);
+    assert_eq!(result1, Value::Number(10.0));
+}

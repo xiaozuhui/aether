@@ -62,37 +62,46 @@ Set HTML_TEMPLATE """
 PRINTLN("HTML Template:")
 PRINTLN(HTML_TEMPLATE)
 
-PRINTLN("")
-PRINTLN("--- Feature 4: Lambda Expressions ---")
+Println("")
+Println("--- Feature 4: Lambda Expressions ---")
 
-// Basic lambda
+# Basic lambda with Func syntax
 Set DOUBLE Func(X) { Return (X * 2) }
-PRINTLN("Double of 5:")
-PRINTLN(DOUBLE(5))
+Println("Double of 5 (Func syntax):")
+Println(DOUBLE(5))
 
-// Multiple parameters
-Set ADD Func(A, B) { Return (A + B) }
-PRINTLN("3 + 7:")
-PRINTLN(ADD(3, 7))
+# Basic lambda with arrow syntax
+Set TRIPLE Lambda X -> X * 3
+Println("Triple of 5 (Lambda arrow syntax):")
+Println(TRIPLE(5))
 
-// Lambda with MAP
+# Multiple parameters with arrow syntax
+Set ADD Lambda (A, B) -> A + B
+Println("3 + 7 (arrow syntax):")
+Println(ADD(3, 7))
+
+# Lambda with MAP (using arrow syntax)
 Set NUMBERS [1, 2, 3, 4, 5]
-Set SQUARED MAP(NUMBERS, Func(X) { Return (X * X) })
-PRINTLN("Squared numbers:")
-PRINTLN(SQUARED)
+Set SQUARED MAP(NUMBERS, Lambda X -> X * X)
+Println("Squared numbers (arrow syntax):")
+Println(SQUARED)
 
-// Lambda with FILTER
-Set EVENS FILTER(NUMBERS, Func(X) { Return (X % 2 == 0) })
-PRINTLN("Even numbers from 1-5:")
-PRINTLN(EVENS)
+# Lambda with FILTER (using arrow syntax)
+Set EVENS FILTER(NUMBERS, Lambda X -> X % 2 == 0)
+Println("Even numbers from 1-5 (arrow syntax):")
+Println(EVENS)
 
-// Lambda closure
+# Lambda closure
 Set MULTIPLIER 10
-Set MULTIPLY_BY_TEN Func(X) { Return (X * MULTIPLIER) }
-PRINTLN("5 * 10 using closure:")
-PRINTLN(MULTIPLY_BY_TEN(5))
+Set MULTIPLY_BY_TEN Lambda X -> X * MULTIPLIER
+Println("5 * 10 using closure (arrow syntax):")
+Println(MULTIPLY_BY_TEN(5))
 
-PRINTLN("")
+# Inline lambda call
+Println("Inline lambda (5 + 10):")
+Println((Lambda X -> X + 10)(5))
+
+Println("")
 PRINTLN("--- Feature 5: Combined Features ---")
 
 // Nested structures with lambdas

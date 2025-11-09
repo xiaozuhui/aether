@@ -327,34 +327,34 @@ impl Lexer {
         self.read_char(); // Skip first "
         self.read_char(); // Skip second "
         self.read_char(); // Skip third "
-        
+
         let start = self.position;
-        
+
         // Read until we find closing """
         loop {
             if self.ch == '\0' {
                 return Token::Illegal('"'); // Unterminated multiline string
             }
-            
+
             // Check if we found closing """
             if self.ch == '"' && self.peek_char() == '"' && self.peek_char_n(2) == '"' {
                 let string: String = self.input[start..self.position].iter().collect();
-                
+
                 // Skip the closing """
                 self.read_char(); // Skip first "
                 self.read_char(); // Skip second "
                 self.read_char(); // Skip third "
-                
+
                 // Process escape sequences
                 return Token::String(self.process_escapes(&string));
             }
-            
+
             // Handle newlines for line tracking
             if self.ch == '\n' {
                 self.line += 1;
                 self.column = 0;
             }
-            
+
             self.read_char();
         }
     }

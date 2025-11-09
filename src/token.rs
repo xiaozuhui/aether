@@ -42,6 +42,7 @@ pub enum Token {
     // Keywords - 首字母大写
     Set,
     Func,
+    Lambda,
     Generator,
     Lazy,
     If,
@@ -119,6 +120,7 @@ impl Token {
             // Keywords
             "Set" => Token::Set,
             "Func" => Token::Func,
+            "Lambda" => Token::Lambda,
             "Generator" => Token::Generator,
             "Lazy" => Token::Lazy,
             "If" => Token::If,
@@ -162,6 +164,7 @@ impl Token {
         match self {
             Token::Set => "Set",
             Token::Func => "Func",
+            Token::Lambda => "Lambda",
             Token::Generator => "Generator",
             Token::Lazy => "Lazy",
             Token::If => "If",

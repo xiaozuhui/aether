@@ -1,0 +1,156 @@
+// Lambda Expression Syntax Demo
+// Showcasing both Func and Lambda arrow syntaxes
+
+PRINTLN("=== Lambda Expression Syntax Comparison ===")
+PRINTLN("")
+
+// ============================================
+// Syntax 1: Func with block body
+// ============================================
+PRINTLN("--- Func Syntax (Traditional) ---")
+
+Set DOUBLE_FUNC Func(X) { Return (X * 2) }
+PRINTLN("DOUBLE_FUNC(5):")
+PRINTLN(DOUBLE_FUNC(5))
+
+Set ADD_FUNC Func(A, B) { Return (A + B) }
+PRINTLN("ADD_FUNC(3, 7):")
+PRINTLN(ADD_FUNC(3, 7))
+
+PRINTLN("")
+
+// ============================================
+// Syntax 2: Lambda with arrow (concise)
+// ============================================
+PRINTLN("--- Lambda Arrow Syntax (Concise) ---")
+
+Set DOUBLE_ARROW Lambda X -> X * 2
+PRINTLN("DOUBLE_ARROW(5):")
+PRINTLN(DOUBLE_ARROW(5))
+
+Set ADD_ARROW Lambda (A, B) -> A + B
+PRINTLN("ADD_ARROW(3, 7):")
+PRINTLN(ADD_ARROW(3, 7))
+
+PRINTLN("")
+
+// ============================================
+// Complex Examples
+// ============================================
+PRINTLN("--- Complex Lambda Examples ---")
+
+// Higher-order functions with MAP
+Set NUMBERS [1, 2, 3, 4, 5]
+
+PRINTLN("Original numbers:")
+PRINTLN(NUMBERS)
+
+Set SQUARED MAP(NUMBERS, Lambda X -> X * X)
+PRINTLN("Squared:")
+PRINTLN(SQUARED)
+
+Set CUBED MAP(NUMBERS, Lambda X -> X * X * X)
+PRINTLN("Cubed:")
+PRINTLN(CUBED)
+
+PRINTLN("")
+
+// FILTER with lambda
+Set EVEN_ONLY FILTER(NUMBERS, Lambda X -> X % 2 == 0)
+PRINTLN("Even numbers only:")
+PRINTLN(EVEN_ONLY)
+
+Set GREATER_THAN_3 FILTER(NUMBERS, Lambda X -> X > 3)
+PRINTLN("Greater than 3:")
+PRINTLN(GREATER_THAN_3)
+
+PRINTLN("")
+
+// ============================================
+// Closures
+// ============================================
+PRINTLN("--- Closures (Capturing Environment) ---")
+
+Set MULTIPLIER 10
+Set MULTIPLY_BY Lambda X -> X * MULTIPLIER
+PRINTLN("5 * 10 (using captured MULTIPLIER):")
+PRINTLN(MULTIPLY_BY(5))
+
+Set OFFSET 100
+Set ADD_OFFSET Lambda X -> X + OFFSET
+PRINTLN("25 + 100 (using captured OFFSET):")
+PRINTLN(ADD_OFFSET(25))
+
+PRINTLN("")
+
+// ============================================
+// Inline Lambda Calls
+// ============================================
+PRINTLN("--- Inline Lambda Calls ---")
+
+PRINTLN("Inline: (Lambda X -> X + 10)(5)")
+PRINTLN((Lambda X -> X + 10)(5))
+
+PRINTLN("Inline: (Lambda (A, B) -> A * B)(6, 7)")
+PRINTLN((Lambda (A, B) -> A * B)(6, 7))
+
+PRINTLN("")
+
+// ============================================
+// Nested Lambdas (Currying)
+// ============================================
+PRINTLN("--- Nested Lambdas (Currying) ---")
+
+Set MAKE_ADDER Lambda X -> Lambda Y -> X + Y
+Set ADD_5 MAKE_ADDER(5)
+Set ADD_10 MAKE_ADDER(10)
+
+PRINTLN("ADD_5(3):")
+PRINTLN(ADD_5(3))
+
+PRINTLN("ADD_10(3):")
+PRINTLN(ADD_10(3))
+
+PRINTLN("")
+
+// ============================================
+// Complex Expressions
+// ============================================
+PRINTLN("--- Complex Lambda Expressions ---")
+
+Set CALC Lambda (X, Y) -> (X * 2) + (Y * 3)
+PRINTLN("CALC(10, 20) = (10*2) + (20*3):")
+PRINTLN(CALC(10, 20))
+
+Set QUADRATIC Lambda (A, B, C, X) -> (A * X * X) + (B * X) + C
+PRINTLN("QUADRATIC(1, 2, 3, 5) = 1*5*5 + 2*5 + 3:")
+PRINTLN(QUADRATIC(1, 2, 3, 5))
+
+PRINTLN("")
+
+// ============================================
+// Practical Use Case: Data Transformation
+// ============================================
+PRINTLN("--- Practical Example: Data Transformation ---")
+
+Set USERS [
+    {"name": "Alice", "age": 30},
+    {"name": "Bob", "age": 25},
+    {"name": "Charlie", "age": 35},
+    {"name": "Diana", "age": 28}
+]
+
+Set NAMES MAP(USERS, Lambda USER -> USER["name"])
+PRINTLN("User names:")
+PRINTLN(NAMES)
+
+Set AGES MAP(USERS, Lambda USER -> USER["age"])
+PRINTLN("User ages:")
+PRINTLN(AGES)
+
+Set ADULTS FILTER(USERS, Lambda USER -> USER["age"] >= 30)
+PRINTLN("Users aged 30+:")
+PRINTLN(ADULTS)
+
+PRINTLN("")
+PRINTLN("=== Lambda Syntax Demo Complete ===")
