@@ -1,0 +1,224 @@
+// ==================================================
+// Aether 新功能综合演示
+// ==================================================
+// 演示以下功能：
+// 1. 多行字符串
+// 2. Lambda 箭头表达式
+// 3. 嵌套数据结构
+// ==================================================
+
+PRINTLN("=================================================")
+PRINTLN("   Aether 新功能综合演示")
+PRINTLN("   多行字符串 + Lambda + 嵌套结构")
+PRINTLN("=================================================")
+PRINTLN("")
+
+// ==================================================
+// 1. 多行字符串演示
+// ==================================================
+
+PRINTLN("===== 多行字符串演示 =====")
+
+Set BANNER "多行字符串支持三引号语法"
+
+PRINTLN(BANNER)
+
+Set SQL_QUERY """
+SELECT 
+    user_id,
+    user_name,
+    COUNT(*) as order_count
+FROM orders
+WHERE created_at >= '2024-01-01'
+GROUP BY user_id, user_name
+ORDER BY order_count DESC
+LIMIT 10
+"""
+
+PRINTLN("SQL 查询示例：")
+PRINTLN(SQL_QUERY)
+
+// ==================================================
+// 2. Lambda 表达式演示
+// ==================================================
+
+PRINTLN("===== Lambda 箭头表达式演示 =====")
+
+// 单参数 Lambda
+Set DOUBLE Lambda X -> X * 2
+Set SQUARE Lambda X -> X * X
+Set ADD_TEN Lambda X -> X + 10
+
+PRINTLN("DOUBLE(5) = " + TO_STRING(DOUBLE(5)))
+PRINTLN("SQUARE(5) = " + TO_STRING(SQUARE(5)))
+PRINTLN("ADD_TEN(5) = " + TO_STRING(ADD_TEN(5)))
+
+// 多参数 Lambda
+Set ADD Lambda (X, Y) -> X + Y
+Set MULTIPLY Lambda (X, Y) -> X * Y
+Set POWER Lambda (BASE, EXP) -> POW(BASE,EXP )
+
+PRINTLN("ADD(3, 7) = " + TO_STRING(ADD(3, 7)))
+PRINTLN("MULTIPLY(6, 4) = " + TO_STRING(MULTIPLY(6, 4)))
+PRINTLN("POWER(2, 8) = " + TO_STRING(POWER(2, 8)))
+
+// Lambda 与 MAP/FILTER 结合
+Set NUMBERS [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+Set DOUBLED (MAP(NUMBERS, Lambda X -> X * 2))
+Set SQUARED (MAP(NUMBERS, Lambda X -> X * X))
+
+// 定义判断函数
+Func IS_EVEN(N) {
+    Return (N % 2 == 0)
+}
+Func IS_ODD(N) {
+    Return (N % 2 != 0)
+}
+
+Set EVENS FILTER(NUMBERS, IS_EVEN)
+Set ODDS FILTER(NUMBERS, IS_ODD)
+
+PRINTLN("\n原始数组: " + TO_STRING(NUMBERS))
+PRINTLN("翻倍后: " + TO_STRING(DOUBLED))
+PRINTLN("平方后: " + TO_STRING(SQUARED))
+PRINTLN("偶数: " + TO_STRING(EVENS))
+PRINTLN("奇数: " + TO_STRING(ODDS))
+
+// ==================================================
+// 3. 嵌套数据结构演示
+// ==================================================
+
+PRINTLN("===== 嵌套数据结构演示 =====")
+
+// 嵌套字典 - 用户信息
+Set USER_INFO {
+    ID: 1001,
+    NAME: "张三",
+    EMAIL: "zhangsan@example.com",
+    ADDRESS: {
+        PROVINCE: "北京市",
+        CITY: "海淀区",
+        STREET: "中关村大街1号",
+        ZIPCODE: "100080"
+    },
+    CONTACTS: [
+        {TYPE: "手机", VALUE: "13800138000"},
+        {TYPE: "座机", VALUE: "010-12345678"},
+        {TYPE: "微信", VALUE: "zhangsan_wx"}
+    ],
+    PREFERENCES: {
+        THEME: "dark",
+        LANGUAGE: "zh-CN",
+        NOTIFICATIONS: {
+            EMAIL: True,
+            SMS: False,
+            PUSH: True
+        }
+    }
+}
+
+PRINTLN("用户ID: " + TO_STRING(USER_INFO["ID"]))
+PRINTLN("用户名: " + USER_INFO["NAME"])
+PRINTLN("城市: " + USER_INFO["ADDRESS"]["CITY"])
+PRINTLN("主题: " + USER_INFO["PREFERENCES"]["THEME"])
+PRINTLN("邮件通知: " + TO_STRING(USER_INFO["PREFERENCES"]["NOTIFICATIONS"]["EMAIL"]))
+
+// 嵌套数组 - 矩阵运算
+Set MATRIX [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+
+PRINTLN("\n矩阵数据:")
+PRINTLN("第一行: " + TO_STRING(MATRIX[0]))
+PRINTLN("第二行: " + TO_STRING(MATRIX[1]))
+PRINTLN("第三行: " + TO_STRING(MATRIX[2]))
+PRINTLN("中心元素 [1][1] = " + TO_STRING(MATRIX[1][1]))
+
+// 使用 Lambda 处理矩阵
+Set MATRIX_DOUBLED MAP(MATRIX, Lambda ROW -> MAP(ROW, Lambda X -> X * 2))
+PRINTLN("\n矩阵翻倍:")
+PRINTLN(TO_STRING(MATRIX_DOUBLED))
+
+// 复杂的嵌套结构 - 公司组织架构
+Set COMPANY {
+    NAME: "科技创新有限公司",
+    DEPARTMENTS: [
+        {
+            NAME: "研发部",
+            MANAGER: "李四",
+            TEAMS: [
+                {
+                    NAME: "前端团队",
+                    MEMBERS: ["王五", "赵六", "孙七"],
+                    TECH_STACK: ["React", "Vue", "TypeScript"]
+                },
+                {
+                    NAME: "后端团队",
+                    MEMBERS: ["周八", "吴九", "郑十"],
+                    TECH_STACK: ["Rust", "Python", "Go"]
+                }
+            ]
+        },
+        {
+            NAME: "市场部",
+            MANAGER: "钱十一",
+            TEAMS: [
+                {
+                    NAME: "营销团队",
+                    MEMBERS: ["陈十二", "林十三"],
+                    CHANNELS: ["线上", "线下", "代理"]
+                }
+            ]
+        }
+    ]
+}
+
+PRINTLN("公司名称: " + COMPANY["NAME"])
+PRINTLN("研发部经理: " + COMPANY["DEPARTMENTS"][0]["MANAGER"])
+PRINTLN("前端团队成员: " + TO_STRING(COMPANY["DEPARTMENTS"][0]["TEAMS"][0]["MEMBERS"]))
+PRINTLN("后端技术栈: " + TO_STRING(COMPANY["DEPARTMENTS"][0]["TEAMS"][1]["TECH_STACK"]))
+
+// ==================================================
+// 4. 综合应用 - 数据处理流水线
+// ==================================================
+
+PRINTLN("===== 综合应用：数据处理流水线 =====")
+
+// 模拟销售数据
+Set SALES_DATA [
+    {PRODUCT: "笔记本电脑", PRICE: 5999, QUANTITY: 15},
+    {PRODUCT: "鼠标", PRICE: 89, QUANTITY: 120},
+    {PRODUCT: "键盘", PRICE: 299, QUANTITY: 80},
+    {PRODUCT: "显示器", PRICE: 1299, QUANTITY: 45},
+    {PRODUCT: "耳机", PRICE: 199, QUANTITY: 200}
+]
+
+// 使用 Lambda 计算总销售额
+Set CALCULATE_TOTAL Lambda ITEM -> ITEM["PRICE"] * ITEM["QUANTITY"]
+Set TOTALS MAP(SALES_DATA, CALCULATE_TOTAL)
+
+PRINTLN("各产品销售额:")
+Set IDX 0
+While (IDX < LEN(SALES_DATA)) {
+    Set ITEM SALES_DATA[IDX]
+    Set TOTAL TOTALS[IDX]
+    PRINTLN("  " + ITEM["PRODUCT"] + ": ¥" + TO_STRING(TOTAL))
+    Set IDX (IDX + 1)
+}
+
+// 筛选高价值产品（总销售额 > 10000）
+Set IS_HIGH_VALUE Lambda ITEM -> CALCULATE_TOTAL(ITEM) > 10000
+Set HIGH_VALUE_PRODUCTS FILTER(SALES_DATA, IS_HIGH_VALUE)
+
+PRINTLN("\n高价值产品 (销售额 > ¥10000):")
+Set J 0
+While (J < LEN(HIGH_VALUE_PRODUCTS)) {
+    Set PROD HIGH_VALUE_PRODUCTS[J]
+    PRINTLN("  " + PROD["PRODUCT"] + " - 单价: ¥" + TO_STRING(PROD["PRICE"]) + " 数量: " + TO_STRING(PROD["QUANTITY"]))
+    Set J (J + 1)
+}
+
+PRINTLN("===== 演示完成！所有新功能运行正常 =====")

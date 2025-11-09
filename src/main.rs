@@ -7,30 +7,150 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 {
-        // 检查是否有 --stdlib 或 --no-stdlib 标志
-        let use_stdlib = if args.contains(&"--no-stdlib".to_string()) {
-            false
-        } else {
-            // 默认加载标准库
-            true
-        };
+        // 检查各种命令行标志
+        let use_stdlib = !args.contains(&"--no-stdlib".to_string());
+        let show_ast = args.contains(&"--ast".to_string());
+        let check_only = args.contains(&"--check".to_string());
+        let debug_mode = args.contains(&"--debug".to_string());
+        let show_help = args.contains(&"--help".to_string()) || args.contains(&"-h".to_string());
 
-        // 脚本模式：运行文件
+        if show_help {
+            print_cli_help();
+            return;
+        }
+
+        // 获取脚本文件名
         let script_file = args
             .iter()
-            .find(|arg| !arg.starts_with("--") && *arg != &args[0])
-            .map(|s| s.as_str())
-            .unwrap_or(&args[1]);
+            .find(|arg| !arg.starts_with("--") && !arg.starts_with("-") && *arg != &args[0])
+            .map(|s| s.as_str());
 
-        run_file(script_file, use_stdlib);
+        if let Some(file) = script_file {
+            if check_only {
+                check_file(file);
+            } else if show_ast {
+                show_ast_for_file(file);
+            } else {
+                run_file(file, use_stdlib, debug_mode);
+            }
+        } else {
+            eprintln!("错误: 未指定脚本文件");
+            eprintln!("使用 --help 查看帮助");
+            std::process::exit(1);
+        }
     } else {
         // REPL 交互模式
         run_repl();
     }
 }
 
+/// 打印命令行帮助
+fn print_cli_help() {
+    println!("Aether 语言解释器 v0.2.0");
+    println!();
+    println!("用法:");
+    println!("  aether [选项] <脚本文件>");
+    println!("  aether                    # 启动 REPL 交互模式");
+    println!();
+    println!("选项:");
+    println!("  -h, --help               显示此帮助信息");
+    println!("  --check                  只检查语法，不执行代码");
+    println!("  --ast                    显示抽象语法树 (AST)");
+    println!("  --debug                  启用调试模式（显示求值过程）");
+    println!("  --no-stdlib              不自动加载标准库");
+    println!();
+    println!("示例:");
+    println!("  aether script.aether              # 运行脚本");
+    println!("  aether --check script.aether      # 检查语法");
+    println!("  aether --ast script.aether        # 查看 AST");
+    println!("  aether --debug script.aether      # 调试模式运行");
+    println!("  aether --no-stdlib script.aether  # 不加载标准库");
+    println!();
+}
+
+/// 检查文件语法
+fn check_file(filename: &str) {
+    match fs::read_to_string(filename) {
+        Ok(code) => {
+            use aether::{Lexer, Parser};
+
+            println!("正在检查 '{}'...", filename);
+
+            // 词法分析
+            let mut lexer = Lexer::new(&code);
+            let mut token_count = 0;
+            loop {
+                let token = lexer.next_token();
+                token_count += 1;
+                if token == aether::Token::EOF {
+                    break;
+                }
+                if let aether::Token::Illegal(ch) = token {
+                    eprintln!(
+                        "✗ 词法错误: 非法字符 '{}' 在行 {}, 列 {}",
+                        ch,
+                        lexer.line(),
+                        lexer.column()
+                    );
+                    std::process::exit(1);
+                }
+            }
+
+            // 语法分析
+            let mut parser = Parser::new(&code);
+            match parser.parse_program() {
+                Ok(program) => {
+                    println!("✓ 语法检查通过");
+                    println!("  - {} 个词法单元", token_count);
+                    println!("  - {} 条语句", program.len());
+                    println!();
+                }
+                Err(e) => {
+                    eprintln!("✗ 语法错误:");
+                    print_detailed_error(&code, &e.to_string());
+                    std::process::exit(1);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("✗ 无法读取文件 '{}': {}", filename, e);
+            std::process::exit(1);
+        }
+    }
+}
+
+/// 显示文件的 AST
+fn show_ast_for_file(filename: &str) {
+    match fs::read_to_string(filename) {
+        Ok(code) => {
+            use aether::Parser;
+
+            let mut parser = Parser::new(&code);
+            match parser.parse_program() {
+                Ok(program) => {
+                    println!("=== 抽象语法树 (AST) ===");
+                    println!("文件: {}", filename);
+                    println!();
+                    println!("{:#?}", program);
+                    println!();
+                    println!("=== 共 {} 条语句 ===", program.len());
+                }
+                Err(e) => {
+                    eprintln!("✗ 解析错误:");
+                    print_detailed_error(&code, &e.to_string());
+                    std::process::exit(1);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("✗ 无法读取文件 '{}': {}", filename, e);
+            std::process::exit(1);
+        }
+    }
+}
+
 /// 运行 Aether 脚本文件
-fn run_file(filename: &str, load_stdlib: bool) {
+fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool) {
     match fs::read_to_string(filename) {
         Ok(code) => {
             // 作为独立语言使用时，默认启用所有IO权限
@@ -47,24 +167,110 @@ fn run_file(filename: &str, load_stdlib: bool) {
                 Aether::with_all_permissions()
             };
 
+            if debug_mode {
+                println!("=== 调试模式 ===");
+                println!("文件: {}", filename);
+                println!(
+                    "标准库: {}",
+                    if load_stdlib {
+                        "已加载"
+                    } else {
+                        "未加载"
+                    }
+                );
+                println!();
+            }
+
             match engine.eval(&code) {
                 Ok(result) => {
+                    if debug_mode {
+                        println!("=== 执行结果 ===");
+                    }
                     // 只在有显式输出时打印
                     if result != aether::Value::Null {
                         println!("{}", result);
                     }
+                    if debug_mode {
+                        println!("\n=== 执行完成 ===");
+                    }
                 }
                 Err(e) => {
-                    eprintln!("错误: {}", e);
+                    eprintln!("✗ 运行时错误:");
+                    print_detailed_error(&code, &e.to_string());
                     std::process::exit(1);
                 }
             }
         }
         Err(e) => {
-            eprintln!("无法读取文件 '{}': {}", filename, e);
+            eprintln!("✗ 无法读取文件 '{}': {}", filename, e);
             std::process::exit(1);
         }
     }
+}
+
+/// 打印详细的错误信息，包含源代码上下文
+fn print_detailed_error(source: &str, error_msg: &str) {
+    eprintln!("{}", error_msg);
+
+    // 尝试提取行号和列号
+    if let Some(line_col) = extract_line_column(error_msg) {
+        let (line, col) = line_col;
+        print_source_context(source, line, col);
+    }
+}
+
+/// 从错误消息中提取行号和列号
+fn extract_line_column(error_msg: &str) -> Option<(usize, usize)> {
+    // 查找 "line X, column Y" 模式
+    if let Some(line_start) = error_msg.find("line ") {
+        if let Some(line_end) = error_msg[line_start..].find(',') {
+            let line_str = &error_msg[line_start + 5..line_start + line_end];
+            if let Ok(line) = line_str.trim().parse::<usize>() {
+                if let Some(col_start) = error_msg.find("column ") {
+                    let col_str = &error_msg[col_start + 7..];
+                    // 找到第一个非数字字符
+                    let col_end = col_str
+                        .find(|c: char| !c.is_numeric())
+                        .unwrap_or(col_str.len());
+                    if let Ok(col) = col_str[..col_end].trim().parse::<usize>() {
+                        return Some((line, col));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 打印源代码上下文
+fn print_source_context(source: &str, error_line: usize, error_col: usize) {
+    let lines: Vec<&str> = source.lines().collect();
+
+    if error_line == 0 || error_line > lines.len() {
+        return;
+    }
+
+    eprintln!();
+    eprintln!("源代码位置:");
+
+    // 显示前一行（如果存在）
+    if error_line > 1 {
+        eprintln!("{:4} | {}", error_line - 1, lines[error_line - 2]);
+    }
+
+    // 显示错误行
+    eprintln!("{:4} | {}", error_line, lines[error_line - 1]);
+
+    // 显示错误位置指示器
+    let indent = format!("{:4} | ", error_line);
+    let pointer = " ".repeat(error_col.saturating_sub(1)) + "^";
+    eprintln!("{}{}", indent, pointer);
+
+    // 显示后一行（如果存在）
+    if error_line < lines.len() {
+        eprintln!("{:4} | {}", error_line + 1, lines[error_line]);
+    }
+    eprintln!();
 }
 
 /// 启动 REPL 交互模式
@@ -135,7 +341,11 @@ fn run_repl() {
                         }
                     }
                     Err(e) => {
-                        eprintln!("错误: {}", e);
+                        eprintln!("✗ {}", e);
+                        // 在 REPL 中也显示详细错误信息
+                        if let Some((line, col)) = extract_line_column(&e.to_string()) {
+                            print_source_context(input, line, col);
+                        }
                     }
                 }
 
@@ -158,9 +368,21 @@ fn print_help() {
     println!("  (X + 5)           # 表达式求值");
     println!("  Println \"Hello\"   # 打印输出");
     println!();
+    println!("Lambda 表达式:");
+    println!("  Lambda X -> X * 2           # 单参数");
+    println!("  Lambda (X, Y) -> X + Y      # 多参数");
+    println!("  Func(X) {{ Return (X * 2) }}  # 块语法");
+    println!();
+    println!("多行字符串:");
+    println!("  \"\"\"多行");
+    println!("  字符串");
+    println!("  内容\"\"\"");
+    println!();
     println!("数据结构:");
     println!("  [1, 2, 3]         # 数组");
+    println!("  [[1, 2], [3, 4]]  # 嵌套数组");
     println!("  {{a: 1, b: 2}}      # 字典");
+    println!("  {{a: {{b: 1}}}}       # 嵌套字典");
     println!();
     println!("控制流:");
     println!("  If (X > 0) {{      # 条件判断");
@@ -194,9 +416,5 @@ fn print_help() {
     println!("  :load datetime           # 加载日期时间库");
     println!("  :load testing            # 加载测试框架");
     println!("  exit, quit               # 退出 REPL");
-    println!();
-    println!("命令行选项:");
-    println!("  aether script.aether     # 运行脚本 (自动加载标准库)");
-    println!("  aether --no-stdlib file  # 运行脚本但不加载标准库");
     println!();
 }

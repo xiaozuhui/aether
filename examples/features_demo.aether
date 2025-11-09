@@ -1,0 +1,152 @@
+// ===================================================
+// Aether 新功能演示
+// 1. 多行字符串
+// 2. Lambda 箭头表达式  
+// 3. 嵌套数据结构
+// ===================================================
+
+PRINTLN("=== Aether 新功能演示 ===")
+PRINTLN("")
+
+// ===================================================
+// 1. 多行字符串
+// ===================================================
+
+PRINTLN("1. 多行字符串支持")
+PRINTLN("------------------")
+
+Set QUERY """
+SELECT * FROM users
+WHERE age > 18
+ORDER BY name
+LIMIT 10
+"""
+
+PRINTLN("SQL 查询:")
+PRINTLN(QUERY)
+PRINTLN("")
+
+// ===================================================
+// 2. Lambda 箭头表达式
+// ===================================================
+
+PRINTLN("2. Lambda 箭头表达式")
+PRINTLN("--------------------")
+
+// 单参数 Lambda
+Set SQUARE Lambda X -> X * X
+Set DOUBLE Lambda X -> X * 2
+Set ADD_10 Lambda X -> X + 10
+
+PRINTLN("SQUARE(5) = ")
+PRINTLN(SQUARE(5))
+PRINTLN("DOUBLE(5) = ")
+PRINTLN(DOUBLE(5))
+PRINTLN("ADD_10(5) = ")
+PRINTLN(ADD_10(5))
+PRINTLN("")
+
+// 多参数 Lambda  
+Set ADD Lambda (A, B) -> A + B
+Set MULTIPLY Lambda (A, B) -> A * B
+
+PRINTLN("ADD(3, 7) = ")
+PRINTLN(ADD(3, 7))
+PRINTLN("MULTIPLY(6, 4) = ")
+PRINTLN(MULTIPLY(6, 4))
+PRINTLN("")
+
+// Lambda 与 MAP
+Set NUMS [1, 2, 3, 4, 5]
+Set SQUARED MAP(NUMS, Lambda X -> X * X)
+Set DOUBLED MAP(NUMS, Lambda X -> X * 2)
+
+PRINTLN("原始数组: ")
+PRINTLN(NUMS)
+PRINTLN("平方后: ")
+PRINTLN(SQUARED)
+PRINTLN("翻倍后: ")
+PRINTLN(DOUBLED)
+PRINTLN("")
+
+// ===================================================
+// 3. 嵌套数据结构
+// ===================================================
+
+PRINTLN("3. 嵌套数据结构")
+PRINTLN("---------------")
+
+// 嵌套字典
+Set USER {
+    ID: 1001,
+    NAME: "张三",
+    ADDRESS: {
+        CITY: "北京",
+        DISTRICT: "海淀区"
+    },
+    TAGS: ["VIP", "活跃用户"]
+}
+
+PRINTLN("用户 ID: ")
+PRINTLN(USER["ID"])
+PRINTLN("用户名: ")
+PRINTLN(USER["NAME"])
+PRINTLN("城市: ")
+PRINTLN(USER["ADDRESS"]["CITY"])
+PRINTLN("标签: ")
+PRINTLN(USER["TAGS"])
+PRINTLN("")
+
+// 嵌套数组（矩阵）
+Set MATRIX [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+
+PRINTLN("矩阵:")
+PRINTLN(MATRIX)
+PRINTLN("第一行: ")
+PRINTLN(MATRIX[0])
+PRINTLN("中心元素 [1][1]: ")
+PRINTLN(MATRIX[1][1])
+PRINTLN("")
+
+// 使用 Lambda 处理矩阵
+Set DOUBLE_ROW Lambda ROW -> MAP(ROW, Lambda X -> X * 2)
+Set MATRIX_X2 MAP(MATRIX, DOUBLE_ROW)
+
+PRINTLN("矩阵翻倍:")
+PRINTLN(MATRIX_X2)
+PRINTLN("")
+
+// ===================================================
+// 4. 综合应用
+// ===================================================
+
+PRINTLN("4. 综合应用 - 销售数据分析")
+PRINTLN("---------------------------")
+
+// 销售数据（嵌套结构）
+Set SALES [
+    {PRODUCT: "笔记本", PRICE: 5999, QTY: 15},
+    {PRODUCT: "鼠标", PRICE: 89, QTY: 120},
+    {PRODUCT: "键盘", PRICE: 299, QTY: 80}
+]
+
+// 使用 Lambda 计算总额
+Set CALC_TOTAL Lambda ITEM -> ITEM["PRICE"] * ITEM["QTY"]
+Set TOTALS MAP(SALES, CALC_TOTAL)
+
+PRINTLN("各产品销售额:")
+Set I 0
+While (I < LEN(SALES)) {
+    Set ITEM SALES[I]
+    Set TOTAL TOTALS[I]
+    PRINTLN("  " + ITEM["PRODUCT"] + ": ")
+    PRINTLN(TOTAL)
+    Set I (I + 1)
+}
+
+PRINTLN("")
+PRINTLN("=== 演示完成 ===")
