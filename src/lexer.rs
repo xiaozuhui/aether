@@ -76,6 +76,16 @@ impl Lexer {
         }
     }
 
+    /// Peek at the character n positions ahead without advancing
+    fn peek_char_n(&self, n: usize) -> char {
+        let pos = self.position + n;
+        if pos >= self.input.len() {
+            '\0'
+        } else {
+            self.input[pos]
+        }
+    }
+
     /// Get the next token
     pub fn next_token(&mut self) -> Token {
         let had_ws = self.skip_whitespace();
@@ -169,7 +179,14 @@ impl Lexer {
             ';' => Token::Semicolon,
 
             // String literals
-            '"' => return self.read_string(),
+            '"' => {
+                // Check if it's a multiline string (""")
+                if self.peek_char() == '"' && self.peek_char_n(2) == '"' {
+                    return self.read_multiline_string();
+                } else {
+                    return self.read_string();
+                }
+            }
 
             // Newline (statement separator)
             '\n' => Token::Newline,
@@ -302,6 +319,44 @@ impl Lexer {
 
         // Process escape sequences
         Token::String(self.process_escapes(&string))
+    }
+
+    /// Read a multiline string literal (""" ... """)
+    fn read_multiline_string(&mut self) -> Token {
+        // Skip the opening """
+        self.read_char(); // Skip first "
+        self.read_char(); // Skip second "
+        self.read_char(); // Skip third "
+        
+        let start = self.position;
+        
+        // Read until we find closing """
+        loop {
+            if self.ch == '\0' {
+                return Token::Illegal('"'); // Unterminated multiline string
+            }
+            
+            // Check if we found closing """
+            if self.ch == '"' && self.peek_char() == '"' && self.peek_char_n(2) == '"' {
+                let string: String = self.input[start..self.position].iter().collect();
+                
+                // Skip the closing """
+                self.read_char(); // Skip first "
+                self.read_char(); // Skip second "
+                self.read_char(); // Skip third "
+                
+                // Process escape sequences
+                return Token::String(self.process_escapes(&string));
+            }
+            
+            // Handle newlines for line tracking
+            if self.ch == '\n' {
+                self.line += 1;
+                self.column = 0;
+            }
+            
+            self.read_char();
+        }
     }
 
     /// Process escape sequences in strings

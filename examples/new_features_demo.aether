@@ -1,0 +1,140 @@
+// New Features Demo
+// Demonstration of nested structures, multiline strings, and lambda expressions
+
+PRINTLN("--- Feature 1: Nested Arrays ---")
+Set MATRIX [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+PRINTLN("Matrix:")
+PRINTLN(MATRIX)
+PRINTLN("Element at [1][2]:")
+PRINTLN(MATRIX[1][2])
+
+PRINTLN("")
+PRINTLN("--- Feature 2: Nested Dictionaries ---")
+Set CONFIG {
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "credentials": {
+            "username": "admin",
+            "password": "secret"
+        }
+    },
+    "cache": {
+        "enabled": True,
+        "ttl": 300
+    }
+}
+PRINTLN("Full config:")
+PRINTLN(CONFIG)
+PRINTLN("Database username:")
+PRINTLN(CONFIG["database"]["credentials"]["username"])
+
+PRINTLN("")
+PRINTLN("--- Feature 3: Multiline Strings ---")
+Set SQL_QUERY """
+SELECT 
+    id, 
+    name, 
+    email,
+    created_at
+FROM users
+WHERE status = 'active'
+  AND age >= 18
+ORDER BY created_at DESC
+LIMIT 100
+"""
+PRINTLN("SQL Query:")
+PRINTLN(SQL_QUERY)
+
+Set HTML_TEMPLATE """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to Aether</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <p>This is a multiline string example.</p>
+</body>
+</html>
+"""
+PRINTLN("HTML Template:")
+PRINTLN(HTML_TEMPLATE)
+
+PRINTLN("")
+PRINTLN("--- Feature 4: Lambda Expressions ---")
+
+// Basic lambda
+Set DOUBLE Func(X) { Return (X * 2) }
+PRINTLN("Double of 5:")
+PRINTLN(DOUBLE(5))
+
+// Multiple parameters
+Set ADD Func(A, B) { Return (A + B) }
+PRINTLN("3 + 7:")
+PRINTLN(ADD(3, 7))
+
+// Lambda with MAP
+Set NUMBERS [1, 2, 3, 4, 5]
+Set SQUARED MAP(NUMBERS, Func(X) { Return (X * X) })
+PRINTLN("Squared numbers:")
+PRINTLN(SQUARED)
+
+// Lambda with FILTER
+Set EVENS FILTER(NUMBERS, Func(X) { Return (X % 2 == 0) })
+PRINTLN("Even numbers from 1-5:")
+PRINTLN(EVENS)
+
+// Lambda closure
+Set MULTIPLIER 10
+Set MULTIPLY_BY_TEN Func(X) { Return (X * MULTIPLIER) }
+PRINTLN("5 * 10 using closure:")
+PRINTLN(MULTIPLY_BY_TEN(5))
+
+PRINTLN("")
+PRINTLN("--- Feature 5: Combined Features ---")
+
+// Nested structures with lambdas
+Set USERS [
+    {"name": "Alice", "age": 30, "city": "Beijing"},
+    {"name": "Bob", "age": 25, "city": "Shanghai"},
+    {"name": "Charlie", "age": 35, "city": "Guangzhou"},
+    {"name": "Diana", "age": 28, "city": "Shenzhen"}
+]
+
+Set NAMES MAP(USERS, Func(USER) { Return USER["name"] })
+PRINTLN("User names:")
+PRINTLN(NAMES)
+
+Set ADULTS FILTER(USERS, Func(USER) { Return (USER["age"] >= 30) })
+PRINTLN("Users aged 30 or above:")
+PRINTLN(ADULTS)
+
+// Multiline strings in nested structures
+Set API_CONFIG {
+    "endpoints": {
+        "users": {
+            "query": """
+                SELECT id, name, email
+                FROM users
+                WHERE active = 1
+            """,
+            "url": "/api/v1/users"
+        },
+        "posts": {
+            "query": """
+                SELECT id, title, content
+                FROM posts
+                WHERE published = 1
+            """,
+            "url": "/api/v1/posts"
+        }
+    }
+}
+
+PRINTLN("Users endpoint query:")
+PRINTLN(API_CONFIG["endpoints"]["users"]["query"])
+
+PRINTLN("")
+PRINTLN("--- All Features Working! ---")

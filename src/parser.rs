@@ -956,6 +956,7 @@ impl Parser {
             Token::Minus => self.parse_unary_expression(UnaryOp::Minus),
             Token::Not => self.parse_unary_expression(UnaryOp::Not),
             Token::If => self.parse_if_expression(),
+            Token::Func => self.parse_lambda_expression(),
             _ => Err(ParseError::InvalidExpression {
                 message: "Unexpected token in expression".to_string(),
                 line: self.current_line,
@@ -1017,10 +1018,12 @@ impl Parser {
         while self.current_token != Token::RightBracket && self.current_token != Token::EOF {
             elements.push(self.parse_expression(Precedence::Lowest)?);
 
+            self.skip_newlines();
+
             if self.current_token == Token::Comma {
                 self.next_token();
                 self.skip_newlines();
-            } else {
+            } else if self.current_token == Token::RightBracket {
                 break;
             }
         }
@@ -1059,10 +1062,12 @@ impl Parser {
 
             pairs.push((key, value));
 
+            self.skip_newlines();
+
             if self.current_token == Token::Comma {
                 self.next_token();
                 self.skip_newlines();
-            } else {
+            } else if self.current_token == Token::RightBrace {
                 break;
             }
         }
@@ -1204,6 +1209,24 @@ impl Parser {
             elif_branches,
             else_branch,
         })
+    }
+
+    /// Parse lambda expression: Func(params) { body }
+    fn parse_lambda_expression(&mut self) -> Result<Expr, ParseError> {
+        self.next_token(); // skip 'Func'
+        self.expect_token(Token::LeftParen)?;
+
+        let params = self.parse_parameter_list()?;
+
+        self.expect_token(Token::RightParen)?;
+        self.skip_newlines();
+        self.expect_token(Token::LeftBrace)?;
+
+        let body = self.parse_block()?;
+
+        self.expect_token(Token::RightBrace)?;
+
+        Ok(Expr::Lambda { params, body })
     }
 }
 

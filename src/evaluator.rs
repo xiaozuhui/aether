@@ -592,11 +592,13 @@ impl Evaluator {
                 Ok(Value::Null)
             }
 
-            Expr::Lambda { .. } => {
-                // TODO: Implement lambda expressions
-                Err(RuntimeError::InvalidOperation(
-                    "Lambda not yet implemented".to_string(),
-                ))
+            Expr::Lambda { params, body } => {
+                // Create a closure by capturing the current environment
+                Ok(Value::Function {
+                    params: params.clone(),
+                    body: body.clone(),
+                    env: Rc::clone(&self.env),
+                })
             }
         }
     }
