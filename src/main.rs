@@ -1,7 +1,7 @@
 use aether::Aether;
 use std::env;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,6 +12,9 @@ fn main() {
         let show_ast = args.contains(&"--ast".to_string());
         let check_only = args.contains(&"--check".to_string());
         let debug_mode = args.contains(&"--debug".to_string());
+        let ouroboros = args.contains(&"--ouroboros".to_string())
+            || args.contains(&"--py-to-aether".to_string());
+        let run_after = args.contains(&"--run".to_string());
         let show_help = args.contains(&"--help".to_string()) || args.contains(&"-h".to_string());
 
         if show_help {
@@ -20,13 +23,23 @@ fn main() {
         }
 
         // 获取脚本文件名
-        let script_file = args
-            .iter()
-            .find(|arg| !arg.starts_with("--") && !arg.starts_with("-") && *arg != &args[0])
-            .map(|s| s.as_str());
+        // - 默认：第一个非 flag 参数
+        // - ouroboros：允许用 "-" 表示 stdin
+        let script_file = args.iter().skip(1).find(|arg| {
+            if arg.starts_with("--") {
+                return false;
+            }
+            if ouroboros && arg.as_str() == "-" {
+                return true;
+            }
+            !arg.starts_with('-')
+        });
 
         if let Some(file) = script_file {
-            if check_only {
+            let file = file.as_str();
+            if ouroboros {
+                ouroboros_transpile_python(file, run_after, use_stdlib, debug_mode);
+            } else if check_only {
                 check_file(file);
             } else if show_ast {
                 show_ast_for_file(file);
@@ -58,6 +71,8 @@ fn print_cli_help() {
     println!("  --ast                    显示抽象语法树 (AST)");
     println!("  --debug                  启用调试模式（显示求值过程）");
     println!("  --no-stdlib              不自动加载标准库");
+    println!("  --ouroboros              将 Python 代码转译为 Aether（输出到 stdout）");
+    println!("  --run                    配合 --ouroboros：转译后直接运行");
     println!();
     println!("示例:");
     println!("  aether script.aether              # 运行脚本");
@@ -65,7 +80,122 @@ fn print_cli_help() {
     println!("  aether --ast script.aether        # 查看 AST");
     println!("  aether --debug script.aether      # 调试模式运行");
     println!("  aether --no-stdlib script.aether  # 不加载标准库");
+    println!("  aether --ouroboros demo.py > demo.aether      # Python → Aether");
+    println!("  aether --ouroboros --run demo.py              # 转译后直接运行");
+    println!("  cat demo.py | aether --ouroboros - > demo.aether  # 从 stdin 转译");
     println!();
+}
+
+/// Ouroboros：将 Python 源码转译为 Aether。
+///
+/// - filename = "-" 时从 stdin 读取
+/// - 默认输出转译后的 Aether 到 stdout
+/// - 若 run_after=true，则转译后直接执行（stdout 输出执行结果/脚本输出）
+/// - 诊断信息输出到 stderr；如果有错误则退出码=1
+fn ouroboros_transpile_python(
+    filename: &str,
+    run_after: bool,
+    load_stdlib: bool,
+    debug_mode: bool,
+) {
+    use aether::pytranspile::{Severity, TranspileOptions, python_to_aether};
+
+    let source = if filename == "-" {
+        let mut buf = String::new();
+        if let Err(e) = io::stdin().read_to_string(&mut buf) {
+            eprintln!("✗ 无法从 stdin 读取: {}", e);
+            std::process::exit(1);
+        }
+        buf
+    } else {
+        match fs::read_to_string(filename) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("✗ 无法读取文件 '{}': {}", filename, e);
+                std::process::exit(1);
+            }
+        }
+    };
+
+    let opts = TranspileOptions::default();
+    let res = python_to_aether(&source, &opts);
+
+    // 打印诊断信息（warning 也会打印）。
+    for d in &res.diagnostics.0 {
+        let level = match d.severity {
+            Severity::Error => "error",
+            Severity::Warning => "warning",
+        };
+        if d.span.line > 0 {
+            eprintln!(
+                "[{level}] {}: {} (line {}, col {})",
+                d.code, d.message, d.span.line, d.span.col
+            );
+        } else {
+            eprintln!("[{level}] {}: {}", d.code, d.message);
+        }
+    }
+
+    if res.diagnostics.has_errors() || res.aether.is_none() {
+        std::process::exit(1);
+    }
+
+    let code = res.aether.unwrap();
+
+    if !run_after {
+        print!("{}", code);
+        if !code.ends_with('\n') {
+            println!();
+        }
+        return;
+    }
+
+    // 转译后直接运行：行为尽量与 run_file 对齐。
+    let mut engine = if load_stdlib {
+        match Aether::with_stdlib() {
+            Ok(engine) => engine,
+            Err(e) => {
+                eprintln!("警告: 标准库加载失败: {}", e);
+                eprintln!("继续运行但不加载标准库...");
+                Aether::with_all_permissions()
+            }
+        }
+    } else {
+        Aether::with_all_permissions()
+    };
+
+    if debug_mode {
+        println!("=== Ouroboros 调试模式 ===");
+        println!("Python 输入: {}", filename);
+        println!(
+            "标准库: {}",
+            if load_stdlib {
+                "已加载"
+            } else {
+                "未加载"
+            }
+        );
+        println!();
+    }
+
+    match engine.eval(&code) {
+        Ok(result) => {
+            if debug_mode {
+                println!("=== 执行结果 ===");
+            }
+            if result != aether::Value::Null {
+                println!("{}", result);
+            }
+            if debug_mode {
+                println!("\n=== 执行完成 ===");
+            }
+        }
+        Err(e) => {
+            eprintln!("✗ 运行时错误:");
+            print_detailed_error(&code, &e.to_string());
+            std::process::exit(1);
+        }
+    }
 }
 
 /// 检查文件语法

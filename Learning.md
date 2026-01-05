@@ -597,6 +597,44 @@ async fn main() -> Result<(), String> {
 }
 ```
 
+### 12.6 Python → Aether（DSL 前置转译，可选）
+
+如果你的输入侧已经是 Python（或类 Python 的表达式），你可以在 Rust 中先把 Python 转译为 Aether，再交给 Aether 引擎执行。
+
+安全建议：
+
+- 转译阶段会做“安全默认”的拒绝（例如 `numpy`、文件/网络 IO、`print/input` 等）
+- 执行阶段建议使用 `Aether::new()`（库模式默认禁用 IO），避免把 IO 权限带进 DSL
+
+```rust
+use aether::{Aether, Value};
+use aether::pytranspile::{python_to_aether, TranspileOptions};
+
+fn main() -> Result<(), String> {
+    let py = r#"
+x = [1, 2, 3]
+y = {"a": 1, "b": 2}
+z = y["a"] + 12.34
+z
+"#;
+
+    let res = python_to_aether(py, &TranspileOptions::default());
+    if res.diagnostics.has_errors() {
+        // 这里的 diagnostics 会告诉你为什么被拒绝/哪里不支持
+        return Err(format!("{}", res.diagnostics));
+    }
+
+    let aether_code = res.aether.unwrap();
+
+    let mut engine = Aether::new(); // 默认安全：无 IO
+    let v = engine.eval(&aether_code)?;
+    if v != Value::Null {
+        println!("{}", v);
+    }
+    Ok(())
+}
+```
+
 ---
 
 ## 13. 调试、排错与最佳实践

@@ -22,7 +22,6 @@
 - [安全模型](#-安全模型)
 - [性能优化](#-性能优化)
 - [语言绑定](#-语言绑定)
-- [开发与测试](#-开发与测试)
 - [许可证](#-许可证)
 
 ---
@@ -80,6 +79,65 @@ echo 'PRINTLN("Hello, Aether!")' > hello.aether
 
 # 运行
 aether hello.aether
+```
+
+### Python → Aether（CLI 转译）
+
+当你希望把现有的 Python 逻辑迁移到 Aether（并继续运行在 Aether 引擎里）时，可以直接用 CLI 转译。
+
+注意：默认会拒绝 `numpy`、文件/网络 IO、以及 `print/input`（更适合 DSL 场景的安全默认值）。
+
+```bash
+# demo.py
+cat > demo.py <<'PY'
+x = [1, 2, 3]
+y = {"a": 1, "b": 2}
+z = y["a"] + 12.34
+z
+PY
+
+# 转译为 Aether（输出到 stdout）
+aether --ouroboros demo.py > demo.aether
+
+# 查看结果
+cat demo.aether
+
+# 也支持从 stdin 读取（用 '-' 表示 stdin）
+cat demo.py | aether --ouroboros - > demo.aether
+
+# 转译后直接运行
+aether --ouroboros --run demo.py
+```
+
+如果你要在 Rust 服务端把 Python 代码作为输入，然后先转成 Aether 再执行，可以直接调用转译 API：
+
+> 说明：本仓库当前默认已开启 `pytranspile` feature。若你的依赖显式关掉了默认 feature，请在 `Cargo.toml` 开启 `features = ["pytranspile"]`。
+
+```rust
+use aether::{Aether, Value};
+use aether::pytranspile::{python_to_aether, TranspileOptions};
+
+fn main() -> Result<(), String> {
+    let py = r#"
+z = 1 + 2
+z
+"#;
+
+    let res = python_to_aether(py, &TranspileOptions::default());
+    if res.diagnostics.has_errors() {
+        return Err(format!("{}", res.diagnostics));
+    }
+
+    let code = res.aether.unwrap();
+
+    // DSL 默认建议用 Aether::new()（IO 默认禁用）
+    let mut engine = Aether::new();
+    let v = engine.eval(&code)?;
+    if v != Value::Null {
+        println!("{}", v);
+    }
+    Ok(())
+}
 ```
 
 **Rust 嵌入 (默认安全):**
@@ -653,12 +711,12 @@ CALC_HOUSING_FUND
 - ✅ AST 缓存和性能优化
 - ✅ Go/TypeScript 绑定
 - ✅ 100+ 测试（持续维护）
+- ✅ Python 绑定
 
 **计划中：**
 
 - 🔄 完整的尾递归优化
 - 🔄 JIT 编译器
-- 🔄 Python 绑定
 - 🔄 更多优化
 
 ---
