@@ -6,11 +6,11 @@ use aether::Aether;
 #[test]
 fn test_stdlib_embedded() {
     // 验证标准库代码已嵌入
-    assert!(aether::stdlib::STRING_UTILS.len() > 0);
-    assert!(aether::stdlib::ARRAY_UTILS.len() > 0);
-    assert!(aether::stdlib::VALIDATION.len() > 0);
-    assert!(aether::stdlib::DATETIME.len() > 0);
-    assert!(aether::stdlib::TESTING.len() > 0);
+    assert!(!aether::stdlib::STRING_UTILS.is_empty());
+    assert!(!aether::stdlib::ARRAY_UTILS.is_empty());
+    assert!(!aether::stdlib::VALIDATION.is_empty());
+    assert!(!aether::stdlib::DATETIME.is_empty());
+    assert!(!aether::stdlib::TESTING.is_empty());
 }
 
 #[test]

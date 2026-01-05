@@ -85,7 +85,7 @@ pub fn excel_write_cell(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
 
@@ -95,7 +95,7 @@ pub fn excel_write_cell(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "String".to_string(),
                 got: format!("{:?}", args[1]),
-            })
+            });
         }
     };
 
@@ -105,7 +105,7 @@ pub fn excel_write_cell(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[2]),
-            })
+            });
         }
     };
 
@@ -115,7 +115,7 @@ pub fn excel_write_cell(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[3]),
-            })
+            });
         }
     };
 
@@ -192,7 +192,7 @@ pub fn excel_save(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
 
@@ -202,7 +202,7 @@ pub fn excel_save(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "String".to_string(),
                 got: format!("{:?}", args[1]),
-            })
+            });
         }
     };
 
@@ -233,7 +233,7 @@ pub fn format_number(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
 
@@ -262,8 +262,8 @@ pub fn format_number(args: &[Value]) -> Result<Value, RuntimeError> {
         let integer_part = parts[0];
         let decimal_part = if parts.len() > 1 { parts[1] } else { "" };
 
-        let (sign, abs_integer) = if integer_part.starts_with('-') {
-            ("-", &integer_part[1..])
+        let (sign, abs_integer) = if let Some(stripped) = integer_part.strip_prefix('-') {
+            ("-", stripped)
         } else {
             ("", integer_part)
         };
@@ -271,7 +271,7 @@ pub fn format_number(args: &[Value]) -> Result<Value, RuntimeError> {
         let chars: Vec<char> = abs_integer.chars().collect();
         let mut result = String::new();
         for (i, c) in chars.iter().enumerate() {
-            if i > 0 && (chars.len() - i) % 3 == 0 {
+            if i > 0 && (chars.len() - i).is_multiple_of(3) {
                 result.push(',');
             }
             result.push(*c);
@@ -304,7 +304,7 @@ pub fn format_currency(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
 
@@ -355,7 +355,7 @@ pub fn format_percent(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
 

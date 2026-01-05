@@ -40,7 +40,7 @@ pub fn calc_attendance_rate(args: &[Value]) -> Result<Value, RuntimeError> {
         ));
     }
 
-    let rate = (actual_days / required_days).min(1.0).max(0.0);
+    let rate = (actual_days / required_days).clamp(0.0, 1.0);
     Ok(Value::Number(rate))
 }
 

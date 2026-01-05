@@ -138,7 +138,7 @@ pub fn is_workday(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let result = if is_holiday == 1 {
         0 // 节假日不是工作日
-    } else if weekday >= 1 && weekday <= 5 {
+    } else if (1..=5).contains(&weekday) {
         1 // 周一到周五是工作日
     } else {
         0 // 周末不是工作日

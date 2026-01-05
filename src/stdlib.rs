@@ -126,16 +126,16 @@ mod tests {
 
     #[test]
     fn test_module_exists() {
-        assert!(STRING_UTILS.len() > 0);
-        assert!(ARRAY_UTILS.len() > 0);
-        assert!(VALIDATION.len() > 0);
-        assert!(DATETIME.len() > 0);
-        assert!(TESTING.len() > 0);
-        assert!(SET.len() > 0);
-        assert!(QUEUE.len() > 0);
-        assert!(STACK.len() > 0);
-        assert!(HEAP.len() > 0);
-        assert!(SORTING.len() > 0);
+        assert!(!STRING_UTILS.is_empty());
+        assert!(!ARRAY_UTILS.is_empty());
+        assert!(!VALIDATION.is_empty());
+        assert!(!DATETIME.is_empty());
+        assert!(!TESTING.is_empty());
+        assert!(!SET.is_empty());
+        assert!(!QUEUE.is_empty());
+        assert!(!STACK.is_empty());
+        assert!(!HEAP.is_empty());
+        assert!(!SORTING.is_empty());
     }
 
     #[test]

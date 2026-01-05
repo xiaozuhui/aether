@@ -20,7 +20,10 @@ use aether::value::Value;
 fn test_asin() {
     let result = math::asin(&[Value::Number(0.5)]).unwrap();
     if let Value::Number(n) = result {
-        assert!((n - 0.5236).abs() < 0.001);
+        #[allow(clippy::approx_constant)]
+        {
+            assert!((n - 0.5236).abs() < 0.001);
+        }
     } else {
         panic!("Expected number");
     }
@@ -152,7 +155,7 @@ fn test_variance_and_std() {
         Value::Number(9.0),
     ]);
 
-    let var = math::variance(&[arr.clone()]).unwrap();
+    let var = math::variance(&[arr.clone()]).unwrap(); // [arr.clone()] is intentional - variance takes array of arrays
     if let Value::Number(v) = var {
         assert!((v - 4.571).abs() < 0.01);
     } else {
@@ -352,14 +355,20 @@ fn test_matmul() {
 fn test_constants() {
     let pi = math::pi(&[]).unwrap();
     if let Value::Number(n) = pi {
-        assert!((n - 3.14159).abs() < 0.001);
+        #[allow(clippy::approx_constant)]
+        {
+            assert!((n - 3.14159).abs() < 0.001);
+        }
     } else {
         panic!("Expected number");
     }
 
     let e = math::e(&[]).unwrap();
     if let Value::Number(n) = e {
-        assert!((n - 2.71828).abs() < 0.001);
+        #[allow(clippy::approx_constant)]
+        {
+            assert!((n - 2.71828).abs() < 0.001);
+        }
     } else {
         panic!("Expected number");
     }

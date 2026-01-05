@@ -41,6 +41,7 @@ pub use statistics::*;
 pub use tax::*;
 
 /// 注册所有薪酬计算函数
+#[allow(clippy::type_complexity)]
 pub fn register_payroll_functions() -> HashMap<String, fn(&[Value]) -> Result<Value, RuntimeError>>
 {
     let mut functions = HashMap::new();

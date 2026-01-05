@@ -39,21 +39,12 @@ pub struct FunctionDoc {
 }
 
 /// IO 权限配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IOPermissions {
     /// 是否允许文件系统操作
     pub filesystem_enabled: bool,
     /// 是否允许网络操作
     pub network_enabled: bool,
-}
-
-impl Default for IOPermissions {
-    fn default() -> Self {
-        Self {
-            filesystem_enabled: false, // 默认禁用，确保安全
-            network_enabled: false,    // 默认禁用，确保安全
-        }
-    }
 }
 
 impl IOPermissions {

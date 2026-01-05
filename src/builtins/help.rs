@@ -677,7 +677,7 @@ pub fn help(args: &[Value]) -> Result<Value, RuntimeError> {
                 let func_name_upper = func_name.to_uppercase();
 
                 if let Some(doc) = docs.get(&func_name_upper) {
-                    let mut output = String::from("=".repeat(50));
+                    let mut output = "=".repeat(50);
                     output.push_str(&format!("\n函数: {}\n", doc.name));
                     output.push_str(&"=".repeat(50));
                     output.push_str(&format!("\n\n描述:\n  {}\n\n", doc.description));

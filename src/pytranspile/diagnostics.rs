@@ -34,7 +34,7 @@ impl Diagnostic {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Diagnostics(pub Vec<Diagnostic>);
 
 impl Diagnostics {

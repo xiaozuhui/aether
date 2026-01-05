@@ -47,20 +47,18 @@ fn validate_stdlib(crate_dir: &str) {
 
     match fs::read_dir(&stdlib_dir) {
         Ok(entries) => {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
+            for entry in entries.flatten() {
+                let path = entry.path();
 
-                    // 只检查 .aether 文件，跳过 examples 和 README
-                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("aether")
-                    {
-                        file_count += 1;
+                // 只检查 .aether 文件，跳过 examples 和 README
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("aether")
+                {
+                    file_count += 1;
 
-                        // 告诉 Cargo 监控这个文件的变化
-                        println!("cargo:rerun-if-changed={}", path.display());
+                    // 告诉 Cargo 监控这个文件的变化
+                    println!("cargo:rerun-if-changed={}", path.display());
 
-                        aether_files.push(path);
-                    }
+                    aether_files.push(path);
                 }
             }
         }

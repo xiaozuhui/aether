@@ -47,7 +47,7 @@ pub fn json_parse(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "String".to_string(),
                 got: format!("{:?}", other),
-            })
+            });
         }
     };
 
@@ -96,7 +96,7 @@ pub fn json_stringify(args: &[Value]) -> Result<Value, RuntimeError> {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number".to_string(),
                     got: format!("{:?}", other),
-                })
+                });
             }
         }
     } else {

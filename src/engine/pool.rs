@@ -98,7 +98,7 @@ impl EnginePool {
         for (i, &is_available) in self.available.iter().enumerate() {
             if is_available {
                 self.available[i] = false;
-                let mut engine = std::mem::replace(&mut self.engines[i], Aether::new());
+                let mut engine = std::mem::take(&mut self.engines[i]);
 
                 // 重置环境（保证隔离性）
                 engine.evaluator.reset_env();
@@ -208,17 +208,17 @@ impl PooledEngine {
 
 impl Drop for PooledEngine {
     fn drop(&mut self) {
-        if let Some(engine) = self.engine.take() {
-            if let Some(index) = self.pool_index {
-                // 归还到池中
-                unsafe {
-                    if !self.pool.is_null() {
-                        (*self.pool).return_engine(index, engine);
-                    }
+        if let Some(engine) = self.engine.take()
+            && let Some(index) = self.pool_index
+        {
+            // 归还到池中
+            unsafe {
+                if !self.pool.is_null() {
+                    (*self.pool).return_engine(index, engine);
                 }
             }
-            // 否则是临时引擎，直接丢弃
         }
+        // 否则是临时引擎，直接丢弃
     }
 }
 

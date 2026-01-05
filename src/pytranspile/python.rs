@@ -212,22 +212,22 @@ impl IrBuilder {
         match ty.as_str() {
             "Assign" => {
                 let targets = node.getattr("targets").ok();
-                if let Some(targets) = targets {
-                    if let Ok(list) = targets.cast_into::<PyList>() {
-                        if list.len() != 1 {
-                            return Stmt::Unsupported {
-                                span,
-                                reason: "multiple assignment targets".to_string(),
-                            };
-                        }
-                        let target = self.emit_expr(&list.get_item(0).unwrap());
-                        let value = self.emit_expr(&node.getattr("value").unwrap());
-                        return Stmt::Assign {
+                if let Some(targets) = targets
+                    && let Ok(list) = targets.cast_into::<PyList>()
+                {
+                    if list.len() != 1 {
+                        return Stmt::Unsupported {
                             span,
-                            target,
-                            value,
+                            reason: "multiple assignment targets".to_string(),
                         };
                     }
+                    let target = self.emit_expr(&list.get_item(0).unwrap());
+                    let value = self.emit_expr(&node.getattr("value").unwrap());
+                    return Stmt::Assign {
+                        span,
+                        target,
+                        value,
+                    };
                 }
                 Stmt::Unsupported {
                     span,
@@ -255,12 +255,11 @@ impl IrBuilder {
             "Expr" => {
                 let value = self.emit_expr(&node.getattr("value").unwrap());
                 // detect python print()
-                if let Expr::Call { func, .. } = &value {
-                    if let Expr::Name { id, .. } = func.as_ref() {
-                        if id == "print" {
-                            self.console_used = true;
-                        }
-                    }
+                if let Expr::Call { func, .. } = &value
+                    && let Expr::Name { id, .. } = func.as_ref()
+                    && id == "print"
+                {
+                    self.console_used = true;
                 }
                 Stmt::ExprStmt { span, value }
             }
@@ -549,10 +548,10 @@ impl IrBuilder {
                     if id == "np" {
                         self.numpy_used = true;
                     }
-                    if let Some(resolved) = self.aliases.get(id) {
-                        if resolved.split('.').next() == Some("numpy") {
-                            self.numpy_used = true;
-                        }
+                    if let Some(resolved) = self.aliases.get(id)
+                        && resolved.split('.').next() == Some("numpy")
+                    {
+                        self.numpy_used = true;
                     }
                 }
 

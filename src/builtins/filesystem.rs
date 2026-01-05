@@ -199,7 +199,7 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::CustomError(format!(
                             "Failed to read directory entry: {}",
                             e
-                        )))
+                        )));
                     }
                 }
             }

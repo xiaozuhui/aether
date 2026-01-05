@@ -31,7 +31,7 @@ impl EnvironmentPool {
 
     /// 从池中获取或创建新环境
     pub fn acquire(&mut self) -> Environment {
-        self.pool.pop().unwrap_or_else(Environment::new)
+        self.pool.pop().unwrap_or_default()
     }
 
     /// 将环境归还到池中
@@ -107,7 +107,7 @@ impl Environment {
     /// Check if a variable exists in this scope or parent scopes
     pub fn has(&self, name: &str) -> bool {
         self.store.contains_key(name)
-            || self.parent.as_ref().map_or(false, |p| p.borrow().has(name))
+            || self.parent.as_ref().is_some_and(|p| p.borrow().has(name))
     }
 
     /// Update a variable in the scope where it was defined

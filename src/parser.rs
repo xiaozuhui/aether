@@ -191,7 +191,7 @@ impl Parser {
     /// For function parameters, we allow more flexible naming (can use lowercase)
     fn validate_identifier_internal(&self, name: &str, is_param: bool) -> Result<(), ParseError> {
         // Check it doesn't start with a number
-        if name.chars().next().map_or(false, |c| c.is_numeric()) {
+        if name.chars().next().is_some_and(|c| c.is_numeric()) {
             return Err(ParseError::InvalidIdentifier {
                 name: name.to_string(),
                 reason: "标识符不能以数字开头".to_string(),
@@ -862,21 +862,16 @@ impl Parser {
             return Ok(params);
         }
 
-        loop {
-            match &self.current_token {
-                Token::Identifier(name) => {
-                    // Validate parameter name (allow flexible naming)
-                    self.validate_identifier_internal(name, true)?;
-                    params.push(name.clone());
-                    self.next_token();
+        while let Token::Identifier(name) = &self.current_token {
+            // Validate parameter name (allow flexible naming)
+            self.validate_identifier_internal(name, true)?;
+            params.push(name.clone());
+            self.next_token();
 
-                    if self.current_token == Token::Comma {
-                        self.next_token();
-                    } else {
-                        break;
-                    }
-                }
-                _ => break,
+            if self.current_token == Token::Comma {
+                self.next_token();
+            } else {
+                break;
             }
         }
 

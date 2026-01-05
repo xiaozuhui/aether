@@ -61,6 +61,7 @@ pub extern "C" fn aether_eval(
     result: *mut *mut c_char,
     error: *mut *mut c_char,
 ) -> c_int {
+    #![allow(clippy::not_unsafe_ptr_arg_deref)]
     if handle.is_null() || code.is_null() || result.is_null() || error.is_null() {
         return AetherErrorCode::NullPointer as c_int;
     }
@@ -86,7 +87,7 @@ pub extern "C" fn aether_eval(
                 }
             }
             Err(e) => {
-                let error_str = format!("{}", e);
+                let error_str = e.to_string();
                 match CString::new(error_str) {
                     Ok(cstr) => {
                         *error = cstr.into_raw();
@@ -139,6 +140,7 @@ pub extern "C" fn aether_free(handle: *mut AetherHandle) {
 /// Free a string allocated by Aether
 #[unsafe(no_mangle)]
 pub extern "C" fn aether_free_string(s: *mut c_char) {
+    #![allow(clippy::not_unsafe_ptr_arg_deref)]
     if !s.is_null() {
         unsafe {
             let _ = CString::from_raw(s);

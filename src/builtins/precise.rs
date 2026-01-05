@@ -291,7 +291,7 @@ pub fn gcd(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
     let b = match &args[1] {
@@ -300,7 +300,7 @@ pub fn gcd(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[1]),
-            })
+            });
         }
     };
     // 欧几里得算法实现最大公约数计算
@@ -336,7 +336,7 @@ pub fn lcm(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[0]),
-            })
+            });
         }
     };
     let b = match &args[1] {
@@ -345,7 +345,7 @@ pub fn lcm(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::TypeErrorDetailed {
                 expected: "Number".to_string(),
                 got: format!("{:?}", args[1]),
-            })
+            });
         }
     };
     // 使用公式：lcm(a,b) = |a*b| / gcd(a,b)

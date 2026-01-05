@@ -42,7 +42,7 @@ pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Number".to_string(),
                         got: format!("{:?}", args[0]),
-                    })
+                    });
                 }
             }
         }
@@ -54,7 +54,7 @@ pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Number, Number".to_string(),
                         got: format!("{:?}, {:?}", args[0], args[1]),
-                    })
+                    });
                 }
             }
         }
@@ -66,7 +66,7 @@ pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Number, Number, Number".to_string(),
                         got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
-                    })
+                    });
                 }
             }
         }
@@ -74,7 +74,7 @@ pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
             return Err(RuntimeError::WrongArity {
                 expected: 1,
                 got: n,
-            })
+            });
         }
     };
 
@@ -306,7 +306,7 @@ pub fn sort(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -361,7 +361,7 @@ pub fn sum(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -424,7 +424,7 @@ pub fn max(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -487,7 +487,7 @@ pub fn min(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }

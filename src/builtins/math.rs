@@ -1374,7 +1374,7 @@ pub fn mean(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -1436,7 +1436,7 @@ pub fn median(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -1444,7 +1444,7 @@ pub fn median(args: &[Value]) -> Result<Value, RuntimeError> {
             numbers.sort_by(|a, b| a.partial_cmp(b).unwrap());
             let mid = numbers.len() / 2;
 
-            let result = if numbers.len() % 2 == 0 {
+            let result = if numbers.len().is_multiple_of(2) {
                 (numbers[mid - 1] + numbers[mid]) / 2.0
             } else {
                 numbers[mid]
@@ -1520,7 +1520,7 @@ pub fn variance(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -1627,7 +1627,7 @@ pub fn quantile(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -1713,7 +1713,7 @@ pub fn dot(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Arrays containing {:?} and {:?}", val_a, val_b),
-                        })
+                        });
                     }
                 }
             }
@@ -1768,7 +1768,7 @@ pub fn norm(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -1831,8 +1831,8 @@ pub fn cross(args: &[Value]) -> Result<Value, RuntimeError> {
                 _ => {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Array of Numbers".to_string(),
-                        got: format!("Array containing non-numbers"),
-                    })
+                        got: "Array containing non-numbers".to_string(),
+                    });
                 }
             };
 
@@ -1841,8 +1841,8 @@ pub fn cross(args: &[Value]) -> Result<Value, RuntimeError> {
                 _ => {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Array of Numbers".to_string(),
-                        got: format!("Array containing non-numbers"),
-                    })
+                        got: "Array containing non-numbers".to_string(),
+                    });
                 }
             };
 
@@ -1917,7 +1917,7 @@ pub fn distance(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Arrays containing {:?} and {:?}", val_a, val_b),
-                        })
+                        });
                     }
                 }
             }
@@ -2051,7 +2051,7 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "2D Array (Array of Arrays)".to_string(),
                         got: format!("Array containing {:?}", a[0]),
-                    })
+                    });
                 }
             };
 
@@ -2068,7 +2068,7 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "2D Array (Array of Arrays)".to_string(),
                         got: format!("Array containing {:?}", b[0]),
-                    })
+                    });
                 }
             };
 
@@ -2081,14 +2081,15 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
 
             // Perform multiplication
             let mut result = Vec::new();
+            #[allow(clippy::needless_range_loop)]
             for i in 0..rows_a {
                 let row_a = match &a[i] {
                     Value::Array(r) => r,
                     _ => {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "2D Array".to_string(),
-                            got: format!("Non-uniform array structure"),
-                        })
+                            got: "Non-uniform array structure".to_string(),
+                        });
                     }
                 };
 
@@ -2102,7 +2103,7 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
                                 return Err(RuntimeError::TypeErrorDetailed {
                                     expected: "Number".to_string(),
                                     got: format!("{:?}", row_a[k]),
-                                })
+                                });
                             }
                         };
 
@@ -2111,8 +2112,8 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
                             _ => {
                                 return Err(RuntimeError::TypeErrorDetailed {
                                     expected: "2D Array".to_string(),
-                                    got: format!("Non-uniform array structure"),
-                                })
+                                    got: "Non-uniform array structure".to_string(),
+                                });
                             }
                         };
 
@@ -2122,7 +2123,7 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
                                 return Err(RuntimeError::TypeErrorDetailed {
                                     expected: "Number".to_string(),
                                     got: format!("{:?}", row_b[j]),
-                                })
+                                });
                             }
                         };
 
@@ -2186,7 +2187,7 @@ pub fn transpose(args: &[Value]) -> Result<Value, RuntimeError> {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "2D Array".to_string(),
                         got: format!("Array containing {:?}", matrix[0]),
-                    })
+                    });
                 }
             };
 
@@ -2202,8 +2203,8 @@ pub fn transpose(args: &[Value]) -> Result<Value, RuntimeError> {
                     _ => {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "2D Array".to_string(),
-                            got: format!("Non-uniform array structure"),
-                        })
+                            got: "Non-uniform array structure".to_string(),
+                        });
                     }
                 };
 
@@ -2288,7 +2289,7 @@ pub fn determinant(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "2D Array".to_string(),
                             got: format!("Array containing {:?}", row),
-                        })
+                        });
                     }
                 }
             }
@@ -2355,12 +2356,12 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
                 Value::Number(val) => Ok(Value::Number(*val)),
                 _ => Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number".to_string(),
-                    got: format!("Non-numeric value in matrix"),
+                    got: "Non-numeric value in matrix".to_string(),
                 }),
             },
             _ => Err(RuntimeError::TypeErrorDetailed {
                 expected: "Array".to_string(),
-                got: format!("Invalid matrix structure"),
+                got: "Invalid matrix structure".to_string(),
             }),
         };
     }
@@ -2368,15 +2369,18 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
     let mut det = 0.0;
 
     // Expand along first row
+    #[allow(clippy::needless_range_loop)]
     for j in 0..n {
         let element = get_matrix_element(matrix, 0, j)?;
 
         // Create minor matrix (remove row 0 and column j)
         let mut minor = Vec::new();
+        #[allow(clippy::needless_range_loop)]
         for i in 1..n {
             let mut row = Vec::new();
             match &matrix[i] {
                 Value::Array(matrix_row) => {
+                    #[allow(clippy::needless_range_loop)]
                     for k in 0..n {
                         if k != j {
                             row.push(matrix_row[k].clone());
@@ -2386,8 +2390,8 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
                 _ => {
                     return Err(RuntimeError::TypeErrorDetailed {
                         expected: "Array".to_string(),
-                        got: format!("Invalid matrix row"),
-                    })
+                        got: "Invalid matrix row".to_string(),
+                    });
                 }
             }
             minor.push(Value::Array(row));
@@ -2471,7 +2475,7 @@ pub fn matrix_inverse(args: &[Value]) -> Result<Value, RuntimeError> {
                                     return Err(RuntimeError::TypeErrorDetailed {
                                         expected: "Number".to_string(),
                                         got: format!("{:?}", val),
-                                    })
+                                    });
                                 }
                             }
                         }
@@ -2481,7 +2485,7 @@ pub fn matrix_inverse(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array".to_string(),
                             got: format!("{:?}", row_val),
-                        })
+                        });
                     }
                 }
             }
@@ -2517,14 +2521,17 @@ pub fn matrix_inverse(args: &[Value]) -> Result<Value, RuntimeError> {
 
                 // Scale pivot row
                 let pivot = aug[i][i];
+                #[allow(clippy::needless_range_loop)]
                 for j in 0..(2 * n) {
                     aug[i][j] /= pivot;
                 }
 
                 // Eliminate column
+                #[allow(clippy::needless_range_loop)]
                 for k in 0..n {
                     if k != i {
                         let factor = aug[k][i];
+                        #[allow(clippy::needless_range_loop)]
                         for j in 0..(2 * n) {
                             aug[k][j] -= factor * aug[i][j];
                         }
@@ -2534,8 +2541,10 @@ pub fn matrix_inverse(args: &[Value]) -> Result<Value, RuntimeError> {
 
             // Extract inverse matrix from augmented matrix
             let mut result = Vec::new();
+            #[allow(clippy::needless_range_loop)]
             for i in 0..n {
                 let mut row = Vec::new();
+                #[allow(clippy::needless_range_loop)]
                 for j in n..(2 * n) {
                     row.push(Value::Number(aug[i][j]));
                 }
@@ -2736,7 +2745,7 @@ pub fn linear_regression(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -2748,7 +2757,7 @@ pub fn linear_regression(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }
@@ -2847,7 +2856,7 @@ pub fn normal_pdf(args: &[Value]) -> Result<Value, RuntimeError> {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number".to_string(),
                     got: format!("{:?}", args[0]),
-                })
+                });
             }
         },
         3 => match (&args[0], &args[1], &args[2]) {
@@ -2864,14 +2873,14 @@ pub fn normal_pdf(args: &[Value]) -> Result<Value, RuntimeError> {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number, Number, Number".to_string(),
                     got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
-                })
+                });
             }
         },
         n => {
             return Err(RuntimeError::WrongArity {
                 expected: 1,
                 got: n,
-            })
+            });
         }
     };
 
@@ -2915,7 +2924,7 @@ pub fn normal_cdf(args: &[Value]) -> Result<Value, RuntimeError> {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number".to_string(),
                     got: format!("{:?}", args[0]),
-                })
+                });
             }
         },
         3 => match (&args[0], &args[1], &args[2]) {
@@ -2932,14 +2941,14 @@ pub fn normal_cdf(args: &[Value]) -> Result<Value, RuntimeError> {
                 return Err(RuntimeError::TypeErrorDetailed {
                     expected: "Number, Number, Number".to_string(),
                     got: format!("{:?}, {:?}, {:?}", args[0], args[1], args[2]),
-                })
+                });
             }
         },
         n => {
             return Err(RuntimeError::WrongArity {
                 expected: 1,
                 got: n,
-            })
+            });
         }
     };
 
@@ -3325,7 +3334,7 @@ pub fn set_precision(args: &[Value]) -> Result<Value, RuntimeError> {
                         return Err(RuntimeError::TypeErrorDetailed {
                             expected: "Array of Numbers".to_string(),
                             got: format!("Array containing {:?}", val),
-                        })
+                        });
                     }
                 }
             }

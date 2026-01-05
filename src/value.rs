@@ -122,6 +122,7 @@ impl Value {
     }
 
     /// Convert to string
+    #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         match self {
             Value::Number(n) => {
@@ -242,7 +243,10 @@ mod tests {
     #[test]
     fn test_value_to_string() {
         assert_eq!(Value::Number(42.0).to_string(), "42");
-        assert_eq!(Value::Number(3.14).to_string(), "3.14");
+        #[allow(clippy::approx_constant)]
+        {
+            assert_eq!(Value::Number(3.14).to_string(), "3.14");
+        }
         assert_eq!(Value::String("hello".to_string()).to_string(), "hello");
         assert_eq!(Value::Boolean(true).to_string(), "true");
         assert_eq!(Value::Null.to_string(), "Null");

@@ -102,6 +102,7 @@ impl Optimizer {
     }
 
     /// 折叠表达式中的常量
+    #[allow(clippy::only_used_in_recursion)]
     fn fold_expr(&self, expr: Expr) -> Expr {
         match expr {
             // 二元运算常量折叠
@@ -110,10 +111,10 @@ impl Optimizer {
                 let right = self.fold_expr(*right);
 
                 // 如果两边都是常量,直接计算结果
-                if let (Expr::Number(l), Expr::Number(r)) = (&left, &right) {
-                    if let Some(result) = Self::eval_const_binary(*l, &op, *r) {
-                        return Expr::Number(result);
-                    }
+                if let (Expr::Number(l), Expr::Number(r)) = (&left, &right)
+                    && let Some(result) = Self::eval_const_binary(*l, &op, *r)
+                {
+                    return Expr::Number(result);
                 }
 
                 Expr::Binary {
@@ -517,10 +518,10 @@ impl Optimizer {
     fn extract_tail_call_args(&self, func_name: &str, expr: &Expr) -> Option<Vec<Expr>> {
         match expr {
             Expr::Call { func, args } => {
-                if let Expr::Identifier(name) = &**func {
-                    if name == func_name {
-                        return Some(args.clone());
-                    }
+                if let Expr::Identifier(name) = &**func
+                    && name == func_name
+                {
+                    return Some(args.clone());
                 }
                 None
             }

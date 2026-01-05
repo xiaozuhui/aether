@@ -419,36 +419,6 @@ impl<'a> Emitter<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::pytranspile::ir::{Expr, Module, Span, Stmt};
-
-    #[test]
-    fn emits_fixed_precision_decimal_as_fraction() {
-        let module = Module {
-            span: Span::default(),
-            body: vec![Stmt::ExprStmt {
-                span: Span::default(),
-                value: Expr::Number {
-                    span: Span::default(),
-                    value: 12.34,
-                },
-            }],
-        };
-
-        let mut opts = TranspileOptions::default();
-        opts.calc_scale = 2;
-
-        let res = ir_to_aether(&module, &opts);
-        assert!(!res.diagnostics.has_errors());
-        let code = res.code.expect("expected emitted code");
-        assert!(code.contains("FRAC_DIV("));
-        assert!(code.contains("1234"));
-        assert!(code.contains("100"));
-    }
-}
-
 fn escape_string(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
@@ -531,4 +501,36 @@ fn map_cmp(op: &str) -> String {
 #[allow(dead_code)]
 fn span_default() -> Span {
     Span::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pytranspile::ir::{Expr, Module, Span, Stmt};
+
+    #[test]
+    fn emits_fixed_precision_decimal_as_fraction() {
+        let module = Module {
+            span: Span::default(),
+            body: vec![Stmt::ExprStmt {
+                span: Span::default(),
+                value: Expr::Number {
+                    span: Span::default(),
+                    value: 12.34,
+                },
+            }],
+        };
+
+        let opts = TranspileOptions {
+            calc_scale: 2,
+            ..Default::default()
+        };
+
+        let res = ir_to_aether(&module, &opts);
+        assert!(!res.diagnostics.has_errors());
+        let code = res.code.expect("expected emitted code");
+        assert!(code.contains("FRAC_DIV("));
+        assert!(code.contains("1234"));
+        assert!(code.contains("100"));
+    }
 }

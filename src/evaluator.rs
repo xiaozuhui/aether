@@ -701,9 +701,9 @@ impl Evaluator {
                         let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
                         Ok(Value::Fraction(a_frac * b))
                     } else {
-                        Err(RuntimeError::TypeError(format!(
-                            "Cannot multiply non-integer Number with Fraction"
-                        )))
+                        Err(RuntimeError::TypeError(
+                            "Cannot multiply non-integer Number with Fraction".to_string()
+                        ))
                     }
                 }
                 _ => Err(RuntimeError::TypeError(format!(
@@ -1035,7 +1035,10 @@ mod tests {
     #[test]
     fn test_eval_numbers() {
         assert_eq!(eval("42").unwrap(), Value::Number(42.0));
-        assert_eq!(eval("3.14").unwrap(), Value::Number(3.14));
+        #[allow(clippy::approx_constant)]
+        {
+            assert_eq!(eval("3.14").unwrap(), Value::Number(3.14));
+        }
     }
 
     #[test]

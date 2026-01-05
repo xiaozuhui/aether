@@ -59,7 +59,7 @@ pub fn calc_salary_median(args: &[Value]) -> Result<Value, RuntimeError> {
     salaries.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let len = salaries.len();
-    let median = if len % 2 == 0 {
+    let median = if len.is_multiple_of(2) {
         (salaries[len / 2 - 1] + salaries[len / 2]) / 2.0
     } else {
         salaries[len / 2]
@@ -116,13 +116,14 @@ pub fn calc_percentile(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     let percentile = get_number(&args[0])?;
-    if percentile < 0.0 || percentile > 100.0 {
+    if !(0.0..=100.0).contains(&percentile) {
         return Err(RuntimeError::InvalidOperation(
             "百分位必须在0-100之间".to_string(),
         ));
     }
 
     let mut salaries: Vec<f64> = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for i in 1..args.len() {
         salaries.push(get_number(&args[i])?);
     }
@@ -193,6 +194,7 @@ pub fn calc_salary_distribution(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     let mut salaries: Vec<f64> = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for i in 1..args.len() {
         salaries.push(get_number(&args[i])?);
     }
