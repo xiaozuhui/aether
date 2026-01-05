@@ -48,8 +48,7 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - **数学**: 线性代数、统计、概率分布、矩阵运算
 - **精确计算**: 分数运算、固定精度金融计算
 - **薪资计算**: 工资、加班费、个税、社保（78个函数）
-- **报表生成**: Excel创建/写入/保存、数据格式化（8个函数）
-- **报表生成**: Excel/Word/PDF 操作、数据格式化、透视表（🆕）
+- **报表生成**: Excel 创建/写入/保存、数据格式化（部分功能规划中）
 
 ---
 
@@ -67,7 +66,7 @@ cargo install aether
 # Go
 go get github.com/yourusername/aether-go
 
-# TypeScript/JavaScript
+# TypeScript/aether
 npm install @yourusername/aether
 ```
 
@@ -77,7 +76,7 @@ npm install @yourusername/aether
 
 ```bash
 # 创建 hello.aether
-echo 'Println("Hello, Aether!")' > hello.aether
+echo 'PRINTLN("Hello, Aether!")' > hello.aether
 
 # 运行
 aether hello.aether
@@ -117,8 +116,8 @@ let permissions = IOPermissions {
 let mut engine = Aether::with_permissions(permissions);
 
 engine.eval(r#"
-    WriteFile("output.txt", "Hello!")
-    Println(ReadFile("output.txt"))
+    WRITE_FILE("output.txt", "Hello!")
+    PRINTLN(READ_FILE("output.txt"))
 "#).unwrap();
 ```
 
@@ -128,7 +127,7 @@ engine.eval(r#"
 
 ### 1. 基础语法
 
-```javascript
+```aether
 // 变量 (必须 UPPER_SNAKE_CASE)
 Set COUNT 10
 Set MESSAGE "Hello, Aether"
@@ -141,12 +140,12 @@ Func ADD (A, B) {
 }
 
 Set RESULT ADD(5, 3)
-Println("5 + 3 =", RESULT)
+PRINTLN("5 + 3 =", RESULT)
 ```
 
 ### 2. 控制流
 
-```javascript
+```aether
 // If-Else
 Func ABS (X) {
     If (X < 0) {
@@ -158,20 +157,20 @@ Func ABS (X) {
 
 // For 循环
 For I In RANGE(0, 5) {
-    Println("数字:", I)
+    PRINTLN("数字:", I)
 }
 
 // While 循环
 Set I 0
 While (I < 5) {
-    Println(I)
+    PRINTLN(I)
     Set I (I + 1)
 }
 ```
 
 ### 3. Generator (惰性序列)
 
-```javascript
+```aether
 Generator FIBONACCI (LIMIT) {
     Set A 0
     Set B 1
@@ -188,17 +187,17 @@ Generator FIBONACCI (LIMIT) {
 
 // 使用
 For NUM In FIBONACCI(10) {
-    Println(NUM)
+    PRINTLN(NUM)
 }
 ```
 
 ### 4. 惰性求值
 
-```javascript
+```aether
 // 延迟计算，仅在需要时执行
 Lazy EXPENSIVE_DATA (
-    Println("正在加载大数据集...")
-    Return LOAD_FILE("big_data.json")
+    PRINTLN("正在加载大数据集...")
+    Return READ_FILE("big_data.json")
 )
 
 // 数据仅在访问时加载
@@ -210,95 +209,90 @@ If (NEEDS_ANALYSIS) {
 
 ### 5. 精确和精度算术
 
-```javascript
+```aether
 // 问题：浮点精度
 Set A 0.1
 Set B 0.2
-Println(A + B)  // 可能显示: 0.30000000000000004
+PRINTLN(A + B)  // 可能显示: 0.30000000000000004
 
 // 解决方案：分数运算（精确）
 Set FA TO_FRACTION(0.1)
 Set FB TO_FRACTION(0.2)
 Set FC FRAC_ADD(FA, FB)
-Println(FC)           // 显示: 3/10
-Println(TO_FLOAT(FC)) // 显示: 0.3
+PRINTLN(FC)           // 显示: 3/10
+PRINTLN(TO_FLOAT(FC)) // 显示: 0.3
 
 // 金融计算（固定精度）
 Set PRICE1 19.99
 Set PRICE2 29.99
 Set TOTAL ADD_WITH_PRECISION(PRICE1, PRICE2, 2)
-Println(TOTAL)  // 显示: 49.98
+PRINTLN(TOTAL)  // 显示: 49.98
 
 Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
-Println(TAX)    // 显示: 4.00
+PRINTLN(TAX)    // 显示: 4.00
 ```
 
 ### 6. 文件系统操作
 
-```javascript
+```aether
 // CLI 模式：自动工作
-WriteFile("data.txt", "Hello, World!")
-Set CONTENT ReadFile("data.txt")
-Println(CONTENT)
+WRITE_FILE("data.txt", "Hello, World!")
+Set CONTENT READ_FILE("data.txt")
+PRINTLN(CONTENT)
 
-If FileExists("data.txt") {
-    Println("文件存在!")
-    DeleteFile("data.txt")
+If FILE_EXISTS("data.txt") {
+    PRINTLN("文件存在!")
+    DELETE_FILE("data.txt")
 }
 
 // 目录操作
-CreateDir("output")
-Set FILES ListDir(".")
+CREATE_DIR("output")
+Set FILES LIST_DIR(".")
 For FILE In FILES {
-    Println(FILE)
+    PRINTLN(FILE)
 }
 ```
 
 ### 7. 网络操作
 
-```javascript
+```aether
 // HTTP GET
-Set RESPONSE HttpGet("https://api.github.com")
-Println(RESPONSE)
+Set RESPONSE HTTP_GET("https://api.github.com")
+PRINTLN(RESPONSE)
 
 // HTTP POST
 Set DATA '{"name": "test"}'
-Set RESULT HttpPost(
+Set RESULT HTTP_POST(
     "https://api.example.com/data",
     DATA,
     "application/json"
 )
-Println(RESULT)
+PRINTLN(RESULT)
 ```
 
 ### 8. 报表生成 (🆕)
 
-```javascript
+```aether
 // Excel 操作
 Set WORKBOOK EXCEL_CREATE()
-EXCEL_WRITE_ROW(WORKBOOK, "Sheet1", 0, ["姓名", "销售额", "完成率"])
-EXCEL_WRITE_ROW(WORKBOOK, "Sheet1", 1, ["张三", 120000, 0.95])
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 0, "姓名")
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 1, "销售额")
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 2, "完成率")
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 0, "张三")
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 1, 120000)
+EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 2, 0.95)
 EXCEL_SAVE(WORKBOOK, "report.xlsx")
 
 // 数据格式化
 Set AMOUNT 1234567.89
-Println(FORMAT_NUMBER(AMOUNT, 2))        // "1,234,567.89"
-Println(FORMAT_CURRENCY(AMOUNT, "¥", 2)) // "¥1,234,567.89"
-Println(FORMAT_PERCENT(0.1234, 2))       // "12.34%"
-
-// Word 文档
-Set DOC WORD_CREATE()
-WORD_ADD_HEADING(DOC, "销售报告", 1)
-WORD_ADD_PARAGRAPH(DOC, "2024年第一季度总结", "Normal")
-WORD_SAVE(DOC, "report.docx")
-
-// 数据透视（规划中）
-Set PIVOT PIVOT_TABLE(DATA, ["region"], ["product"], ["amount"], "sum")
+PRINTLN(FORMAT_NUMBER(AMOUNT, 2))         // "1,234,567.89"
+PRINTLN(FORMAT_CURRENCY(AMOUNT, "¥", 2)) // "¥1,234,567.89"
+PRINTLN(FORMAT_PERCENT(0.1234, 2))        // "12.34%"
 ```
 
 ### 9. 错误处理
 
-```javascript
+```aether
 // 错误示例
 Set myVar 10
 // ❌ 错误: 变量名必须使用全大写字母和下划线
@@ -345,7 +339,7 @@ let mut engine = Aether::with_all_permissions();
 
 所有变量、函数、参数必须使用 `UPPER_SNAKE_CASE`：
 
-```javascript
+```aether
 // ✅ 正确
 Set MY_VARIABLE 10
 Func CALCULATE_TOTAL (PRICE, TAX_RATE) { }
@@ -359,7 +353,7 @@ Func calculateTotal () // 会报错
 
 ## ⚡ 性能优化
 
-Aether v0.2.0 引入了多项性能优化：
+Aether 引入了多项性能优化：
 
 ### 1. AST 缓存 (50-140x 加速)
 
@@ -384,7 +378,7 @@ println!("{}", engine.cache_stats());
 
 编译时计算常量表达式：
 
-```javascript
+```aether
 // 优化前
 Set X (2 + 3 * 4)
 
@@ -396,10 +390,10 @@ Set X 14
 
 移除永不执行的代码：
 
-```javascript
+```aether
 // 优化前
 While False {
-    Println("永远不执行")
+    PRINTLN("永远不执行")
 }
 
 // 优化后（自动删除整个循环）
@@ -472,7 +466,7 @@ func main() {
 }
 ```
 
-### TypeScript/JavaScript
+### TypeScript/aether
 
 ```typescript
 import { Aether } from '@yourusername/aether';
@@ -516,7 +510,7 @@ cargo test --all
 
 ### 测试覆盖
 
-- ✅ **114 个测试** (100% 通过率)
+- ✅ **100+ 测试**（单元/集成/脚本测试）
 - ✅ 完整的解释器测试（Lexer, Parser, Evaluator）
 - ✅ 所有内置函数测试
 - ✅ 错误处理和命名约定测试
@@ -550,13 +544,13 @@ open target/criterion/report/index.html
 
 ### I/O 操作
 
-```javascript
+```aether
 PRINT, PRINTLN, INPUT
 ```
 
 ### 文件系统
 
-```javascript
+```aether
 READ_FILE, WRITE_FILE, APPEND_FILE
 DELETE_FILE, FILE_EXISTS, CREATE_DIR
 LIST_DIR, DELETE_DIR, FILE_SIZE
@@ -564,40 +558,35 @@ LIST_DIR, DELETE_DIR, FILE_SIZE
 
 ### 网络
 
-```javascript
+```aether
 HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
 ```
 
 ### 报表生成 (🆕)
 
-```javascript
-// Excel
-EXCEL_CREATE, EXCEL_READ_SHEET, EXCEL_WRITE_CELL
-EXCEL_WRITE_ROW, EXCEL_WRITE_TABLE, EXCEL_SAVE
-EXCEL_SET_CELL_FORMAT, EXCEL_ADD_CHART
+```aether
+// 说明：部分 EXCEL_* / FORMAT_DATE 当前版本为占位符（调用会返回“尚未实现”）
 
-// Word
-WORD_CREATE, WORD_ADD_PARAGRAPH, WORD_ADD_HEADING
-WORD_ADD_TABLE, WORD_SAVE, WORD_LOAD_TEMPLATE
+// Excel
+EXCEL_CREATE, EXCEL_WRITE_CELL, EXCEL_SAVE
+EXCEL_WRITE_ROW, EXCEL_WRITE_COLUMN, EXCEL_WRITE_TABLE
+EXCEL_READ_SHEET, EXCEL_READ_CELL, EXCEL_READ_RANGE, EXCEL_GET_SHEETS
 
 // 数据格式化
 FORMAT_NUMBER, FORMAT_CURRENCY, FORMAT_PERCENT
 FORMAT_DATE
-
-// 数据处理（规划中）
-PIVOT_TABLE, GROUP_BY, AGGREGATE
 ```
 
 ### 类型转换
 
-```javascript
+```aether
 TO_STRING, TO_NUMBER, TYPE_OF
 TO_ARRAY, TO_DICT, IS_NULL
 ```
 
 ### 数组操作
 
-```javascript
+```aether
 PUSH, POP, SHIFT, UNSHIFT
 MAP, FILTER, REDUCE, SORT
 FIND, INCLUDES, JOIN, SLICE
@@ -605,14 +594,14 @@ FIND, INCLUDES, JOIN, SLICE
 
 ### 字符串操作
 
-```javascript
+```aether
 LEN, SPLIT, TRIM, UPPER, LOWER
 REPLACE, SUBSTRING, STARTS_WITH, ENDS_WITH
 ```
 
 ### 数学函数
 
-```javascript
+```aether
 ABS, SQRT, POW, SIN, COS, TAN
 MIN, MAX, SUM, AVG, MEDIAN
 STDEV, VARIANCE, CORRELATION
@@ -621,7 +610,7 @@ LINEAR_REGRESSION, MATRIX_INVERSE
 
 ### 精确计算
 
-```javascript
+```aether
 TO_FRACTION, FRAC_ADD, FRAC_SUB
 FRAC_MUL, FRAC_DIV, TO_FLOAT
 ADD_WITH_PRECISION, SUB_WITH_PRECISION
@@ -630,7 +619,7 @@ MUL_WITH_PRECISION, DIV_WITH_PRECISION
 
 ### 薪资计算 (78 个函数)
 
-```javascript
+```aether
 // 基本工资
 HOURLY_TO_DAILY, DAILY_TO_MONTHLY
 MONTHLY_TO_ANNUAL, ANNUAL_TO_MONTHLY
@@ -653,7 +642,7 @@ CALC_HOUSING_FUND
 
 ## 🎯 开发状态
 
-### 当前版本: v0.2.0
+### 当前版本: v0.3.0
 
 **已完成：**
 
@@ -663,7 +652,7 @@ CALC_HOUSING_FUND
 - ✅ 严格的命名约定
 - ✅ AST 缓存和性能优化
 - ✅ Go/TypeScript 绑定
-- ✅ 114 个测试通过
+- ✅ 100+ 测试（持续维护）
 
 **计划中：**
 
@@ -692,8 +681,8 @@ Aether 的灵感来自：
 
 ## 📬 联系方式
 
-- GitHub Issues: [提交问题](https://github.com/yourusername/aether/issues)
-- Discussions: [参与讨论](https://github.com/yourusername/aether/discussions)
+- GitHub Issues: [提交问题](https://github.com/xiaozuhui/aether/issues)
+- Email: [邮箱](xiaozuhui@outlook.com)
 
 ---
 

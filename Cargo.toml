@@ -23,6 +23,7 @@ exclude = [
 [lib]
 name = "aether"
 crate-type = ["cdylib", "rlib", "staticlib"]
+doctest = false
 
 [[bin]]
 name = "aether"
@@ -33,11 +34,11 @@ num-rational = "0.4"
 num-traits = "0.2"
 num-bigint = "0.4"
 ureq = "3.1.4"
-serde_json = "1.0"
+serde_json = "1.0.148"
 
 # 报表生成依赖
-calamine = "0.31.0"        # Excel 读取
-rust_xlsxwriter = "0.91.0" # Excel 写入
+calamine = "0.32.0"        # Excel 读取
+rust_xlsxwriter = "0.92.2" # Excel 写入
 chrono = "0.4"             # 日期时间格式化
 lazy_static = "1.4"        # 全局句柄存储和单例模式
 
@@ -45,15 +46,15 @@ lazy_static = "1.4"        # 全局句柄存储和单例模式
 crossbeam = "0.8" # 无锁队列，用于引擎池
 
 # 异步支持（可选）
-tokio = { version = "1", features = ["rt", "sync"], optional = true }
+tokio = { version = "1.49.0", features = ["rt", "sync"], optional = true }
 
 [features]
 default = []
 async = ["tokio"]
 
 [dev-dependencies]
-criterion = { version = "0.7.0", features = ["html_reports"] }
-tokio = { version = "1", features = ["full"] }
+criterion = { version = "0.8.1", features = ["html_reports"] }
+tokio = { version = "1.49.0", features = ["full"] }
 
 [[example]]
 name = "async_demo"
@@ -64,8 +65,8 @@ name = "aether_benchmarks"
 harness = false
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
-js-sys = "0.3"
+wasm-bindgen = "0.2.106"
+js-sys = "0.3.83"
 console_error_panic_hook = "0.1"
 
 [build-dependencies]
