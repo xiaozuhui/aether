@@ -42,7 +42,7 @@ cargo fmt --check || {
 echo ""
 echo "🔍 步骤 3/7: 运行 clippy..."
 cargo clippy --all-targets --all-features -- -D warnings || {
-    echo "❌ Clippy 检查失败"
+    echo "❌ Clippy 检查失败" 
     exit 1
 }
 

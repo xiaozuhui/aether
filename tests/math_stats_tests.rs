@@ -258,7 +258,7 @@ fn test_matrix_inverse() {
         ]),
     ]);
 
-    match math::matrix_inverse(&[matrix3x3.clone()]) {
+    match math::matrix_inverse(std::slice::from_ref(&matrix3x3)) {
         Ok(inv_matrix) => {
             // 计算 A * A^(-1)
             match math::matmul(&[matrix3x3, inv_matrix]) {

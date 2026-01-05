@@ -155,7 +155,7 @@ fn test_variance_and_std() {
         Value::Number(9.0),
     ]);
 
-    let var = math::variance(&[arr.clone()]).unwrap(); // [arr.clone()] is intentional - variance takes array of arrays
+    let var = math::variance(std::slice::from_ref(&arr)).unwrap(); // variance takes array of arrays
     if let Value::Number(v) = var {
         assert!((v - 4.571).abs() < 0.01);
     } else {

@@ -352,20 +352,20 @@ fn print_detailed_error(source: &str, error_msg: &str) {
 /// 从错误消息中提取行号和列号
 fn extract_line_column(error_msg: &str) -> Option<(usize, usize)> {
     // 查找 "line X, column Y" 模式
-    if let Some(line_start) = error_msg.find("line ") {
-        if let Some(line_end) = error_msg[line_start..].find(',') {
-            let line_str = &error_msg[line_start + 5..line_start + line_end];
-            if let Ok(line) = line_str.trim().parse::<usize>() {
-                if let Some(col_start) = error_msg.find("column ") {
-                    let col_str = &error_msg[col_start + 7..];
-                    // 找到第一个非数字字符
-                    let col_end = col_str
-                        .find(|c: char| !c.is_numeric())
-                        .unwrap_or(col_str.len());
-                    if let Ok(col) = col_str[..col_end].trim().parse::<usize>() {
-                        return Some((line, col));
-                    }
-                }
+    if let Some(line_start) = error_msg.find("line ")
+        && let Some(line_end) = error_msg[line_start..].find(',')
+    {
+        let line_str = &error_msg[line_start + 5..line_start + line_end];
+        if let Ok(line) = line_str.trim().parse::<usize>()
+            && let Some(col_start) = error_msg.find("column ")
+        {
+            let col_str = &error_msg[col_start + 7..];
+            // 找到第一个非数字字符
+            let col_end = col_str
+                .find(|c: char| !c.is_numeric())
+                .unwrap_or(col_str.len());
+            if let Ok(col) = col_str[..col_end].trim().parse::<usize>() {
+                return Some((line, col));
             }
         }
     }
