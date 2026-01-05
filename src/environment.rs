@@ -106,8 +106,7 @@ impl Environment {
 
     /// Check if a variable exists in this scope or parent scopes
     pub fn has(&self, name: &str) -> bool {
-        self.store.contains_key(name)
-            || self.parent.as_ref().is_some_and(|p| p.borrow().has(name))
+        self.store.contains_key(name) || self.parent.as_ref().is_some_and(|p| p.borrow().has(name))
     }
 
     /// Update a variable in the scope where it was defined

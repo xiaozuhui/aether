@@ -702,7 +702,7 @@ impl Evaluator {
                         Ok(Value::Fraction(a_frac * b))
                     } else {
                         Err(RuntimeError::TypeError(
-                            "Cannot multiply non-integer Number with Fraction".to_string()
+                            "Cannot multiply non-integer Number with Fraction".to_string(),
                         ))
                     }
                 }

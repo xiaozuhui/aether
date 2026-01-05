@@ -2379,7 +2379,8 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
         for i in 1..n {
             let mut row = Vec::new();
             match &matrix[i] {
-                Value::Array(matrix_row) => {
+                Value::Array(matrix_row) =>
+                {
                     #[allow(clippy::needless_range_loop)]
                     for k in 0..n {
                         if k != j {

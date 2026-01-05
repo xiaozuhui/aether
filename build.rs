@@ -51,8 +51,7 @@ fn validate_stdlib(crate_dir: &str) {
                 let path = entry.path();
 
                 // 只检查 .aether 文件，跳过 examples 和 README
-                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("aether")
-                {
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("aether") {
                     file_count += 1;
 
                     // 告诉 Cargo 监控这个文件的变化

@@ -126,16 +126,19 @@ mod tests {
 
     #[test]
     fn test_module_exists() {
-        assert!(!STRING_UTILS.is_empty());
-        assert!(!ARRAY_UTILS.is_empty());
-        assert!(!VALIDATION.is_empty());
-        assert!(!DATETIME.is_empty());
-        assert!(!TESTING.is_empty());
-        assert!(!SET.is_empty());
-        assert!(!QUEUE.is_empty());
-        assert!(!STACK.is_empty());
-        assert!(!HEAP.is_empty());
-        assert!(!SORTING.is_empty());
+        #[allow(clippy::const_is_empty)]
+        {
+            assert!(!STRING_UTILS.is_empty());
+            assert!(!ARRAY_UTILS.is_empty());
+            assert!(!VALIDATION.is_empty());
+            assert!(!DATETIME.is_empty());
+            assert!(!TESTING.is_empty());
+            assert!(!SET.is_empty());
+            assert!(!QUEUE.is_empty());
+            assert!(!STACK.is_empty());
+            assert!(!HEAP.is_empty());
+            assert!(!SORTING.is_empty());
+        }
     }
 
     #[test]
