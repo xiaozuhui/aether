@@ -18,6 +18,7 @@ pub mod payroll;
 pub mod precise;
 pub mod report;
 pub mod string;
+pub mod trace;
 pub mod types;
 
 /// Type alias for built-in function implementations
@@ -91,6 +92,9 @@ impl BuiltInRegistry {
         registry.register("PRINT", io::print, 1);
         registry.register("PRINTLN", io::println, 1);
         registry.register("INPUT", io::input, 1);
+
+        // Trace (DSL-safe debug buffer; handled by evaluator)
+        registry.register("TRACE", trace::trace, 1);
 
         // Array functions
         registry.register("RANGE", array::range, 1); // Variadic: 1-3 args

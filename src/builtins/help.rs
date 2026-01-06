@@ -202,6 +202,17 @@ pub fn init_docs() -> HashMap<String, FunctionDocData> {
         },
     );
 
+    docs.insert(
+        "TRACE".to_string(),
+        FunctionDocData {
+            name: "TRACE".to_string(),
+            description: "记录调试信息到引擎内存缓冲区（宿主可读取，不产生 IO）".to_string(),
+            params: vec![("value".to_string(), "要记录的值（任意类型）".to_string())],
+            returns: "null".to_string(),
+            example: Some("TRACE(\"x=\" + TO_STRING(X))\nTRACE({\"a\": 1})".to_string()),
+        },
+    );
+
     // 数组函数
     docs.insert(
         "RANGE".to_string(),
@@ -597,6 +608,7 @@ pub fn help(args: &[Value]) -> Result<Value, RuntimeError> {
                 ],
             ),
             ("输入输出", vec!["PRINT", "PRINTLN", "INPUT"]),
+            ("调试", vec!["TRACE"]),
             (
                 "数组操作",
                 vec![

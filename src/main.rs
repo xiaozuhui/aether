@@ -22,6 +22,13 @@ fn main() {
             return;
         }
 
+        if run_after && !ouroboros {
+            eprintln!("错误: --run 只能与 --ouroboros 一起使用（用于 Python → Aether 转译后运行）");
+            eprintln!("提示: 运行 Aether 脚本请直接使用: aether <脚本文件>");
+            eprintln!("使用 --help 查看帮助");
+            std::process::exit(2);
+        }
+
         // 获取脚本文件名
         // - 默认：第一个非 flag 参数
         // - ouroboros：允许用 "-" 表示 stdin

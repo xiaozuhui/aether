@@ -179,6 +179,48 @@ engine.eval(r#"
 "#).unwrap();
 ```
 
+### 无 IO 调试：TRACE（推荐用于 DSL）
+
+在 DSL 场景下通常会禁用 IO（不能 `PRINT/PRINTLN/INPUT`），但你仍然可以通过 `TRACE(...)` **安全记录调试信息**：
+
+- `TRACE(...)` 不会写 stdout / 文件 / 网络
+- 它只会把信息追加到引擎的**内存缓冲区**
+- 宿主（Rust）可通过 `take_trace()` 读取并自行输出/写日志
+
+```aether
+Set X [1, 2, 3]
+Set Y {"a": 12}
+Set Z (Y["a"] + 3)
+
+TRACE("X=" + TO_STRING(X))
+TRACE({"y": Y, "z": Z})
+
+Z
+```
+
+Rust 侧读取 trace：
+
+```rust
+use aether::Aether;
+
+fn main() -> Result<(), String> {
+    let mut engine = Aether::new(); // DSL 模式：默认无 IO
+
+    let v = engine.eval(r#"
+        Set X [1, 2, 3]
+        TRACE("hello")
+        TRACE(X)
+        42
+    "#)?;
+
+    let trace = engine.take_trace();
+    // 这里由宿主决定如何处理（打印/结构化日志/埋点）
+    println!("trace={:?}", trace);
+    println!("result={}", v);
+    Ok(())
+}
+```
+
 ---
 
 ## 📚 语言特性
@@ -371,8 +413,8 @@ Set RESULT (X + Y)
 
 | 模式 | IO 状态 | 使用场景 |
 |------|---------|----------|
-| **CLI** | 默认启用 | 直接运行脚本，用户明确信任 |
-| **库** | 默认禁用 | 嵌入应用，脚本可能不可信 |
+| CLI | 默认启用 | 直接运行脚本，用户明确信任 |
+| 库 | 默认禁用 | 嵌入应用，脚本可能不可信 |
 
 ### 权限控制
 
@@ -700,7 +742,7 @@ CALC_HOUSING_FUND
 
 ## 🎯 开发状态
 
-### 当前版本: v0.3.0
+### 当前版本: v0.4.0
 
 **已完成：**
 
@@ -709,15 +751,19 @@ CALC_HOUSING_FUND
 - ✅ 增强的错误报告
 - ✅ 严格的命名约定
 - ✅ AST 缓存和性能优化
-- ✅ Go/TypeScript 绑定
 - ✅ 100+ 测试（持续维护）
-- ✅ Python 绑定
+- ✅ python转译
+- ✅ 无IO Trace
 
 **计划中：**
 
 - 🔄 完整的尾递归优化
 - 🔄 JIT 编译器
 - 🔄 更多优化
+- 🔄 绑定golang环境
+- 🔄 绑定typescript环境
+- 🔄 Python 绑定
+- 🔄 试算 - 在内部变量不确定的情况下，通过自动赋值为0或""来让代码跑通，用于代码初期简单测试
 
 ---
 

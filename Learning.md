@@ -635,6 +635,52 @@ z
 }
 ```
 
+### 12.7 无 IO 调试：TRACE（推荐用于 DSL）
+
+在 DSL 场景中你通常会选择 `Aether::new()`（默认禁用 IO），因此脚本里不能使用 `PRINT/PRINTLN/INPUT` 作为 debug。
+
+推荐做法是使用 `TRACE(...)`：
+
+- `TRACE(...)` 不产生任何 IO 副作用（不写 stdout/文件/网络）
+- 只把信息写入引擎的**内存 trace 缓冲区**
+- Rust 宿主在执行后通过 `engine.take_trace()` 把日志取走并自行处理
+
+脚本侧：
+
+```aether
+Set X [1, 2, 3]
+Set Y {"a": 12}
+Set Z (Y["a"] + 3)
+
+TRACE("X=" + TO_STRING(X))
+TRACE({"y": Y, "z": Z})
+
+Z
+```
+
+宿主侧（Rust）：
+
+```rust
+use aether::Aether;
+
+fn main() -> Result<(), String> {
+    let mut engine = Aether::new();
+
+    let _ = engine.eval(r#"
+        Set X 10
+        TRACE("x=" + TO_STRING(X))
+        Set Y (X + 1)
+        TRACE({"y": Y})
+        Y
+    "#)?;
+
+    let trace = engine.take_trace();
+    // 这里由宿主决定如何输出/落库
+    println!("trace={:?}", trace);
+    Ok(())
+}
+```
+
 ---
 
 ## 13. 调试、排错与最佳实践

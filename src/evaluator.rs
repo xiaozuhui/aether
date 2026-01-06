@@ -6,6 +6,7 @@ use crate::builtins::BuiltInRegistry;
 use crate::environment::Environment;
 use crate::value::{GeneratorState, Value};
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 /// Runtime errors
@@ -89,9 +90,15 @@ pub struct Evaluator {
     env: Rc<RefCell<Environment>>,
     /// Built-in function registry
     registry: BuiltInRegistry,
+    /// In-memory trace buffer (for DSL-safe debugging; no stdout/files/network)
+    trace: VecDeque<String>,
+    /// Monotonic sequence for trace entries (starts at 1)
+    trace_seq: u64,
 }
 
 impl Evaluator {
+    const TRACE_MAX_ENTRIES: usize = 1024;
+
     /// Create a new evaluator (默认禁用IO)
     pub fn new() -> Self {
         Self::with_permissions(crate::builtins::IOPermissions::default())
@@ -108,13 +115,45 @@ impl Evaluator {
                 .set(name.clone(), Value::BuiltIn { name, arity: 0 });
         }
 
-        Evaluator { env, registry }
+        Evaluator {
+            env,
+            registry,
+            trace: VecDeque::new(),
+            trace_seq: 0,
+        }
     }
 
     /// Create evaluator with custom environment
     pub fn with_env(env: Rc<RefCell<Environment>>) -> Self {
         let registry = BuiltInRegistry::new();
-        Evaluator { env, registry }
+        Evaluator {
+            env,
+            registry,
+            trace: VecDeque::new(),
+            trace_seq: 0,
+        }
+    }
+
+    /// Append a trace entry (host-readable; no IO side effects).
+    pub fn trace_push(&mut self, msg: String) {
+        self.trace_seq = self.trace_seq.saturating_add(1);
+        let entry = format!("#{} {}", self.trace_seq, msg);
+
+        if self.trace.len() >= Self::TRACE_MAX_ENTRIES {
+            self.trace.pop_front();
+        }
+        self.trace.push_back(entry);
+    }
+
+    /// Drain the trace buffer.
+    pub fn take_trace(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.trace).into_iter().collect()
+    }
+
+    /// Clear the trace buffer.
+    pub fn clear_trace(&mut self) {
+        self.trace.clear();
+        self.trace_seq = 0;
     }
 
     /// Reset the environment (clear all variables and re-register built-ins)
@@ -124,6 +163,10 @@ impl Evaluator {
     pub fn reset_env(&mut self) {
         // Create new environment
         self.env = Rc::new(RefCell::new(Environment::new()));
+
+        // Avoid leaking trace across pooled executions
+        self.trace.clear();
+        self.trace_seq = 0;
 
         // Re-register built-in functions
         for name in self.registry.names() {
@@ -900,6 +943,39 @@ impl Evaluator {
             Value::BuiltIn { name, .. } => {
                 // Special handling for MAP, FILTER, and REDUCE
                 match name.as_str() {
+                    "TRACE" => {
+                        if args.is_empty() {
+                            return Err(RuntimeError::WrongArity {
+                                expected: 1,
+                                got: 0,
+                            });
+                        }
+
+                        // Optional label: TRACE("label", x, y)
+                        // If only one argument is provided, treat it as the payload (backward compatible).
+                        let (label, payload_args) = if args.len() >= 2 {
+                            match &args[0] {
+                                Value::String(s) => (Some(s.as_str()), &args[1..]),
+                                _ => (None, args.as_slice()),
+                            }
+                        } else {
+                            (None, args.as_slice())
+                        };
+
+                        let payload = payload_args
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+
+                        let msg = match label {
+                            Some(l) => format!("[{}] {}", l, payload),
+                            None => payload,
+                        };
+
+                        self.trace_push(msg);
+                        Ok(Value::Null)
+                    }
                     "MAP" => self.builtin_map(&args),
                     "FILTER" => self.builtin_filter(&args),
                     "REDUCE" => self.builtin_reduce(&args),

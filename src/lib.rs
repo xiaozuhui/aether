@@ -418,6 +418,19 @@ impl Aether {
             .map_err(|e| format!("Runtime error: {}", e))
     }
 
+    /// Drain the in-memory TRACE buffer.
+    ///
+    /// This is designed for DSL-safe debugging: scripts call `TRACE(...)` to record
+    /// values, and the host application reads them out-of-band via this method.
+    pub fn take_trace(&mut self) -> Vec<String> {
+        self.evaluator.take_trace()
+    }
+
+    /// Clear the TRACE buffer without returning it.
+    pub fn clear_trace(&mut self) {
+        self.evaluator.clear_trace();
+    }
+
     /// Evaluate Aether code asynchronously (requires "async" feature)
     ///
     /// This is a convenience wrapper around `eval()` that runs in a background task.
