@@ -4,9 +4,11 @@
 use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
 use crate::builtins::BuiltInRegistry;
 use crate::environment::Environment;
+use crate::module_system::{DisabledModuleResolver, ModuleContext, ModuleResolver, ResolvedModule};
 use crate::value::{GeneratorState, Value};
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Runtime errors
@@ -94,6 +96,17 @@ pub struct Evaluator {
     trace: VecDeque<String>,
     /// Monotonic sequence for trace entries (starts at 1)
     trace_seq: u64,
+
+    /// Module resolver (Import/Export). Defaults to disabled for DSL safety.
+    module_resolver: Box<dyn ModuleResolver>,
+    /// Module export cache: module_id -> exports
+    module_cache: HashMap<String, HashMap<String, Value>>,
+    /// Module load stack for cycle detection
+    module_stack: Vec<String>,
+    /// Current module export table stack (only when evaluating an imported module)
+    export_stack: Vec<HashMap<String, Value>>,
+    /// Optional base directory context for resolving relative imports (e.g. eval_file)
+    import_base_stack: Vec<ModuleContext>,
 }
 
 impl Evaluator {
@@ -120,6 +133,12 @@ impl Evaluator {
             registry,
             trace: VecDeque::new(),
             trace_seq: 0,
+
+            module_resolver: Box::new(DisabledModuleResolver),
+            module_cache: HashMap::new(),
+            module_stack: Vec::new(),
+            export_stack: Vec::new(),
+            import_base_stack: Vec::new(),
         }
     }
 
@@ -131,7 +150,30 @@ impl Evaluator {
             registry,
             trace: VecDeque::new(),
             trace_seq: 0,
+
+            module_resolver: Box::new(DisabledModuleResolver),
+            module_cache: HashMap::new(),
+            module_stack: Vec::new(),
+            export_stack: Vec::new(),
+            import_base_stack: Vec::new(),
         }
+    }
+
+    /// Configure the module resolver used for `Import/Export`.
+    pub fn set_module_resolver(&mut self, resolver: Box<dyn ModuleResolver>) {
+        self.module_resolver = resolver;
+    }
+
+    /// Push a base directory context for resolving relative imports.
+    ///
+    /// This is typically used by CLI `eval_file()` wrappers.
+    pub fn push_import_base(&mut self, module_id: String, base_dir: Option<std::path::PathBuf>) {
+        self.import_base_stack.push(ModuleContext { module_id, base_dir });
+    }
+
+    /// Pop the most recent base directory context.
+    pub fn pop_import_base(&mut self) {
+        self.import_base_stack.pop();
     }
 
     /// Append a trace entry (host-readable; no IO side effects).
@@ -167,6 +209,11 @@ impl Evaluator {
         // Avoid leaking trace across pooled executions
         self.trace.clear();
         self.trace_seq = 0;
+
+        // Reset module contexts (cache is kept; can be cleared explicitly by host if needed)
+        self.import_base_stack.clear();
+        self.export_stack.clear();
+        self.module_stack.clear();
 
         // Re-register built-in functions
         for name in self.registry.names() {
@@ -463,19 +510,13 @@ impl Evaluator {
                 Ok(Value::Null)
             }
 
-            Stmt::Import { .. } => {
-                // TODO: Implement module system
-                Err(RuntimeError::InvalidOperation(
-                    "Import not yet implemented".to_string(),
-                ))
-            }
+            Stmt::Import {
+                names,
+                path,
+                aliases,
+            } => self.eval_import(names, path, aliases),
 
-            Stmt::Export(_) => {
-                // TODO: Implement module system
-                Err(RuntimeError::InvalidOperation(
-                    "Export not yet implemented".to_string(),
-                ))
-            }
+            Stmt::Export(name) => self.eval_export(name),
 
             Stmt::Throw(expr) => {
                 let val = self.eval_expression(expr)?;
@@ -1107,6 +1148,119 @@ impl Evaluator {
         }
 
         Ok(accumulator)
+    }
+}
+
+impl Evaluator {
+    fn current_import_context(&self) -> Option<&ModuleContext> {
+        self.import_base_stack.last()
+    }
+
+    fn eval_import(
+        &mut self,
+        names: &[String],
+        specifier: &str,
+        aliases: &[Option<String>],
+    ) -> EvalResult {
+        let from_ctx = self.current_import_context();
+
+        let resolved = self
+            .module_resolver
+            .resolve(specifier, from_ctx)
+            .map_err(|e| RuntimeError::CustomError(format!("Import error: {e}")))?;
+
+        let exports = self.load_module(resolved)?;
+
+        for (i, name) in names.iter().enumerate() {
+            let alias = aliases.get(i).and_then(|a| a.clone()).unwrap_or_else(|| name.clone());
+            let v = exports.get(name).cloned().ok_or_else(|| {
+                RuntimeError::CustomError(format!(
+                    "Import error: '{}' is not exported by module {}",
+                    name, specifier
+                ))
+            })?;
+            self.env.borrow_mut().set(alias, v);
+        }
+
+        Ok(Value::Null)
+    }
+
+    fn eval_export(&mut self, name: &str) -> EvalResult {
+        let exports = self.export_stack.last_mut().ok_or_else(|| {
+            RuntimeError::CustomError("Export error: Export used outside of a module".to_string())
+        })?;
+
+        let val = self
+            .env
+            .borrow()
+            .get(name)
+            .ok_or_else(|| RuntimeError::CustomError(format!("Export error: '{}' is not defined", name)))?;
+
+        exports.insert(name.to_string(), val);
+        Ok(Value::Null)
+    }
+
+    fn load_module(&mut self, resolved: ResolvedModule) -> Result<HashMap<String, Value>, RuntimeError> {
+        if let Some(cached) = self.module_cache.get(&resolved.module_id) {
+            return Ok(cached.clone());
+        }
+
+        if self.module_stack.contains(&resolved.module_id) {
+            let mut chain = self.module_stack.clone();
+            chain.push(resolved.module_id.clone());
+            return Err(RuntimeError::CustomError(format!(
+                "Import error: circular import detected: {}",
+                chain.join(" -> ")
+            )));
+        }
+
+        self.module_stack.push(resolved.module_id.clone());
+
+        // Parse module
+        let mut parser = crate::parser::Parser::new(&resolved.source);
+        let program = parser
+            .parse_program()
+            .map_err(|e| RuntimeError::CustomError(format!(
+                "Import error: parse failed for module {}: {}",
+                resolved.module_id, e
+            )))?;
+
+        // Evaluate in an isolated environment with builtins registered.
+        let prev_env = Rc::clone(&self.env);
+        let module_env = Rc::new(RefCell::new(Environment::new()));
+        for name in self.registry.names() {
+            module_env
+                .borrow_mut()
+                .set(name.clone(), Value::BuiltIn { name, arity: 0 });
+        }
+        self.env = module_env;
+
+        // Push module import base (for relative imports inside the module)
+        self.import_base_stack.push(ModuleContext {
+            module_id: resolved.module_id.clone(),
+            base_dir: resolved.base_dir.clone(),
+        });
+
+        // Push export table
+        self.export_stack.push(HashMap::new());
+
+        let eval_res = self.eval_program(&program);
+
+        // Pop stacks and restore env
+        let exports = self.export_stack.pop().unwrap_or_default();
+        self.import_base_stack.pop();
+        self.env = prev_env;
+
+        // Pop module stack
+        let _ = self.module_stack.pop();
+
+        // If runtime error happened, surface it
+        if let Err(e) = eval_res {
+            return Err(e);
+        }
+
+        self.module_cache.insert(resolved.module_id.clone(), exports.clone());
+        Ok(exports)
     }
 }
 

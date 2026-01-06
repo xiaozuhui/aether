@@ -1,0 +1,5 @@
+Func ADD(A, B) {
+    Return (A + B)
+}
+
+Export ADD

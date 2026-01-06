@@ -1,0 +1,3 @@
+Import ADD as PLUS From "./math"
+
+PLUS(7, 8)

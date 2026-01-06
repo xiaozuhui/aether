@@ -175,6 +175,7 @@ pub mod engine;
 pub mod environment;
 pub mod evaluator;
 pub mod lexer;
+pub mod module_system;
 pub mod optimizer;
 pub mod parser;
 pub mod stdlib;
@@ -196,6 +197,7 @@ pub use cache::{ASTCache, CacheStats};
 pub use environment::Environment;
 pub use evaluator::{EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
+pub use module_system::{DisabledModuleResolver, FileSystemModuleResolver, ModuleResolver};
 pub use optimizer::Optimizer;
 pub use parser::{ParseError, Parser};
 pub use token::Token;
@@ -429,6 +431,49 @@ impl Aether {
     /// Clear the TRACE buffer without returning it.
     pub fn clear_trace(&mut self) {
         self.evaluator.clear_trace();
+    }
+
+    /// Configure the module resolver used for `Import/Export`.
+    ///
+    /// By default (DSL embedding), the resolver is disabled for safety.
+    pub fn set_module_resolver(&mut self, resolver: Box<dyn crate::module_system::ModuleResolver>) {
+        self.evaluator.set_module_resolver(resolver);
+    }
+
+    /// Push a base directory context for resolving relative imports.
+    ///
+    /// This is typically used by a file-based runner (CLI) before calling `eval()`.
+    pub fn push_import_base(&mut self, module_id: String, base_dir: Option<std::path::PathBuf>) {
+        self.evaluator.push_import_base(module_id, base_dir);
+    }
+
+    /// Pop the most recent base directory context.
+    pub fn pop_import_base(&mut self) {
+        self.evaluator.pop_import_base();
+    }
+
+    /// Evaluate an Aether script from a file path.
+    ///
+    /// This is a convenience wrapper that:
+    /// - reads the file
+    /// - pushes an import base context (module_id = canonical path; base_dir = parent dir)
+    /// - evaluates the code
+    /// - pops the import base context
+    ///
+    /// Note: this does **not** enable any module resolver. For DSL safety, module loading
+    /// remains disabled unless you explicitly call `set_module_resolver(...)`.
+    pub fn eval_file(&mut self, path: impl AsRef<std::path::Path>) -> Result<Value, String> {
+        let path = path.as_ref();
+
+        let code = std::fs::read_to_string(path).map_err(|e| format!("IO error: {}", e))?;
+
+        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let base_dir = canon.parent().map(|p| p.to_path_buf());
+
+        self.push_import_base(canon.display().to_string(), base_dir);
+        let res = self.eval(&code);
+        self.pop_import_base();
+        res
     }
 
     /// Set a global variable from the host application without using `eval()`.

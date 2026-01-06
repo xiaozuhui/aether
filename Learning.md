@@ -2,7 +2,7 @@
 
 > 本文面向希望**快速上手 Aether**（CLI 使用）以及希望把 Aether **嵌入到 Rust 应用**作为 DSL 的开发者。
 >
-> 当前仓库版本以 `Cargo.toml` 为准：`aether-azathoth v0.3.0`（crate 名为 `aether`，二进制名为 `aether`）。
+> 当前仓库版本以 `Cargo.toml` 为准：`aether-azathoth v0.4.2`（crate 名为 `aether`，二进制名为 `aether`）。
 
 ---
 
@@ -89,6 +89,7 @@ Aether CLI 默认会：
 
 - 启用所有 IO 权限（允许文件/网络相关内置函数）
 - 自动加载标准库（除非加 `--no-stdlib`）
+- 启用文件模块加载（`Import/Export`），并以脚本所在目录作为相对导入的 base
 
 ### 3.2 常用选项
 
@@ -365,8 +366,8 @@ PRINTLN(USER["age"])
 
 Aether 的 stdlib 由 Aether 语言自身编写，并在编译时嵌入二进制。
 
-> 提示：语言级 `Import/Export` 语法已可解析，但当前版本运行时模块系统尚未实现。
-> 在工程落地上更推荐把“模块/函数库”交给宿主（Rust）管理：按需把代码 `eval` 注入，或使用下文的“隔离作用域”方式执行。
+> 提示：`Import/Export` 运行时模块系统已实现，但在 DSL（`Aether::new()`）默认 **禁用导入**（安全优先）。
+> 在 DSL 工程落地上依然推荐把“模块/函数库”交给宿主（Rust）管理：按需把代码 `eval` 注入，或使用下文的“隔离作用域”方式执行。
 
 ### 9.1 模块列表（16 个）
 

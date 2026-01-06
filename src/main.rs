@@ -1,4 +1,4 @@
-use aether::Aether;
+use aether::{Aether, FileSystemModuleResolver};
 use std::env;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -185,7 +185,24 @@ fn ouroboros_transpile_python(
         println!();
     }
 
-    match engine.eval(&code) {
+    // Enable filesystem Import/Export for CLI runs.
+    engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
+
+    // Best-effort base dir for relative imports (when input comes from a file).
+    if filename != "-" {
+        let path = std::path::Path::new(filename);
+        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let base_dir = canon.parent().map(|p| p.to_path_buf());
+        engine.push_import_base(canon.display().to_string(), base_dir);
+    }
+
+    let eval_res = engine.eval(&code);
+
+    if filename != "-" {
+        engine.pop_import_base();
+    }
+
+    match eval_res {
         Ok(result) => {
             if debug_mode {
                 println!("=== 执行结果 ===");
@@ -288,58 +305,59 @@ fn show_ast_for_file(filename: &str) {
 
 /// 运行 Aether 脚本文件
 fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool) {
-    match fs::read_to_string(filename) {
-        Ok(code) => {
-            // 作为独立语言使用时，默认启用所有IO权限
-            let mut engine = if load_stdlib {
-                match Aether::with_stdlib() {
-                    Ok(engine) => engine,
-                    Err(e) => {
-                        eprintln!("警告: 标准库加载失败: {}", e);
-                        eprintln!("继续运行但不加载标准库...");
-                        Aether::with_all_permissions()
-                    }
-                }
-            } else {
+    // 作为独立语言使用时，默认启用所有IO权限
+    let mut engine = if load_stdlib {
+        match Aether::with_stdlib() {
+            Ok(engine) => engine,
+            Err(e) => {
+                eprintln!("警告: 标准库加载失败: {}", e);
+                eprintln!("继续运行但不加载标准库...");
                 Aether::with_all_permissions()
-            };
-
-            if debug_mode {
-                println!("=== 调试模式 ===");
-                println!("文件: {}", filename);
-                println!(
-                    "标准库: {}",
-                    if load_stdlib {
-                        "已加载"
-                    } else {
-                        "未加载"
-                    }
-                );
-                println!();
             }
+        }
+    } else {
+        Aether::with_all_permissions()
+    };
 
-            match engine.eval(&code) {
-                Ok(result) => {
-                    if debug_mode {
-                        println!("=== 执行结果 ===");
-                    }
-                    // 只在有显式输出时打印
-                    if result != aether::Value::Null {
-                        println!("{}", result);
-                    }
-                    if debug_mode {
-                        println!("\n=== 执行完成 ===");
-                    }
-                }
-                Err(e) => {
-                    eprintln!("✗ 运行时错误:");
-                    print_detailed_error(&code, &e.to_string());
-                    std::process::exit(1);
-                }
+    if debug_mode {
+        println!("=== 调试模式 ===");
+        println!("文件: {}", filename);
+        println!(
+            "标准库: {}",
+            if load_stdlib {
+                "已加载"
+            } else {
+                "未加载"
+            }
+        );
+        println!();
+    }
+
+    // Enable filesystem Import/Export for CLI file runs.
+    engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
+
+    match engine.eval_file(filename) {
+        Ok(result) => {
+            if debug_mode {
+                println!("=== 执行结果 ===");
+            }
+            if result != aether::Value::Null {
+                println!("{}", result);
+            }
+            if debug_mode {
+                println!("\n=== 执行完成 ===");
             }
         }
         Err(e) => {
-            eprintln!("✗ 无法读取文件 '{}': {}", filename, e);
+            eprintln!("✗ 运行时错误:");
+
+            // Best-effort source context
+            if let Ok(code) = fs::read_to_string(filename) {
+                print_detailed_error(&code, &e);
+            } else {
+                eprintln!("{}", e);
+            }
+
             std::process::exit(1);
         }
     }
