@@ -517,7 +517,8 @@ impl Evaluator {
                 names,
                 path,
                 aliases,
-            } => self.eval_import(names, path, aliases),
+                namespace,
+            } => self.eval_import(names, path, aliases, namespace.as_ref()),
 
             Stmt::Export(name) => self.eval_export(name),
 
@@ -1164,6 +1165,7 @@ impl Evaluator {
         names: &[String],
         specifier: &str,
         aliases: &[Option<String>],
+        namespace: Option<&String>,
     ) -> EvalResult {
         let from_ctx = self.current_import_context();
 
@@ -1173,6 +1175,11 @@ impl Evaluator {
             .map_err(|e| RuntimeError::CustomError(format!("Import error: {e}")))?;
 
         let exports = self.load_module(resolved)?;
+
+        if let Some(ns) = namespace {
+            self.env.borrow_mut().set(ns.clone(), Value::Dict(exports));
+            return Ok(Value::Null);
+        }
 
         for (i, name) in names.iter().enumerate() {
             let alias = aliases

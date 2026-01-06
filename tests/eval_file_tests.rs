@@ -55,7 +55,7 @@ Export ADD
     let main = dir.write(
         "main.aether",
         r#"
-Import ADD From "./math"
+Import {ADD} From "./math"
 ADD(1, 2)
 "#,
     );
@@ -68,7 +68,7 @@ ADD(1, 2)
 
     // Import base should not leak; without base context, relative import should fail.
     let err = engine
-        .eval("Import ADD From \"./math\"")
+        .eval("Import {ADD} From \"./math\"")
         .unwrap_err()
         .to_string();
     assert!(err.contains("No base directory"), "unexpected error: {err}");
@@ -91,7 +91,7 @@ Export ADD
     let main = dir.write(
         "main.aether",
         r#"
-Import ADD From "./math"
+Import {ADD} From "./math"
 ADD(1, 2)
 "#,
     );

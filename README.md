@@ -246,7 +246,9 @@ fn main() -> Result<(), String> {
 
 - DSL（`Aether::new()`）默认 resolver 为禁用：脚本里 `Import` 会报错
 - CLI 会显式启用文件系统 resolver，并自动以“脚本所在目录”作为相对导入的 base
-- 目前别名关键字是小写 `as`（例如：`Import ADD as PLUS From "./math"`）
+- 别名关键字为 `As`（也兼容旧写法 `as`）
+- 命名空间导入：`Import M From "./math"` 会把模块导出绑定为一个 Dict 到 `M`（可用 `M["ADD"]` 访问）
+- 具名导入推荐使用 `{}`：例如 `Import {ADD} From "./math"`（避免与命名空间导入歧义）
 
 最小示例见：
 
@@ -271,6 +273,11 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 ```
+
+更多设计与规划：
+
+- [docs/MODULE_SYSTEM_DESIGN.md](docs/MODULE_SYSTEM_DESIGN.md)
+- [docs/ROADMAP.md](docs/ROADMAP.md)
 
 最小示例：Rust 数据 + DB 函数 + 脚本（闭包结束自动清理）：
 

@@ -68,9 +68,9 @@ Export ADD
     let main = dir.write(
         "main.aether",
         r#"
-Import ADD From "./math"
-ADD(1, 2)
-"#,
+    Import {ADD} From "./math"
+    ADD(1, 2)
+    "#,
     );
 
     let code = std::fs::read_to_string(&main).unwrap();
@@ -79,6 +79,20 @@ ADD(1, 2)
     let result = engine.eval(&code).unwrap();
     engine.pop_import_base();
 
+    assert_eq!(result, Value::Number(3.0));
+
+    // Namespace import binds module exports as a Dict.
+    let mut engine = engine_with_fs_import(&main);
+    let result = engine
+        .eval(
+            r#"
+Import M From "./math"
+Set F M["ADD"]
+F(1, 2)
+"#,
+        )
+        .unwrap();
+    engine.pop_import_base();
     assert_eq!(result, Value::Number(3.0));
 }
 
@@ -99,9 +113,9 @@ Export ADD
     let main = dir.write(
         "main.aether",
         r#"
-Import ADD as PLUS From "./math"
-PLUS(10, 20)
-"#,
+    Import ADD As PLUS From "./math"
+    PLUS(10, 20)
+    "#,
     );
 
     let code = std::fs::read_to_string(&main).unwrap();
@@ -129,9 +143,9 @@ Func ADD(A, B) {
     let main = dir.write(
         "main.aether",
         r#"
-Import ADD From "./math"
-ADD(1, 2)
-"#,
+    Import {ADD} From "./math"
+    ADD(1, 2)
+    "#,
     );
 
     let code = std::fs::read_to_string(&main).unwrap();
@@ -150,7 +164,7 @@ fn circular_import_is_detected() {
     let _a = dir.write(
         "a.aether",
         r#"
-Import BVAL From "./b"
+Import {BVAL} From "./b"
 Set AVAL 1
 Export AVAL
 "#,
@@ -159,7 +173,7 @@ Export AVAL
     let _b = dir.write(
         "b.aether",
         r#"
-Import AVAL From "./a"
+Import {AVAL} From "./a"
 Set BVAL 2
 Export BVAL
 "#,
@@ -168,9 +182,9 @@ Export BVAL
     let main = dir.write(
         "main.aether",
         r#"
-Import AVAL From "./a"
-AVAL
-"#,
+    Import {AVAL} From "./a"
+    AVAL
+    "#,
     );
 
     let code = std::fs::read_to_string(&main).unwrap();

@@ -380,7 +380,14 @@ fn stmt_to_json(stmt: &crate::ast::Stmt) -> serde_json::Value {
             names,
             path,
             aliases,
-        } => serde_json::json!({"type":"Import","names":names,"path":path,"aliases":aliases}),
+            namespace,
+        } => serde_json::json!({
+            "type":"Import",
+            "names": names,
+            "path": path,
+            "aliases": aliases,
+            "namespace": namespace,
+        }),
         Stmt::Export(name) => serde_json::json!({"type":"Export","name":name}),
         Stmt::Throw(expr) => serde_json::json!({"type":"Throw","value":expr_to_json(expr)}),
         Stmt::Expression(expr) => {

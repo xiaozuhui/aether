@@ -168,11 +168,15 @@ pub enum Stmt {
         default: Option<Vec<Stmt>>,
     },
 
-    // Import statement: Import NAME From PATH
+    // Import statement:
+    // - Named imports: Import {NAME1, NAME2} From PATH
+    // - Named import with alias: Import NAME As ALIAS From PATH
+    // - Namespace import: Import NS From PATH  (bind module exports as Dict to NS)
     Import {
         names: Vec<String>,
         path: String,
-        aliases: Vec<Option<String>>, // Optional aliases (as NAME)
+        aliases: Vec<Option<String>>, // Optional aliases (As NAME)
+        namespace: Option<String>,    // Namespace binding name
     },
 
     // Export statement: Export NAME

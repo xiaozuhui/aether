@@ -693,12 +693,16 @@ impl Parser {
         })
     }
 
-    /// Parse: Import {NAME1, NAME2} From "path"
+    /// Parse:
+    /// - Import {NAME1, NAME2} From "path"
+    /// - Import NAME As ALIAS From "path"
+    /// - Import NS From "path" (namespace import)
     fn parse_import_statement(&mut self) -> Result<Stmt, ParseError> {
         self.next_token(); // skip 'Import'
 
         let mut names = Vec::new();
         let mut aliases = Vec::new();
+        let mut namespace: Option<String> = None;
 
         // Import {NAME1, NAME2, ...}
         if self.current_token == Token::LeftBrace {
@@ -747,7 +751,7 @@ impl Parser {
 
             self.expect_token(Token::RightBrace)?;
         } else {
-            // Import NAME
+            // Import NAME ...
             let name = match &self.current_token {
                 Token::Identifier(n) => n.clone(),
                 _ => {
@@ -761,21 +765,23 @@ impl Parser {
             };
             self.next_token();
 
-            let alias = if self.current_token == Token::As {
+            // If `As` present: named import with alias.
+            // Otherwise, if directly followed by `From`: namespace import.
+            if self.current_token == Token::As {
                 self.next_token();
-                if let Token::Identifier(a) = &self.current_token.clone() {
+                let alias = if let Token::Identifier(a) = &self.current_token.clone() {
                     let alias_name = a.clone();
                     self.next_token();
                     Some(alias_name)
                 } else {
                     None
-                }
+                };
+                names.push(name);
+                aliases.push(alias);
             } else {
-                None
-            };
-
-            names.push(name);
-            aliases.push(alias);
+                // Namespace import
+                namespace = Some(name);
+            }
         }
 
         self.expect_token(Token::From)?;
@@ -802,6 +808,7 @@ impl Parser {
             names,
             path,
             aliases,
+            namespace,
         })
     }
 

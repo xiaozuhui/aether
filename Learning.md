@@ -419,6 +419,58 @@ engine.eval("PRINTLN(STR_TO_UPPER(\"hello\"))")?;
 # Ok::<(), String>(())
 ```
 
+### 9.4 文件模块（Import/Export，通用语言/CLI 场景）
+
+当你把 Aether 当成通用脚本语言使用时，可以把代码拆分到多个 `.aether` 文件，并用 `Import/Export` 复用。
+
+示例（主文件）：
+
+```aether
+// examples/module_import/main.aether
+Import ADD As PLUS From "./math"
+
+PLUS(7, 8)
+```
+
+示例（被导入模块）：
+
+```aether
+// examples/module_import/math.aether
+Func ADD(A, B) {
+    Return (A + B)
+}
+
+Export ADD
+```
+
+关键点：
+
+- `Import`/`From`/`Export` 关键字首字母大写
+- 别名关键字为 `As`（也兼容旧写法 `as`）
+- 命名空间导入：`Import M From "./math"` 会把模块导出绑定为一个 Dict 到 `M`（可用 `M["ADD"]` 访问）
+- 具名导入推荐使用 `{}`：例如 `Import {ADD} From "./math"`
+- 变量/函数名必须是 `UPPER_SNAKE_CASE`（例如 `ADD`, `TOTAL_PRICE`）
+
+CLI 运行（相对导入以脚本目录为 base）：
+
+```bash
+aether examples/module_import/main.aether
+```
+
+Rust 侧推荐使用方案 1：`eval_file` 只管理 base_dir，上层显式启用 resolver：
+
+```rust
+use aether::{Aether, FileSystemModuleResolver};
+
+fn main() -> Result<(), String> {
+    let mut engine = Aether::new();
+    engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
+    let v = engine.eval_file("examples/module_import/main.aether")?;
+    println!("{}", v);
+    Ok(())
+}
+```
+
 ---
 
 ## 10. 精确计算与大整数
@@ -781,12 +833,14 @@ aether --ast examples/stats_demo.aether
 ### 14.1 示例脚本
 
 - `examples/`：语言特性与场景示例（统计、精度、报表、引擎模式等）
+- `examples/module_import/`：文件模块（`Import/Export`）多文件示例
+- `examples/eval_file_demo.rs`：Rust 侧启用 resolver + `eval_file(...)` 示例
 - `stdlib/examples/`：标准库模块示例
 
 运行示例：
 
 ```bash
-cargo run --release examples/report_demo.aether
+cargo run --release -- examples/report_demo.aether
 ```
 
 ### 14.2 运行测试
