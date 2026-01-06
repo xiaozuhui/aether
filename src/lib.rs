@@ -195,7 +195,7 @@ pub use ast::{Expr, Program, Stmt};
 pub use builtins::{BuiltInRegistry, IOPermissions};
 pub use cache::{ASTCache, CacheStats};
 pub use environment::Environment;
-pub use evaluator::{EvalResult, Evaluator, RuntimeError};
+pub use evaluator::{ErrorReport, EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
 pub use module_system::{DisabledModuleResolver, FileSystemModuleResolver, ModuleResolver};
 pub use optimizer::Optimizer;
@@ -396,6 +396,9 @@ impl Aether {
 
     /// Evaluate Aether code and return the result
     pub fn eval(&mut self, code: &str) -> Result<Value, String> {
+        // Clear any previous call stack frames before starting a new top-level evaluation.
+        self.evaluator.clear_call_stack();
+
         // 尝试从缓存获取AST
         let program = if let Some(cached_program) = self.cache.get(code) {
             cached_program
@@ -418,6 +421,32 @@ impl Aether {
         self.evaluator
             .eval_program(&program)
             .map_err(|e| format!("Runtime error: {}", e))
+    }
+
+    /// Evaluate Aether code and return a structured error report on failure.
+    ///
+    /// This is intended for integrations that need machine-readable diagnostics.
+    pub fn eval_report(&mut self, code: &str) -> Result<Value, ErrorReport> {
+        // Clear any previous call stack frames before starting a new top-level evaluation.
+        self.evaluator.clear_call_stack();
+
+        // Try AST cache first
+        let program = if let Some(cached_program) = self.cache.get(code) {
+            cached_program
+        } else {
+            let mut parser = Parser::new(code);
+            let program = parser
+                .parse_program()
+                .map_err(|e| ErrorReport::parse_error(e.to_string()))?;
+
+            let optimized = self.optimizer.optimize_program(&program);
+            self.cache.insert(code, optimized.clone());
+            optimized
+        };
+
+        self.evaluator
+            .eval_program(&program)
+            .map_err(|e| e.to_error_report())
     }
 
     /// Drain the in-memory TRACE buffer.
@@ -472,6 +501,25 @@ impl Aether {
 
         self.push_import_base(canon.display().to_string(), base_dir);
         let res = self.eval(&code);
+        self.pop_import_base();
+        res
+    }
+
+    /// Evaluate an Aether script from a file path, returning a structured error report on failure.
+    pub fn eval_file_report(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Value, ErrorReport> {
+        let path = path.as_ref();
+
+        let code = std::fs::read_to_string(path)
+            .map_err(|e| ErrorReport::io_error(format!("IO error: {e}")))?;
+
+        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let base_dir = canon.parent().map(|p| p.to_path_buf());
+
+        self.push_import_base(canon.display().to_string(), base_dir);
+        let res = self.eval_report(&code);
         self.pop_import_base();
         res
     }

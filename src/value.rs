@@ -37,6 +37,7 @@ pub enum Value {
 
     /// Function (closure)
     Function {
+        name: Option<String>,
         params: Vec<String>,
         body: Vec<Stmt>,
         env: Rc<RefCell<Environment>>,
@@ -154,8 +155,12 @@ impl Value {
                     .collect();
                 format!("{{{}}}", pairs.join(", "))
             }
-            Value::Function { params, .. } => {
-                format!("<Function ({})>", params.join(", "))
+            Value::Function { name, params, .. } => {
+                if let Some(n) = name {
+                    format!("<Function {} ({})>", n, params.join(", "))
+                } else {
+                    format!("<Function ({})>", params.join(", "))
+                }
             }
             Value::Generator { params, .. } => {
                 format!("<Generator ({})>", params.join(", "))

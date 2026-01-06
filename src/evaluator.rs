@@ -4,12 +4,146 @@
 use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
 use crate::builtins::BuiltInRegistry;
 use crate::environment::Environment;
-use crate::module_system::{DisabledModuleResolver, ModuleContext, ModuleResolver, ResolvedModule};
+use crate::module_system::{
+    DisabledModuleResolver, ModuleContext, ModuleResolveError, ModuleResolver, ResolvedModule,
+};
 use crate::value::{GeneratorState, Value};
+use serde_json::{Value as JsonValue, json};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallFrame {
+    pub name: String,
+    pub signature: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImportErrorKind {
+    ImportDisabled,
+    InvalidSpecifier,
+    NoBaseDir,
+    NotFound,
+    AccessDenied,
+    IoError,
+    NotExported,
+    CircularImport,
+    ParseFailed,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImportError {
+    pub kind: ImportErrorKind,
+    pub specifier: String,
+    pub detail: Option<String>,
+    pub symbol: Option<String>,
+    pub module_id: Option<String>,
+    pub import_chain: Vec<String>,
+    pub cycle: Option<Vec<String>>,
+}
+
+impl ImportError {
+    fn from_resolve_error(
+        specifier: &str,
+        err: ModuleResolveError,
+        import_chain: Vec<String>,
+    ) -> Self {
+        match err {
+            ModuleResolveError::ImportDisabled => ImportError {
+                kind: ImportErrorKind::ImportDisabled,
+                specifier: specifier.to_string(),
+                detail: None,
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+            ModuleResolveError::InvalidSpecifier(s) => ImportError {
+                kind: ImportErrorKind::InvalidSpecifier,
+                specifier: specifier.to_string(),
+                detail: Some(s),
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+            ModuleResolveError::NoBaseDir(s) => ImportError {
+                kind: ImportErrorKind::NoBaseDir,
+                specifier: specifier.to_string(),
+                detail: Some(s),
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+            ModuleResolveError::NotFound(s) => ImportError {
+                kind: ImportErrorKind::NotFound,
+                specifier: specifier.to_string(),
+                detail: Some(s),
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+            ModuleResolveError::AccessDenied(s) => ImportError {
+                kind: ImportErrorKind::AccessDenied,
+                specifier: specifier.to_string(),
+                detail: Some(s),
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+            ModuleResolveError::IoError(s) => ImportError {
+                kind: ImportErrorKind::IoError,
+                specifier: specifier.to_string(),
+                detail: Some(s),
+                symbol: None,
+                module_id: None,
+                import_chain,
+                cycle: None,
+            },
+        }
+    }
+
+    fn not_exported(specifier: &str, symbol: &str, import_chain: Vec<String>) -> Self {
+        ImportError {
+            kind: ImportErrorKind::NotExported,
+            specifier: specifier.to_string(),
+            detail: None,
+            symbol: Some(symbol.to_string()),
+            module_id: None,
+            import_chain,
+            cycle: None,
+        }
+    }
+
+    fn circular(module_id: &str, cycle: Vec<String>, import_chain: Vec<String>) -> Self {
+        ImportError {
+            kind: ImportErrorKind::CircularImport,
+            specifier: module_id.to_string(),
+            detail: None,
+            symbol: None,
+            module_id: Some(module_id.to_string()),
+            import_chain,
+            cycle: Some(cycle),
+        }
+    }
+
+    fn parse_failed(module_id: &str, detail: String, import_chain: Vec<String>) -> Self {
+        ImportError {
+            kind: ImportErrorKind::ParseFailed,
+            specifier: module_id.to_string(),
+            detail: Some(detail),
+            symbol: None,
+            module_id: Some(module_id.to_string()),
+            import_chain,
+            cycle: None,
+        }
+    }
+}
 
 /// Runtime errors
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +184,15 @@ pub enum RuntimeError {
     /// Throw statement (user-thrown error)
     Throw(Value),
 
+    /// Structured Import/Export module errors (with import chain)
+    ImportError(ImportError),
+
+    /// Attach a captured call stack to an error.
+    WithCallStack {
+        error: Box<RuntimeError>,
+        call_stack: Vec<CallFrame>,
+    },
+
     /// Custom error message (用于IO操作等)
     CustomError(String),
 }
@@ -77,6 +220,63 @@ impl std::fmt::Display for RuntimeError {
             RuntimeError::Break => write!(f, "Break outside of loop"),
             RuntimeError::Continue => write!(f, "Continue outside of loop"),
             RuntimeError::Throw(val) => write!(f, "Throw: {}", val),
+            RuntimeError::ImportError(e) => {
+                let msg = match e.kind {
+                    ImportErrorKind::ImportDisabled => "Import is disabled".to_string(),
+                    ImportErrorKind::InvalidSpecifier => format!(
+                        "Invalid module specifier: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NoBaseDir => format!(
+                        "No base directory to resolve specifier: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NotFound => format!(
+                        "Module not found: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::AccessDenied => format!(
+                        "Module access denied: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::IoError => format!(
+                        "Module IO error: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NotExported => format!(
+                        "'{}' is not exported by module {}",
+                        e.symbol.clone().unwrap_or_else(|| "<unknown>".to_string()),
+                        e.specifier
+                    ),
+                    ImportErrorKind::CircularImport => {
+                        let cycle = e.cycle.clone().unwrap_or_else(|| vec![e.specifier.clone()]);
+                        format!("circular import detected: {}", cycle.join(" -> "))
+                    }
+                    ImportErrorKind::ParseFailed => format!(
+                        "parse failed for module {}: {}",
+                        e.module_id.clone().unwrap_or_else(|| e.specifier.clone()),
+                        e.detail.clone().unwrap_or_else(|| "<unknown>".to_string())
+                    ),
+                };
+
+                write!(f, "Import error: {}", msg)?;
+                if !e.import_chain.is_empty() {
+                    write!(f, "\nImport chain: {}", e.import_chain.join(" -> "))?;
+                }
+                Ok(())
+            }
+            RuntimeError::WithCallStack { error, call_stack } => {
+                write!(f, "{}", error)?;
+                if !call_stack.is_empty() {
+                    let frames = call_stack
+                        .iter()
+                        .map(|fr| fr.signature.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" -> ");
+                    write!(f, "\nCall stack: {}", frames)?;
+                }
+                Ok(())
+            }
             RuntimeError::CustomError(msg) => write!(f, "{}", msg),
         }
     }
@@ -85,6 +285,174 @@ impl std::fmt::Display for RuntimeError {
 impl std::error::Error for RuntimeError {}
 
 pub type EvalResult = Result<Value, RuntimeError>;
+
+/// A structured, machine-readable error report.
+///
+/// This is intended for CLI/host integrations that need stable fields
+/// (instead of parsing human-readable error strings).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ErrorReport {
+    pub phase: String,
+    pub kind: String,
+    pub message: String,
+    pub import_chain: Vec<String>,
+    pub call_stack: Vec<CallFrame>,
+}
+
+impl ErrorReport {
+    pub fn io_error(message: impl Into<String>) -> Self {
+        ErrorReport {
+            phase: "io".to_string(),
+            kind: "IoError".to_string(),
+            message: message.into(),
+            import_chain: Vec::new(),
+            call_stack: Vec::new(),
+        }
+    }
+
+    pub fn parse_error(message: impl Into<String>) -> Self {
+        ErrorReport {
+            phase: "parse".to_string(),
+            kind: "ParseError".to_string(),
+            message: message.into(),
+            import_chain: Vec::new(),
+            call_stack: Vec::new(),
+        }
+    }
+
+    pub fn to_json_value(&self) -> JsonValue {
+        let call_stack = self
+            .call_stack
+            .iter()
+            .map(|fr| json!({"name": fr.name, "signature": fr.signature}))
+            .collect::<Vec<_>>();
+
+        json!({
+            "phase": self.phase,
+            "kind": self.kind,
+            "message": self.message,
+            "import_chain": self.import_chain,
+            "call_stack": call_stack,
+        })
+    }
+
+    pub fn to_json_pretty(&self) -> String {
+        serde_json::to_string_pretty(&self.to_json_value()).unwrap_or_else(|_| {
+            "{\n  \"error\": \"failed to serialize ErrorReport\"\n}".to_string()
+        })
+    }
+}
+
+impl RuntimeError {
+    fn peel_call_stack(&self) -> (&RuntimeError, Vec<CallFrame>) {
+        let mut current = self;
+        let mut frames: Vec<CallFrame> = Vec::new();
+
+        while let RuntimeError::WithCallStack { error, call_stack } = current {
+            if frames.is_empty() {
+                frames = call_stack.clone();
+            }
+            current = error.as_ref();
+        }
+
+        (current, frames)
+    }
+
+    fn kind_name(&self) -> String {
+        match self {
+            RuntimeError::UndefinedVariable(_) => "UndefinedVariable",
+            RuntimeError::TypeError(_) | RuntimeError::TypeErrorDetailed { .. } => "TypeError",
+            RuntimeError::InvalidOperation(_) => "InvalidOperation",
+            RuntimeError::DivisionByZero => "DivisionByZero",
+            RuntimeError::NotCallable(_) => "NotCallable",
+            RuntimeError::WrongArity { .. } => "WrongArity",
+            RuntimeError::Return(_) => "Return",
+            RuntimeError::Yield(_) => "Yield",
+            RuntimeError::Break => "Break",
+            RuntimeError::Continue => "Continue",
+            RuntimeError::Throw(_) => "Throw",
+            RuntimeError::ImportError(e) => match e.kind {
+                ImportErrorKind::ImportDisabled => "ImportDisabled",
+                ImportErrorKind::InvalidSpecifier => "InvalidSpecifier",
+                ImportErrorKind::NoBaseDir => "NoBaseDir",
+                ImportErrorKind::NotFound => "NotFound",
+                ImportErrorKind::AccessDenied => "AccessDenied",
+                ImportErrorKind::IoError => "IoError",
+                ImportErrorKind::NotExported => "NotExported",
+                ImportErrorKind::CircularImport => "CircularImport",
+                ImportErrorKind::ParseFailed => "ParseFailed",
+            },
+            RuntimeError::WithCallStack { .. } => "WithCallStack",
+            RuntimeError::CustomError(_) => "CustomError",
+        }
+        .to_string()
+    }
+
+    fn base_message(&self) -> String {
+        match self {
+            RuntimeError::WithCallStack { error, .. } => error.base_message(),
+            RuntimeError::ImportError(e) => {
+                let msg = match e.kind {
+                    ImportErrorKind::ImportDisabled => "Import is disabled".to_string(),
+                    ImportErrorKind::InvalidSpecifier => format!(
+                        "Invalid module specifier: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NoBaseDir => format!(
+                        "No base directory to resolve specifier: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NotFound => format!(
+                        "Module not found: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::AccessDenied => format!(
+                        "Module access denied: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::IoError => format!(
+                        "Module IO error: {}",
+                        e.detail.clone().unwrap_or_else(|| e.specifier.clone())
+                    ),
+                    ImportErrorKind::NotExported => format!(
+                        "'{}' is not exported by module {}",
+                        e.symbol.clone().unwrap_or_else(|| "<unknown>".to_string()),
+                        e.specifier
+                    ),
+                    ImportErrorKind::CircularImport => {
+                        let cycle = e.cycle.clone().unwrap_or_else(|| vec![e.specifier.clone()]);
+                        format!("circular import detected: {}", cycle.join(" -> "))
+                    }
+                    ImportErrorKind::ParseFailed => format!(
+                        "parse failed for module {}: {}",
+                        e.module_id.clone().unwrap_or_else(|| e.specifier.clone()),
+                        e.detail.clone().unwrap_or_else(|| "<unknown>".to_string())
+                    ),
+                };
+
+                format!("Import error: {msg}")
+            }
+            other => other.to_string(),
+        }
+    }
+
+    pub fn to_error_report(&self) -> ErrorReport {
+        let (base, call_stack) = self.peel_call_stack();
+
+        let import_chain = match base {
+            RuntimeError::ImportError(e) => e.import_chain.clone(),
+            _ => Vec::new(),
+        };
+
+        ErrorReport {
+            phase: "runtime".to_string(),
+            kind: base.kind_name(),
+            message: base.base_message(),
+            import_chain,
+            call_stack,
+        }
+    }
+}
 
 /// Evaluator for Aether programs
 pub struct Evaluator {
@@ -107,10 +475,43 @@ pub struct Evaluator {
     export_stack: Vec<HashMap<String, Value>>,
     /// Optional base directory context for resolving relative imports (e.g. eval_file)
     import_base_stack: Vec<ModuleContext>,
+
+    /// Call stack for better debugging (user functions + builtins)
+    call_stack: Vec<CallFrame>,
 }
 
 impl Evaluator {
     const TRACE_MAX_ENTRIES: usize = 1024;
+
+    fn register_builtins_into_env(registry: &BuiltInRegistry, env: &mut Environment) {
+        for name in registry.names() {
+            let arity = registry.get(&name).map(|(_, a)| a).unwrap_or(0);
+            env.set(name.clone(), Value::BuiltIn { name, arity });
+        }
+    }
+
+    fn is_control_flow_error(err: &RuntimeError) -> bool {
+        matches!(
+            err,
+            RuntimeError::Return(_)
+                | RuntimeError::Yield(_)
+                | RuntimeError::Break
+                | RuntimeError::Continue
+        )
+    }
+
+    fn attach_call_stack_if_absent(&self, err: RuntimeError) -> RuntimeError {
+        if Self::is_control_flow_error(&err) {
+            return err;
+        }
+        match err {
+            RuntimeError::WithCallStack { .. } => err,
+            other => RuntimeError::WithCallStack {
+                error: Box::new(other),
+                call_stack: self.call_stack.clone(),
+            },
+        }
+    }
 
     /// Create a new evaluator (默认禁用IO)
     pub fn new() -> Self {
@@ -123,10 +524,7 @@ impl Evaluator {
 
         // Register built-in functions with permissions
         let registry = BuiltInRegistry::with_permissions(permissions);
-        for name in registry.names() {
-            env.borrow_mut()
-                .set(name.clone(), Value::BuiltIn { name, arity: 0 });
-        }
+        Self::register_builtins_into_env(&registry, &mut *env.borrow_mut());
 
         Evaluator {
             env,
@@ -139,6 +537,8 @@ impl Evaluator {
             module_stack: Vec::new(),
             export_stack: Vec::new(),
             import_base_stack: Vec::new(),
+
+            call_stack: Vec::new(),
         }
     }
 
@@ -156,7 +556,14 @@ impl Evaluator {
             module_stack: Vec::new(),
             export_stack: Vec::new(),
             import_base_stack: Vec::new(),
+
+            call_stack: Vec::new(),
         }
+    }
+
+    /// Clear the call stack (used by top-level entry points like `Aether::eval`).
+    pub fn clear_call_stack(&mut self) {
+        self.call_stack.clear();
     }
 
     /// Configure the module resolver used for `Import/Export`.
@@ -218,12 +625,11 @@ impl Evaluator {
         self.export_stack.clear();
         self.module_stack.clear();
 
+        // Avoid leaking call stack across pooled executions
+        self.call_stack.clear();
+
         // Re-register built-in functions
-        for name in self.registry.names() {
-            self.env
-                .borrow_mut()
-                .set(name.clone(), Value::BuiltIn { name, arity: 0 });
-        }
+        Self::register_builtins_into_env(&self.registry, &mut *self.env.borrow_mut());
     }
 
     /// Set a global variable from the host (without requiring `eval`).
@@ -327,6 +733,7 @@ impl Evaluator {
 
             Stmt::FuncDef { name, params, body } => {
                 let func = Value::Function {
+                    name: Some(name.clone()),
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
@@ -600,12 +1007,16 @@ impl Evaluator {
             }
 
             Expr::Call { func, args } => {
+                let name_hint = match func.as_ref() {
+                    Expr::Identifier(name) => Some(name.clone()),
+                    _ => None,
+                };
                 let func_val = self.eval_expression(func)?;
                 let arg_vals: Result<Vec<_>, _> =
                     args.iter().map(|arg| self.eval_expression(arg)).collect();
                 let arg_vals = arg_vals?;
 
-                self.call_function(&func_val, arg_vals)
+                self.call_function(name_hint.as_deref(), &func_val, arg_vals)
             }
 
             Expr::Array(elements) => {
@@ -703,6 +1114,7 @@ impl Evaluator {
             Expr::Lambda { params, body } => {
                 // Create a closure by capturing the current environment
                 Ok(Value::Function {
+                    name: None,
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
@@ -964,14 +1376,61 @@ impl Evaluator {
     }
 
     /// Call a function with arguments
-    fn call_function(&mut self, func: &Value, args: Vec<Value>) -> EvalResult {
+    fn call_function(
+        &mut self,
+        name_hint: Option<&str>,
+        func: &Value,
+        args: Vec<Value>,
+    ) -> EvalResult {
+        let frame = match func {
+            Value::Function { name, params, .. } => {
+                let display_name = name_hint
+                    .map(|s| s.to_string())
+                    .or_else(|| name.clone())
+                    .unwrap_or_else(|| "<lambda>".to_string());
+                let signature = format!("{}({})", display_name, params.join(", "));
+                CallFrame {
+                    name: display_name.clone(),
+                    signature,
+                }
+            }
+            Value::BuiltIn { name, .. } => {
+                let arity = self.registry.get(name).map(|(_, a)| a).unwrap_or(0);
+                let params = if arity == 0 {
+                    String::new()
+                } else {
+                    (1..=arity)
+                        .map(|i| format!("arg{}", i))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                let signature = format!("{}({})", name, params);
+                CallFrame {
+                    name: name.clone(),
+                    signature,
+                }
+            }
+            other => {
+                let name = name_hint.unwrap_or("<call>").to_string();
+                let signature = format!("{}(<{}>)", name, other.type_name());
+                CallFrame { name, signature }
+            }
+        };
+
+        self.call_stack.push(frame);
+
         match func {
-            Value::Function { params, body, env } => {
+            Value::Function {
+                params, body, env, ..
+            } => {
                 if params.len() != args.len() {
-                    return Err(RuntimeError::WrongArity {
+                    let err = RuntimeError::WrongArity {
                         expected: params.len(),
                         got: args.len(),
-                    });
+                    };
+                    let err = self.attach_call_stack_if_absent(err);
+                    let _ = self.call_stack.pop();
+                    return Err(err);
                 }
 
                 // Create new environment for function execution
@@ -996,24 +1455,32 @@ impl Evaluator {
                         }
                         Err(e) => {
                             self.env = prev_env;
+                            let e = self.attach_call_stack_if_absent(e);
+                            let _ = self.call_stack.pop();
                             return Err(e);
                         }
                     }
                 }
 
                 self.env = prev_env;
+                let _ = self.call_stack.pop();
                 Ok(result)
             }
 
             Value::BuiltIn { name, .. } => {
                 // Special handling for MAP, FILTER, and REDUCE
-                match name.as_str() {
+                let res = match name.as_str() {
                     "TRACE" => {
                         if args.is_empty() {
-                            return Err(RuntimeError::WrongArity {
-                                expected: 1,
-                                got: 0,
-                            });
+                            return {
+                                let err = RuntimeError::WrongArity {
+                                    expected: 1,
+                                    got: 0,
+                                };
+                                let err = self.attach_call_stack_if_absent(err);
+                                let _ = self.call_stack.pop();
+                                Err(err)
+                            };
                         }
 
                         // Optional label: TRACE("label", x, y)
@@ -1056,10 +1523,21 @@ impl Evaluator {
                             )))
                         }
                     }
+                };
+
+                let _ = self.call_stack.pop();
+                match res {
+                    Ok(v) => Ok(v),
+                    Err(e) => Err(self.attach_call_stack_if_absent(e)),
                 }
             }
 
-            _ => Err(RuntimeError::NotCallable(func.type_name().to_string())),
+            _ => {
+                let err = RuntimeError::NotCallable(func.type_name().to_string());
+                let err = self.attach_call_stack_if_absent(err);
+                let _ = self.call_stack.pop();
+                Err(err)
+            }
         }
     }
 
@@ -1086,7 +1564,7 @@ impl Evaluator {
 
         let mut result = Vec::new();
         for item in arr {
-            let mapped = self.call_function(func, vec![item.clone()])?;
+            let mapped = self.call_function(None, func, vec![item.clone()])?;
             result.push(mapped);
         }
 
@@ -1116,7 +1594,7 @@ impl Evaluator {
 
         let mut result = Vec::new();
         for item in arr {
-            let test_result = self.call_function(predicate, vec![item.clone()])?;
+            let test_result = self.call_function(None, predicate, vec![item.clone()])?;
             if test_result.is_truthy() {
                 result.push(item.clone());
             }
@@ -1148,7 +1626,7 @@ impl Evaluator {
         let func = &args[2];
 
         for item in arr {
-            accumulator = self.call_function(func, vec![accumulator, item.clone()])?;
+            accumulator = self.call_function(None, func, vec![accumulator, item.clone()])?;
         }
 
         Ok(accumulator)
@@ -1156,6 +1634,19 @@ impl Evaluator {
 }
 
 impl Evaluator {
+    fn import_chain(&self) -> Vec<String> {
+        self.import_base_stack
+            .iter()
+            .map(|c| c.module_id.clone())
+            .collect()
+    }
+
+    fn import_chain_with(&self, leaf: impl Into<String>) -> Vec<String> {
+        let mut chain = self.import_chain();
+        chain.push(leaf.into());
+        chain
+    }
+
     fn current_import_context(&self) -> Option<&ModuleContext> {
         self.import_base_stack.last()
     }
@@ -1169,10 +1660,18 @@ impl Evaluator {
     ) -> EvalResult {
         let from_ctx = self.current_import_context();
 
+        let chain_for_resolve = self.import_chain_with(specifier.to_string());
+
         let resolved = self
             .module_resolver
             .resolve(specifier, from_ctx)
-            .map_err(|e| RuntimeError::CustomError(format!("Import error: {e}")))?;
+            .map_err(|e| {
+                RuntimeError::ImportError(ImportError::from_resolve_error(
+                    specifier,
+                    e,
+                    chain_for_resolve,
+                ))
+            })?;
 
         let exports = self.load_module(resolved)?;
 
@@ -1187,9 +1686,10 @@ impl Evaluator {
                 .and_then(|a| a.clone())
                 .unwrap_or_else(|| name.clone());
             let v = exports.get(name).cloned().ok_or_else(|| {
-                RuntimeError::CustomError(format!(
-                    "Import error: '{}' is not exported by module {}",
-                    name, specifier
+                RuntimeError::ImportError(ImportError::not_exported(
+                    specifier,
+                    name,
+                    self.import_chain_with(specifier.to_string()),
                 ))
             })?;
             self.env.borrow_mut().set(alias, v);
@@ -1215,6 +1715,8 @@ impl Evaluator {
         &mut self,
         resolved: ResolvedModule,
     ) -> Result<HashMap<String, Value>, RuntimeError> {
+        let import_chain = self.import_chain_with(resolved.module_id.clone());
+
         if let Some(cached) = self.module_cache.get(&resolved.module_id) {
             return Ok(cached.clone());
         }
@@ -1222,9 +1724,10 @@ impl Evaluator {
         if self.module_stack.contains(&resolved.module_id) {
             let mut chain = self.module_stack.clone();
             chain.push(resolved.module_id.clone());
-            return Err(RuntimeError::CustomError(format!(
-                "Import error: circular import detected: {}",
-                chain.join(" -> ")
+            return Err(RuntimeError::ImportError(ImportError::circular(
+                &resolved.module_id,
+                chain,
+                import_chain,
             )));
         }
 
@@ -1232,21 +1735,22 @@ impl Evaluator {
 
         // Parse module
         let mut parser = crate::parser::Parser::new(&resolved.source);
-        let program = parser.parse_program().map_err(|e| {
-            RuntimeError::CustomError(format!(
-                "Import error: parse failed for module {}: {}",
-                resolved.module_id, e
-            ))
-        })?;
+        let program = match parser.parse_program() {
+            Ok(p) => p,
+            Err(e) => {
+                let _ = self.module_stack.pop();
+                return Err(RuntimeError::ImportError(ImportError::parse_failed(
+                    &resolved.module_id,
+                    e.to_string(),
+                    import_chain,
+                )));
+            }
+        };
 
         // Evaluate in an isolated environment with builtins registered.
         let prev_env = Rc::clone(&self.env);
         let module_env = Rc::new(RefCell::new(Environment::new()));
-        for name in self.registry.names() {
-            module_env
-                .borrow_mut()
-                .set(name.clone(), Value::BuiltIn { name, arity: 0 });
-        }
+        Self::register_builtins_into_env(&self.registry, &mut *module_env.borrow_mut());
         self.env = module_env;
 
         // Push module import base (for relative imports inside the module)
@@ -1258,15 +1762,18 @@ impl Evaluator {
         // Push export table
         self.export_stack.push(HashMap::new());
 
-        let _ = self.eval_program(&program)?;
+        let eval_res = self.eval_program(&program);
 
-        // Pop stacks and restore env
+        // Pop stacks and restore env (must happen even on error)
         let exports = self.export_stack.pop().unwrap_or_default();
         self.import_base_stack.pop();
         self.env = prev_env;
 
         // Pop module stack
         let _ = self.module_stack.pop();
+
+        // Propagate module evaluation error (cleanup already done)
+        let _ = eval_res.map_err(|e| self.attach_call_stack_if_absent(e))?;
 
         self.module_cache
             .insert(resolved.module_id.clone(), exports.clone());

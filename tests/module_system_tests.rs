@@ -197,6 +197,9 @@ Export BVAL
         err.contains("circular import detected"),
         "unexpected error: {err}"
     );
+
+    // Phase 1: error should include import chain for easier debugging.
+    assert!(err.contains("Import chain:"), "unexpected error: {err}");
 }
 
 #[test]

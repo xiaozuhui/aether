@@ -12,6 +12,7 @@ fn main() {
         let show_ast = args.contains(&"--ast".to_string());
         let check_only = args.contains(&"--check".to_string());
         let debug_mode = args.contains(&"--debug".to_string());
+        let json_error = args.contains(&"--json-error".to_string());
         let ouroboros = args.contains(&"--ouroboros".to_string())
             || args.contains(&"--py-to-aether".to_string());
         let run_after = args.contains(&"--run".to_string());
@@ -45,13 +46,13 @@ fn main() {
         if let Some(file) = script_file {
             let file = file.as_str();
             if ouroboros {
-                ouroboros_transpile_python(file, run_after, use_stdlib, debug_mode);
+                ouroboros_transpile_python(file, run_after, use_stdlib, debug_mode, json_error);
             } else if check_only {
                 check_file(file);
             } else if show_ast {
                 show_ast_for_file(file);
             } else {
-                run_file(file, use_stdlib, debug_mode);
+                run_file(file, use_stdlib, debug_mode, json_error);
             }
         } else {
             eprintln!("错误: 未指定脚本文件");
@@ -78,6 +79,7 @@ fn print_cli_help() {
     println!("  --ast                    显示抽象语法树 (AST)");
     println!("  --debug                  启用调试模式（显示求值过程）");
     println!("  --no-stdlib              不自动加载标准库");
+    println!("  --json-error             出错时输出结构化 JSON 错误（写到 stderr）");
     println!("  --ouroboros              将 Python 代码转译为 Aether（输出到 stdout）");
     println!("  --run                    配合 --ouroboros：转译后直接运行");
     println!();
@@ -104,6 +106,7 @@ fn ouroboros_transpile_python(
     run_after: bool,
     load_stdlib: bool,
     debug_mode: bool,
+    json_error: bool,
 ) {
     use aether::pytranspile::{Severity, TranspileOptions, python_to_aether};
 
@@ -196,7 +199,11 @@ fn ouroboros_transpile_python(
         engine.push_import_base(canon.display().to_string(), base_dir);
     }
 
-    let eval_res = engine.eval(&code);
+    let eval_res = if json_error {
+        engine.eval_report(&code).map_err(|r| r.to_json_pretty())
+    } else {
+        engine.eval(&code)
+    };
 
     if filename != "-" {
         engine.pop_import_base();
@@ -215,8 +222,12 @@ fn ouroboros_transpile_python(
             }
         }
         Err(e) => {
-            eprintln!("✗ 运行时错误:");
-            print_detailed_error(&code, &e.to_string());
+            if json_error {
+                eprintln!("{}", e);
+            } else {
+                eprintln!("✗ 运行时错误:");
+                print_detailed_error(&code, &e.to_string());
+            }
             std::process::exit(1);
         }
     }
@@ -304,7 +315,7 @@ fn show_ast_for_file(filename: &str) {
 }
 
 /// 运行 Aether 脚本文件
-fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool) {
+fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool, json_error: bool) {
     // 作为独立语言使用时，默认启用所有IO权限
     let mut engine = if load_stdlib {
         match Aether::with_stdlib() {
@@ -335,6 +346,27 @@ fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool) {
 
     // Enable filesystem Import/Export for CLI file runs.
     engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
+
+    if json_error {
+        match engine.eval_file_report(filename) {
+            Ok(result) => {
+                if debug_mode {
+                    println!("=== 执行结果 ===");
+                }
+                if result != aether::Value::Null {
+                    println!("{}", result);
+                }
+                if debug_mode {
+                    println!("\n=== 执行完成 ===");
+                }
+            }
+            Err(report) => {
+                eprintln!("{}", report.to_json_pretty());
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
 
     match engine.eval_file(filename) {
         Ok(result) => {
