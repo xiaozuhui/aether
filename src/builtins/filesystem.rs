@@ -2,6 +2,7 @@
 //! 文件系统IO操作函数
 
 use crate::evaluator::RuntimeError;
+use crate::sandbox::get_filesystem_validator;
 use crate::value::Value;
 use std::fs;
 use std::path::Path;
@@ -14,6 +15,19 @@ fn get_string(val: &Value) -> Result<String, RuntimeError> {
             expected: "String".to_string(),
             got: format!("{:?}", val),
         }),
+    }
+}
+
+/// 辅助函数：验证路径（如果配置了验证器）
+fn validate_path(path_str: &str) -> Result<std::path::PathBuf, RuntimeError> {
+    // 如果配置了路径验证器，使用它验证路径
+    if let Some(validator) = get_filesystem_validator() {
+        let path = Path::new(path_str);
+        validator.validate_and_normalize(path)
+            .map_err(|e| RuntimeError::CustomError(format!("Path validation failed: {}", e)))
+    } else {
+        // 没有配置验证器，直接使用原始路径
+        Ok(std::path::PathBuf::from(path_str))
     }
 }
 
@@ -35,13 +49,16 @@ pub fn read_file(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
 
-    match fs::read_to_string(&path) {
+    // 验证路径（如果配置了验证器）
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::read_to_string(&validated_path) {
         Ok(content) => Ok(Value::String(content)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to read file '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
@@ -65,14 +82,17 @@ pub fn write_file(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
     let content = get_string(&args[1])?;
 
-    match fs::write(&path, content) {
+    // 验证路径
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::write(&validated_path, content) {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to write file '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
@@ -96,23 +116,26 @@ pub fn append_file(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
     let content = get_string(&args[1])?;
 
-    match fs::OpenOptions::new().create(true).append(true).open(&path) {
+    // 验证路径
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::OpenOptions::new().create(true).append(true).open(&validated_path) {
         Ok(mut file) => {
             use std::io::Write;
             match file.write_all(content.as_bytes()) {
                 Ok(_) => Ok(Value::Boolean(true)),
                 Err(e) => Err(RuntimeError::CustomError(format!(
                     "Failed to append to file '{}': {}",
-                    path, e
+                    validated_path.display(), e
                 ))),
             }
         }
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to open file '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
@@ -135,13 +158,16 @@ pub fn delete_file(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
 
-    match fs::remove_file(&path) {
+    // 验证路径
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::remove_file(&validated_path) {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to delete file '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
@@ -183,9 +209,12 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
 
-    match fs::read_dir(&path) {
+    // 验证路径
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::read_dir(&validated_path) {
         Ok(entries) => {
             let mut items = Vec::new();
             for entry in entries {
@@ -207,7 +236,7 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
         }
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to list directory '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
@@ -230,13 +259,16 @@ pub fn create_dir(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let path = get_string(&args[0])?;
+    let path_str = get_string(&args[0])?;
 
-    match fs::create_dir_all(&path) {
+    // 验证路径
+    let validated_path = validate_path(&path_str)?;
+
+    match fs::create_dir_all(&validated_path) {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to create directory '{}': {}",
-            path, e
+            validated_path.display(), e
         ))),
     }
 }
