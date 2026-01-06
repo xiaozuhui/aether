@@ -4,8 +4,8 @@
 
 ## 轻量级、可嵌入的领域特定语言 (DSL)
 
-[![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether)
-[![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether)
+[![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether-azathoth)
+[![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether-azathoth/latest/aether/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 
 **高性能 · 易集成 · 跨平台 · 安全优先**
@@ -187,6 +187,12 @@ engine.eval(r#"
 - 它只会把信息追加到引擎的**内存缓冲区**
 - 宿主（Rust）可通过 `take_trace()` 读取并自行输出/写日志
 
+补充：
+
+- 每条 trace 会自动带递增序号前缀：`#1 ...`, `#2 ...`
+- 可选标签：`TRACE("label", x, y)` 会记录为 `[#N] [label] x y`
+- 缓冲区有上限（默认 1024 条）；超出会丢弃最旧条目
+
 ```aether
 Set X [1, 2, 3]
 Set Y {"a": 12}
@@ -215,8 +221,62 @@ fn main() -> Result<(), String> {
 
     let trace = engine.take_trace();
     // 这里由宿主决定如何处理（打印/结构化日志/埋点）
+    // e.g. ["#1 hello", "#2 [dbg] 1 2", ...]
     println!("trace={:?}", trace);
     println!("result={}", v);
+    Ok(())
+}
+
+### 宿主注入与隔离执行（推荐 DSL / 模块化 B 方案）
+
+当前版本的 `Import/Export` 语法已可解析，但运行时模块系统尚未实现。
+在 DSL 场景更推荐 **B 方案**：由宿主统一管理“模块/函数库”（例如从数据库取出 Aether 函数定义），在每次执行前注入。
+
+为支持“像 PyO3 一样把数据/函数放到 globals，然后执行脚本，并且执行完自动清空不污染”，引擎提供：
+
+- `engine.set_global(name, Value)`：直接注入 Rust 侧数据（无需 `eval`）
+- `engine.with_isolated_scope(|engine| ...)`：闭包作用域，闭包结束后自动丢弃本次注入/定义
+- `engine.reset_env()`：强制清空整个环境（会清掉通过 `eval` 加载的 stdlib/函数）
+
+最小示例：Rust 数据 + DB 函数 + 脚本（闭包结束自动清理）：
+
+```rust
+use aether::{Aether, Value};
+use std::collections::HashMap;
+
+fn main() -> Result<(), String> {
+    let mut engine = Aether::new(); // DSL：默认无 IO
+
+    // 模拟从 DB 取出来的一堆 Aether 函数定义
+    let db_funcs: Vec<String> = vec![
+        r#"Func ADD_TAX (amount, rate) { Return (amount * (1 + rate)) }"#.to_string(),
+        r#"Func APPLY_DISCOUNT (subtotal, coupon) { Return (subtotal - coupon) }"#.to_string(),
+    ];
+
+    let script = r#"
+Set net APPLY_DISCOUNT(INPUT[\"subtotal\"], INPUT[\"coupon\"])
+ADD_TAX(net, RATE)
+"#;
+
+    let out = engine.with_isolated_scope(|engine| {
+        // 注入 Rust 数据（不用 eval）
+        engine.set_global("RATE", Value::Number(0.08));
+
+        let mut input = HashMap::new();
+        input.insert("subtotal".to_string(), Value::Number(1000.0));
+        input.insert("coupon".to_string(), Value::Number(50.0));
+        engine.set_global("INPUT", Value::Dict(input));
+
+        // 注入 DB 函数（逐条 eval）
+        for f in &db_funcs {
+            engine.eval(f)?;
+        }
+
+        // 执行脚本
+        engine.eval(script)
+    })?;
+
+    println!("out={}", out);
     Ok(())
 }
 ```

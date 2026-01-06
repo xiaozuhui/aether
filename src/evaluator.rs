@@ -176,6 +176,26 @@ impl Evaluator {
         }
     }
 
+    /// Set a global variable from the host (without requiring `eval`).
+    pub fn set_global(&mut self, name: impl Into<String>, value: Value) {
+        self.env.borrow_mut().set(name.into(), value);
+    }
+
+    /// Enter a child scope (new environment whose parent is the current env).
+    ///
+    /// Returns the previous environment handle; pass it back to `restore_env()`.
+    pub fn enter_child_scope(&mut self) -> Rc<RefCell<Environment>> {
+        let prev = Rc::clone(&self.env);
+        let child = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&prev))));
+        self.env = child;
+        prev
+    }
+
+    /// Restore a previously saved environment handle (typically from `enter_child_scope()`).
+    pub fn restore_env(&mut self, prev: Rc<RefCell<Environment>>) {
+        self.env = prev;
+    }
+
     /// Evaluate a program
     pub fn eval_program(&mut self, program: &Program) -> EvalResult {
         let mut result = Value::Null;

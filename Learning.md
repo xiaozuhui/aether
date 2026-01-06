@@ -365,6 +365,9 @@ PRINTLN(USER["age"])
 
 Aether 的 stdlib 由 Aether 语言自身编写，并在编译时嵌入二进制。
 
+> 提示：语言级 `Import/Export` 语法已可解析，但当前版本运行时模块系统尚未实现。
+> 在工程落地上更推荐把“模块/函数库”交给宿主（Rust）管理：按需把代码 `eval` 注入，或使用下文的“隔离作用域”方式执行。
+
 ### 9.1 模块列表（16 个）
 
 - `string_utils`
@@ -645,6 +648,12 @@ z
 - 只把信息写入引擎的**内存 trace 缓冲区**
 - Rust 宿主在执行后通过 `engine.take_trace()` 把日志取走并自行处理
 
+补充：
+
+- 每条 trace 会自动带递增序号前缀：`#1 ...`, `#2 ...`
+- 可选标签：`TRACE("label", x, y)` 会记录为 `#N [label] x y`
+- 缓冲区有上限（默认 1024 条）；超出会丢弃最旧条目
+
 脚本侧：
 
 ```aether
@@ -677,6 +686,63 @@ fn main() -> Result<(), String> {
     let trace = engine.take_trace();
     // 这里由宿主决定如何输出/落库
     println!("trace={:?}", trace);
+    Ok(())
+}
+
+### 12.8 宿主注入与隔离作用域（类似 PyO3 globals）
+
+你的典型场景可能是：
+
+- **参数数据来自 Rust**（而不是先 `eval("Set ...")`）
+- **函数定义来自数据库**（一条条 Aether `Func ...` 字符串）
+- 需要多次执行：每次注入不同的数据/函数，**不能互相污染**
+
+为此引擎提供了三个对宿主友好的能力：
+
+- `engine.set_global(name, Value)`：直接注入 Rust 侧 `Value` 到全局环境（无需 `eval`）
+- `engine.with_isolated_scope(|engine| ...)`：创建一个子作用域，闭包结束后自动恢复环境（本次注入/定义不会泄漏）
+- `engine.reset_env()`：强制清空整个环境（会清掉通过 `eval` 加载的 stdlib/函数；慎用）
+
+最小示例（Rust 数据 + DB 函数 + 脚本，一次执行后自动清理）：
+
+```rust
+use aether::{Aether, Value};
+use std::collections::HashMap;
+
+fn main() -> Result<(), String> {
+    let mut engine = Aether::new();
+
+    let db_funcs: Vec<String> = vec![
+        r#"Func ADD_TAX (amount, rate) { Return (amount * (1 + rate)) }"#.to_string(),
+        r#"Func APPLY_DISCOUNT (subtotal, coupon) { Return (subtotal - coupon) }"#.to_string(),
+    ];
+
+    let script = r#"
+Set net APPLY_DISCOUNT(INPUT[\"subtotal\"], INPUT[\"coupon\"])
+ADD_TAX(net, RATE)
+"#;
+
+    let out = engine.with_isolated_scope(|engine| {
+        engine.set_global("RATE", Value::Number(0.08));
+
+        let mut input = HashMap::new();
+        input.insert("subtotal".to_string(), Value::Number(1000.0));
+        input.insert("coupon".to_string(), Value::Number(50.0));
+        engine.set_global("INPUT", Value::Dict(input));
+
+        for f in &db_funcs {
+            engine.eval(f)?;
+        }
+
+        engine.eval(script)
+    })?;
+
+    println!("out={}", out);
+
+    // 作用域已恢复：INPUT/函数不会泄漏到下一次执行
+    assert!(engine.eval("INPUT").is_err());
+    assert!(engine.eval("ADD_TAX(1, 0.1)").is_err());
+
     Ok(())
 }
 ```

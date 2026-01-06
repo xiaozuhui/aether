@@ -431,6 +431,38 @@ impl Aether {
         self.evaluator.clear_trace();
     }
 
+    /// Set a global variable from the host application without using `eval()`.
+    ///
+    /// This is useful when you already have Rust-side data and want to inject it
+    /// as `Value` into the script environment.
+    pub fn set_global(&mut self, name: &str, value: Value) {
+        self.evaluator.set_global(name.to_string(), value);
+    }
+
+    /// Reset the runtime environment (variables/functions) while keeping built-ins registered.
+    ///
+    /// Note: this clears anything that was introduced via `eval()` (including stdlib code).
+    pub fn reset_env(&mut self) {
+        self.evaluator.reset_env();
+    }
+
+    /// Run a closure inside an isolated child scope.
+    ///
+    /// All variables/functions you inject or define inside the closure will be dropped
+    /// when it returns, while the outer environment is preserved.
+    ///
+    /// This is designed for the "DSL host" scenario: inject Rust data + load per-request
+    /// Aether functions (e.g. from DB) + run the script, without cross-request pollution.
+    pub fn with_isolated_scope<R>(
+        &mut self,
+        f: impl FnOnce(&mut Aether) -> Result<R, String>,
+    ) -> Result<R, String> {
+        let prev_env = self.evaluator.enter_child_scope();
+        let result = f(self);
+        self.evaluator.restore_env(prev_env);
+        result
+    }
+
     /// Evaluate Aether code asynchronously (requires "async" feature)
     ///
     /// This is a convenience wrapper around `eval()` that runs in a background task.

@@ -1,6 +1,6 @@
 [package]
 name = "aether-azathoth"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 authors = ["xiaozuhui <xiaozuhui@outlook.com>"]
 description = "A lightweight, embeddable domain-specific language (DSL) interpreter with rich standard library"
