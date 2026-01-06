@@ -28,7 +28,9 @@ impl std::fmt::Display for ModuleResolveError {
         match self {
             ModuleResolveError::ImportDisabled => write!(f, "Import is disabled"),
             ModuleResolveError::InvalidSpecifier(s) => write!(f, "Invalid module specifier: {s}"),
-            ModuleResolveError::NoBaseDir(s) => write!(f, "No base directory to resolve specifier: {s}"),
+            ModuleResolveError::NoBaseDir(s) => {
+                write!(f, "No base directory to resolve specifier: {s}")
+            }
             ModuleResolveError::NotFound(s) => write!(f, "Module not found: {s}"),
             ModuleResolveError::AccessDenied(s) => write!(f, "Module access denied: {s}"),
             ModuleResolveError::IoError(s) => write!(f, "Module IO error: {s}"),
@@ -59,21 +61,12 @@ impl ModuleResolver for DisabledModuleResolver {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileSystemModuleResolver {
     /// Optional root directory; when set, resolved paths must be under this root.
     pub root_dir: Option<PathBuf>,
     /// Whether to allow absolute paths.
     pub allow_absolute: bool,
-}
-
-impl Default for FileSystemModuleResolver {
-    fn default() -> Self {
-        Self {
-            root_dir: None,
-            allow_absolute: false,
-        }
-    }
 }
 
 impl FileSystemModuleResolver {
@@ -105,7 +98,9 @@ impl FileSystemModuleResolver {
                 Err(e) => return Err(ModuleResolveError::IoError(e.to_string())),
             };
             if !canon.starts_with(&root) {
-                return Err(ModuleResolveError::AccessDenied(canon.display().to_string()));
+                return Err(ModuleResolveError::AccessDenied(
+                    canon.display().to_string(),
+                ));
             }
         }
         Ok(())

@@ -1,5 +1,5 @@
 use aether::{Aether, FileSystemModuleResolver, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 struct TempDir {
     path: PathBuf,
@@ -38,7 +38,7 @@ impl Drop for TempDir {
     }
 }
 
-fn engine_with_fs_import(base_file: &PathBuf) -> Aether {
+fn engine_with_fs_import(base_file: &Path) -> Aether {
     let mut engine = Aether::new();
     engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
 

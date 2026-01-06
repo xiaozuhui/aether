@@ -7,8 +7,8 @@ use crate::environment::Environment;
 use crate::module_system::{DisabledModuleResolver, ModuleContext, ModuleResolver, ResolvedModule};
 use crate::value::{GeneratorState, Value};
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 /// Runtime errors
@@ -168,7 +168,10 @@ impl Evaluator {
     ///
     /// This is typically used by CLI `eval_file()` wrappers.
     pub fn push_import_base(&mut self, module_id: String, base_dir: Option<std::path::PathBuf>) {
-        self.import_base_stack.push(ModuleContext { module_id, base_dir });
+        self.import_base_stack.push(ModuleContext {
+            module_id,
+            base_dir,
+        });
     }
 
     /// Pop the most recent base directory context.
@@ -1172,7 +1175,10 @@ impl Evaluator {
         let exports = self.load_module(resolved)?;
 
         for (i, name) in names.iter().enumerate() {
-            let alias = aliases.get(i).and_then(|a| a.clone()).unwrap_or_else(|| name.clone());
+            let alias = aliases
+                .get(i)
+                .and_then(|a| a.clone())
+                .unwrap_or_else(|| name.clone());
             let v = exports.get(name).cloned().ok_or_else(|| {
                 RuntimeError::CustomError(format!(
                     "Import error: '{}' is not exported by module {}",
@@ -1190,17 +1196,18 @@ impl Evaluator {
             RuntimeError::CustomError("Export error: Export used outside of a module".to_string())
         })?;
 
-        let val = self
-            .env
-            .borrow()
-            .get(name)
-            .ok_or_else(|| RuntimeError::CustomError(format!("Export error: '{}' is not defined", name)))?;
+        let val = self.env.borrow().get(name).ok_or_else(|| {
+            RuntimeError::CustomError(format!("Export error: '{}' is not defined", name))
+        })?;
 
         exports.insert(name.to_string(), val);
         Ok(Value::Null)
     }
 
-    fn load_module(&mut self, resolved: ResolvedModule) -> Result<HashMap<String, Value>, RuntimeError> {
+    fn load_module(
+        &mut self,
+        resolved: ResolvedModule,
+    ) -> Result<HashMap<String, Value>, RuntimeError> {
         if let Some(cached) = self.module_cache.get(&resolved.module_id) {
             return Ok(cached.clone());
         }
@@ -1218,12 +1225,12 @@ impl Evaluator {
 
         // Parse module
         let mut parser = crate::parser::Parser::new(&resolved.source);
-        let program = parser
-            .parse_program()
-            .map_err(|e| RuntimeError::CustomError(format!(
+        let program = parser.parse_program().map_err(|e| {
+            RuntimeError::CustomError(format!(
                 "Import error: parse failed for module {}: {}",
                 resolved.module_id, e
-            )))?;
+            ))
+        })?;
 
         // Evaluate in an isolated environment with builtins registered.
         let prev_env = Rc::clone(&self.env);
@@ -1244,7 +1251,7 @@ impl Evaluator {
         // Push export table
         self.export_stack.push(HashMap::new());
 
-        let eval_res = self.eval_program(&program);
+        let _ = self.eval_program(&program)?;
 
         // Pop stacks and restore env
         let exports = self.export_stack.pop().unwrap_or_default();
@@ -1254,12 +1261,8 @@ impl Evaluator {
         // Pop module stack
         let _ = self.module_stack.pop();
 
-        // If runtime error happened, surface it
-        if let Err(e) = eval_res {
-            return Err(e);
-        }
-
-        self.module_cache.insert(resolved.module_id.clone(), exports.clone());
+        self.module_cache
+            .insert(resolved.module_id.clone(), exports.clone());
         Ok(exports)
     }
 }
