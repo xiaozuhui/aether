@@ -1,0 +1,36 @@
+# 结构化 TRACE 事件演示
+
+# 使用新的级别化 TRACE API
+
+# 调试级别 - 详细的调试信息
+TRACE_DEBUG("calculation", "intermediate_result", 42)
+
+# 信息级别 - 一般信息
+TRACE_INFO("user_action", "login", 12345)
+TRACE_INFO("api_call", "GET /api/users", 200)
+
+# 警告级别 - 警告信息
+TRACE_WARN("performance", "slow_query", 5000)
+TRACE_WARN("cache", "miss_rate", 0.15)
+
+# 错误级别 - 错误信息
+TRACE_ERROR("database", "connection_failed", "timeout")
+TRACE_ERROR("validation", "invalid_input", "user_id")
+
+# 旧 API 继续工作（向后兼容）
+TRACE("legacy_trace", "still_works")
+TRACE(1, 2, 3)
+
+# 在实际场景中使用
+Set USER_ID 12345
+Set RESPONSE_TIME 250
+
+If (RESPONSE_TIME > 200) {
+    TRACE_WARN("api", "slow_response", RESPONSE_TIME)
+} Else {
+    TRACE_INFO("api", "normal_response", RESPONSE_TIME)
+}
+
+# 计算并追踪结果
+Set RESULT (USER_ID * 2)
+TRACE_INFO("calculation", "doubled_user_id", RESULT)

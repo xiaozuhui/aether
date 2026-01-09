@@ -2,10 +2,10 @@
 //!
 //! 使用线程局部存储来传递 PathValidator 给内置函数，避免修改函数签名。
 
-use std::cell::RefCell;
 use super::PathValidator;
+use std::cell::RefCell;
 
-/// 线程局部的沙箱上下文
+// 线程局部的沙箱上下文
 thread_local! {
     static FILESYSTEM_VALIDATOR: RefCell<Option<PathValidator>> = RefCell::new(None);
 }
@@ -42,7 +42,6 @@ impl Drop for ScopedValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn test_validator_context() {
@@ -53,7 +52,10 @@ mod tests {
 
         // 获取验证器
         let retrieved = get_filesystem_validator().unwrap();
-        assert_eq!(retrieved.restriction().root_dir, validator.restriction().root_dir);
+        assert_eq!(
+            retrieved.restriction().root_dir,
+            validator.restriction().root_dir
+        );
 
         // 清除验证器
         set_filesystem_validator(None);

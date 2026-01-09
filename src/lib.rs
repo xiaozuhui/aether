@@ -200,7 +200,7 @@ pub use environment::Environment;
 pub use evaluator::{ErrorReport, EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
 pub use sandbox::{SandboxConfig, SandboxPolicy, PathValidator, PathRestriction, PathValidationError, ScopedValidator, ModuleCacheManager, ModuleCacheStats, MetricsCollector, MetricsSnapshot, ExecutionMetrics, ModuleMetrics};
-pub use runtime::{ExecutionLimits, ExecutionLimitError};
+pub use runtime::{ExecutionLimits, ExecutionLimitError, TraceEntry, TraceFilter, TraceLevel, TraceStats};
 pub use module_system::{DisabledModuleResolver, FileSystemModuleResolver, ModuleResolver};
 pub use optimizer::Optimizer;
 pub use parser::{ParseError, Parser};
@@ -484,6 +484,76 @@ impl Aether {
     /// Clear the TRACE buffer without returning it.
     pub fn clear_trace(&mut self) {
         self.evaluator.clear_trace();
+    }
+
+    /// Get all structured trace entries (Stage 3.2)
+    ///
+    /// Returns a vector of structured trace entries with levels, categories, timestamps, etc.
+    pub fn trace_records(&self) -> Vec<crate::runtime::TraceEntry> {
+        self.evaluator.trace_records()
+    }
+
+    /// Filter trace entries by level (Stage 3.2)
+    ///
+    /// # Example
+    /// ```ignore
+    /// let error_traces = engine.trace_by_level(crate::runtime::TraceLevel::Error);
+    /// ```
+    pub fn trace_by_level(&self, level: crate::runtime::TraceLevel) -> Vec<crate::runtime::TraceEntry> {
+        self.evaluator.trace_by_level(level)
+    }
+
+    /// Filter trace entries by category (Stage 3.2)
+    ///
+    /// # Example
+    /// ```ignore
+    /// let api_traces = engine.trace_by_category("api_call");
+    /// ```
+    pub fn trace_by_category(&self, category: &str) -> Vec<crate::runtime::TraceEntry> {
+        self.evaluator.trace_by_category(category)
+    }
+
+    /// Filter trace entries by label (Stage 3.2)
+    ///
+    /// # Example
+    /// ```ignore
+    /// let slow_traces = engine.trace_by_label("slow_request");
+    /// ```
+    pub fn trace_by_label(&self, label: &str) -> Vec<crate::runtime::TraceEntry> {
+        self.evaluator.trace_by_label(label)
+    }
+
+    /// Apply complex filter to trace entries (Stage 3.2)
+    ///
+    /// # Example
+    /// ```ignore
+    /// use crate::runtime::{TraceFilter, TraceLevel};
+    /// use std::time::Instant;
+    ///
+    /// let filter = TraceFilter::new()
+    ///     .with_min_level(TraceLevel::Warn)
+    ///     .with_category("api".to_string());
+    /// let filtered = engine.trace_filter(&filter);
+    /// ```
+    pub fn trace_filter(&self, filter: &crate::runtime::TraceFilter) -> Vec<crate::runtime::TraceEntry> {
+        self.evaluator.trace_filter(filter)
+    }
+
+    /// Get trace statistics (Stage 3.2)
+    ///
+    /// Returns statistics about trace entries, including counts by level and category.
+    pub fn trace_stats(&self) -> crate::runtime::TraceStats {
+        self.evaluator.trace_stats()
+    }
+
+    /// Set TRACE buffer size (Stage 3.2)
+    ///
+    /// Note: This method is a placeholder for future implementation.
+    /// Currently, the buffer size is fixed at 1024 entries.
+    #[allow(dead_code)]
+    pub fn set_trace_buffer_size(&mut self, _size: usize) {
+        // TODO: Implement configurable buffer size
+        // For now, buffer size is fixed at TRACE_MAX_ENTRIES (1024)
     }
 
     /// Configure the module resolver used for `Import/Export`.

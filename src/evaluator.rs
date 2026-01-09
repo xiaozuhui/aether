@@ -469,6 +469,8 @@ pub struct Evaluator {
     trace: VecDeque<String>,
     /// Monotonic sequence for trace entries (starts at 1)
     trace_seq: u64,
+    /// Structured trace entries (new in Stage 3.2)
+    trace_entries: VecDeque<crate::runtime::TraceEntry>,
 
     /// Module resolver (Import/Export). Defaults to disabled for DSL safety.
     module_resolver: Box<dyn ModuleResolver>,
@@ -609,6 +611,7 @@ impl Evaluator {
             registry,
             trace: VecDeque::new(),
             trace_seq: 0,
+            trace_entries: VecDeque::new(),
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -633,6 +636,7 @@ impl Evaluator {
             registry,
             trace: VecDeque::new(),
             trace_seq: 0,
+            trace_entries: VecDeque::new(),
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -685,14 +689,105 @@ impl Evaluator {
         self.trace.push_back(entry);
     }
 
+    /// Push a structured trace entry (Stage 3.2)
+    fn trace_push_entry(&mut self, entry: crate::runtime::TraceEntry) {
+        self.trace_seq = self.trace_seq.saturating_add(1);
+
+        // Add to structured entries
+        if self.trace_entries.len() >= Self::TRACE_MAX_ENTRIES {
+            self.trace_entries.pop_front();
+        }
+        self.trace_entries.push_back(entry.clone());
+
+        // Also add to formatted trace (for backward compatibility)
+        let formatted = entry.format();
+        let msg = format!("#{} {}", self.trace_seq, formatted);
+        if self.trace.len() >= Self::TRACE_MAX_ENTRIES {
+            self.trace.pop_front();
+        }
+        self.trace.push_back(msg);
+    }
+
     /// Drain the trace buffer.
     pub fn take_trace(&mut self) -> Vec<String> {
         std::mem::take(&mut self.trace).into_iter().collect()
     }
 
+    /// Get all structured trace entries
+    pub fn trace_records(&self) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries.iter().cloned().collect()
+    }
+
+    /// Filter trace entries by level
+    pub fn trace_by_level(&self, level: crate::runtime::TraceLevel) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries
+            .iter()
+            .filter(|e| e.level == level)
+            .cloned()
+            .collect()
+    }
+
+    /// Filter trace entries by category
+    pub fn trace_by_category(&self, category: &str) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries
+            .iter()
+            .filter(|e| e.category == category)
+            .cloned()
+            .collect()
+    }
+
+    /// Filter trace entries by label
+    pub fn trace_by_label(&self, label: &str) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries
+            .iter()
+            .filter(|e| e.label.as_deref() == Some(label))
+            .cloned()
+            .collect()
+    }
+
+    /// Filter trace entries by time range (since)
+    pub fn trace_since(&self, since: std::time::Instant) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries
+            .iter()
+            .filter(|e| e.timestamp >= since)
+            .cloned()
+            .collect()
+    }
+
+    /// Apply complex filter to trace entries
+    pub fn trace_filter(&self, filter: &crate::runtime::TraceFilter) -> Vec<crate::runtime::TraceEntry> {
+        self.trace_entries
+            .iter()
+            .filter(|e| filter.matches(e))
+            .cloned()
+            .collect()
+    }
+
+    /// Get trace statistics
+    pub fn trace_stats(&self) -> crate::runtime::TraceStats {
+        use std::collections::HashMap;
+
+        let mut by_level = HashMap::new();
+        let mut by_category = HashMap::new();
+
+        for entry in &self.trace_entries {
+            *by_level.entry(entry.level).or_insert(0) += 1;
+            *by_category.entry(entry.category.clone()).or_insert(0) += 1;
+        }
+
+        crate::runtime::TraceStats {
+            total_entries: self.trace_entries.len(),
+            by_level,
+            by_category,
+            buffer_size: Self::TRACE_MAX_ENTRIES,
+            buffer_full: self.trace_entries.len() >= Self::TRACE_MAX_ENTRIES,
+        }
+    }
+
     /// Clear the trace buffer.
     pub fn clear_trace(&mut self) {
         self.trace.clear();
+        self.trace_entries.clear();
         self.trace_seq = 0;
     }
 
@@ -706,6 +801,7 @@ impl Evaluator {
 
         // Avoid leaking trace across pooled executions
         self.trace.clear();
+        self.trace_entries.clear();
         self.trace_seq = 0;
 
         // Reset module contexts (cache is kept; can be cleared explicitly by host if needed)
@@ -1571,7 +1667,7 @@ impl Evaluator {
             }
 
             Value::BuiltIn { name, .. } => {
-                // Special handling for MAP, FILTER, and REDUCE
+                // Special handling for TRACE functions
                 let res = match name.as_str() {
                     "TRACE" => {
                         if args.is_empty() {
@@ -1610,6 +1706,56 @@ impl Evaluator {
                         };
 
                         self.trace_push(msg);
+                        Ok(Value::Null)
+                    }
+                    "TRACE_DEBUG" | "TRACE_INFO" | "TRACE_WARN" | "TRACE_ERROR" => {
+                        // Structured TRACE functions (Stage 3.2)
+                        // Usage: TRACE_DEBUG("category", value1, value2, ...)
+                        if args.len() < 2 {
+                            return {
+                                let err = RuntimeError::WrongArity {
+                                    expected: 2,
+                                    got: args.len(),
+                                };
+                                let err = self.attach_call_stack_if_absent(err);
+                                let _ = self.call_stack.pop();
+                                self.exit_call();
+                                Err(err)
+                            };
+                        }
+
+                        // Parse level from function name
+                        let level = match name.as_str() {
+                            "TRACE_DEBUG" => crate::runtime::TraceLevel::Debug,
+                            "TRACE_INFO" => crate::runtime::TraceLevel::Info,
+                            "TRACE_WARN" => crate::runtime::TraceLevel::Warn,
+                            "TRACE_ERROR" => crate::runtime::TraceLevel::Error,
+                            _ => unreachable!(),
+                        };
+
+                        // Parse category
+                        let category = match &args[0] {
+                            Value::String(s) => s.clone(),
+                            _ => {
+                                return {
+                                    let err = RuntimeError::CustomError(
+                                        format!("TRACE category must be a string, got {}", args[0].type_name())
+                                    );
+                                    let err = self.attach_call_stack_if_absent(err);
+                                    let _ = self.call_stack.pop();
+                                    self.exit_call();
+                                    Err(err)
+                                };
+                            }
+                        };
+
+                        // Collect values (args[1..])
+                        let values = args[1..].to_vec();
+
+                        // Create and push structured entry
+                        let entry = crate::runtime::TraceEntry::new(level, category, values);
+                        self.trace_push_entry(entry);
+
                         Ok(Value::Null)
                     }
                     "MAP" => self.builtin_map(&args),

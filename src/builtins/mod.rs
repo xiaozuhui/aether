@@ -95,6 +95,10 @@ impl BuiltInRegistry {
 
         // Trace (DSL-safe debug buffer; handled by evaluator)
         registry.register("TRACE", trace::trace, 1);
+        registry.register("TRACE_DEBUG", trace::trace_debug, 2);  // (category, value, ...)
+        registry.register("TRACE_INFO", trace::trace_info, 2);    // (category, value, ...)
+        registry.register("TRACE_WARN", trace::trace_warn, 2);    // (category, value, ...)
+        registry.register("TRACE_ERROR", trace::trace_error, 2);  // (category, value, ...)
 
         // Array functions
         registry.register("RANGE", array::range, 1); // Variadic: 1-3 args

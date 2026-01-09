@@ -2,10 +2,10 @@
 //!
 //! 提供显式的模块缓存管理 API，支持 TTL 和容量限制。
 
+use crate::value::Value;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
-use crate::value::Value;
 
 /// 模块缓存条目
 #[derive(Debug, Clone)]
@@ -15,6 +15,7 @@ struct ModuleCacheEntry {
     /// 加载时间
     loaded_at: Instant,
     /// 访问次数
+    #[allow(dead_code)]
     access_count: usize,
 }
 
@@ -98,11 +99,14 @@ impl ModuleCacheManager {
                 self.evict_oldest(&mut cache, to_remove);
             }
 
-            cache.insert(module_id.clone(), ModuleCacheEntry {
-                exports,
-                loaded_at: Instant::now(),
-                access_count: 0,
-            });
+            cache.insert(
+                module_id.clone(),
+                ModuleCacheEntry {
+                    exports,
+                    loaded_at: Instant::now(),
+                    access_count: 0,
+                },
+            );
 
             // 更新统计
             if let Ok(mut stats) = self.stats.write() {
@@ -126,9 +130,7 @@ impl ModuleCacheManager {
         let mut cache = self.cache.write().unwrap();
         let now = Instant::now();
 
-        cache.retain(|_, entry| {
-            now.duration_since(entry.loaded_at) < ttl
-        });
+        cache.retain(|_, entry| now.duration_since(entry.loaded_at) < ttl);
 
         if let Ok(mut stats) = self.stats.write() {
             stats.module_count = cache.len();
@@ -167,12 +169,7 @@ impl ModuleCacheManager {
 
     /// 获取缓存的模块 ID 列表
     pub fn cached_modules(&self) -> Vec<String> {
-        self.cache
-            .read()
-            .unwrap()
-            .keys()
-            .cloned()
-            .collect()
+        self.cache.read().unwrap().keys().cloned().collect()
     }
 
     /// 清理最旧的条目（内部方法）
