@@ -3,7 +3,7 @@
 //! 提供统一的路径安全检查，防止路径遍历攻击（`..`）和越权访问。
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf, Component};
+use std::path::{Component, Path, PathBuf};
 
 /// 路径验证错误
 #[derive(Debug, Clone, PartialEq)]
@@ -24,18 +24,30 @@ impl std::fmt::Display for PathValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PathValidationError::OutsideRoot { path, root } => {
-                write!(f, "Path '{}' is outside allowed root '{}'",
-                       path.display(), root.display())
+                write!(
+                    f,
+                    "Path '{}' is outside allowed root '{}'",
+                    path.display(),
+                    root.display()
+                )
             }
             PathValidationError::AbsolutePathNotAllowed(path) => {
                 write!(f, "Absolute path '{}' not allowed", path.display())
             }
             PathValidationError::ParentTraversalNotAllowed(path) => {
-                write!(f, "Parent traversal '..' not allowed in path '{}'", path.display())
+                write!(
+                    f,
+                    "Parent traversal '..' not allowed in path '{}'",
+                    path.display()
+                )
             }
             PathValidationError::ExtensionNotAllowed { path, extension } => {
-                write!(f, "File extension '{}' not allowed for path '{}'",
-                       extension, path.display())
+                write!(
+                    f,
+                    "File extension '{}' not allowed for path '{}'",
+                    extension,
+                    path.display()
+                )
             }
             PathValidationError::InvalidPath(path) => {
                 write!(f, "Invalid path '{}'", path.display())
@@ -99,7 +111,7 @@ impl PathValidator {
         // 1. 检查绝对路径
         if path.is_absolute() && !self.restriction.allow_absolute {
             return Err(PathValidationError::AbsolutePathNotAllowed(
-                path.to_path_buf()
+                path.to_path_buf(),
             ));
         }
 
@@ -108,7 +120,7 @@ impl PathValidator {
             let path_str = path.to_string_lossy();
             if path_str.contains("..") {
                 return Err(PathValidationError::ParentTraversalNotAllowed(
-                    path.to_path_buf()
+                    path.to_path_buf(),
                 ));
             }
         }
@@ -117,25 +129,25 @@ impl PathValidator {
         let normalized = self.canonicalize_safe(path)?;
 
         // 4. 检查是否在根目录下
-        if let Ok(root) = self.restriction.root_dir.canonicalize() {
-            if !normalized.starts_with(&root) {
-                return Err(PathValidationError::OutsideRoot {
-                    path: normalized.clone(),
-                    root,
-                });
-            }
+        if let Ok(root) = self.restriction.root_dir.canonicalize()
+            && !normalized.starts_with(&root)
+        {
+            return Err(PathValidationError::OutsideRoot {
+                path: normalized.clone(),
+                root,
+            });
         }
 
         // 5. 检查文件扩展名
-        if let Some(allowed) = &self.restriction.allowed_extensions {
-            if let Some(ext) = normalized.extension() {
-                let ext_str = ext.to_string_lossy().to_lowercase();
-                if !allowed.contains(&ext_str) {
-                    return Err(PathValidationError::ExtensionNotAllowed {
-                        path: normalized.clone(),
-                        extension: ext_str,
-                    });
-                }
+        if let Some(allowed) = &self.restriction.allowed_extensions
+            && let Some(ext) = normalized.extension()
+        {
+            let ext_str = ext.to_string_lossy().to_lowercase();
+            if !allowed.contains(&ext_str) {
+                return Err(PathValidationError::ExtensionNotAllowed {
+                    path: normalized.clone(),
+                    extension: ext_str,
+                });
             }
         }
 
@@ -168,7 +180,7 @@ impl PathValidator {
                         Component::ParentDir => {
                             if !self.restriction.allow_parent_traversal {
                                 return Err(PathValidationError::ParentTraversalNotAllowed(
-                                    full_path
+                                    full_path,
                                 ));
                             }
                             // 尝试弹出父目录
@@ -210,8 +222,16 @@ mod tests {
         let validator = PathValidator::new(restriction);
 
         // 应该被阻止
-        assert!(validator.validate_and_normalize(Path::new("../etc/passwd")).is_err());
-        assert!(validator.validate_and_normalize(Path::new("safe/../../etc/passwd")).is_err());
+        assert!(
+            validator
+                .validate_and_normalize(Path::new("../etc/passwd"))
+                .is_err()
+        );
+        assert!(
+            validator
+                .validate_and_normalize(Path::new("safe/../../etc/passwd"))
+                .is_err()
+        );
     }
 
     #[test]
@@ -226,7 +246,11 @@ mod tests {
         let validator = PathValidator::new(restriction);
 
         // 应该被阻止
-        assert!(validator.validate_and_normalize(Path::new("/etc/passwd")).is_err());
+        assert!(
+            validator
+                .validate_and_normalize(Path::new("/etc/passwd"))
+                .is_err()
+        );
     }
 
     #[test]

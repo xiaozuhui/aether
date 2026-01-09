@@ -21,8 +21,10 @@ fn test_sandbox_blocks_parent_traversal() {
     fs::write(&test_file, "Hello from Sandbox!").unwrap();
 
     // 创建引擎，启用文件系统权限
-    let mut perms = IOPermissions::default();
-    perms.filesystem_enabled = true;
+    let perms = IOPermissions {
+        filesystem_enabled: true,
+        ..Default::default()
+    };
     let mut engine = Aether::with_permissions(perms);
 
     // 设置路径验证器（限制在 sandbox_root 内）
@@ -87,8 +89,10 @@ fn test_sandbox_write_operations() {
     fs::create_dir_all(&sandbox_root).unwrap();
 
     // 创建引擎，启用文件系统权限
-    let mut perms = IOPermissions::default();
-    perms.filesystem_enabled = true;
+    let perms = IOPermissions {
+        filesystem_enabled: true,
+        ..Default::default()
+    };
     let mut engine = Aether::with_permissions(perms);
 
     // 设置路径验证器
@@ -220,8 +224,10 @@ fn test_no_validator_allows_anything() {
     // 不设置验证器时，IO 权限单独控制访问
 
     // 创建引擎，启用文件系统权限
-    let mut perms = IOPermissions::default();
-    perms.filesystem_enabled = true;
+    let perms = IOPermissions {
+        filesystem_enabled: true,
+        ..Default::default()
+    };
     let mut engine = Aether::with_permissions(perms);
 
     // 创建一个临时文件

@@ -13,7 +13,7 @@ pub mod module_cache;
 pub mod path_validator;
 
 pub use config::{SandboxConfig, SandboxPolicy};
-pub use context::{get_filesystem_validator, ScopedValidator, set_filesystem_validator};
+pub use context::{ScopedValidator, get_filesystem_validator, set_filesystem_validator};
 pub use metrics::{ExecutionMetrics, MetricsCollector, MetricsSnapshot, ModuleMetrics};
 pub use module_cache::{ModuleCacheManager, ModuleCacheStats};
-pub use path_validator::{PathValidationError, PathRestriction, PathValidator};
+pub use path_validator::{PathRestriction, PathValidationError, PathValidator};

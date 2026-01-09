@@ -185,7 +185,7 @@ pub enum RuntimeError {
     Throw(Value),
 
     /// Structured Import/Export module errors (with import chain)
-    ImportError(ImportError),
+    ImportError(Box<ImportError>),
 
     /// Attach a captured call stack to an error.
     WithCallStack {
@@ -512,7 +512,7 @@ impl Evaluator {
             let steps = self.step_counter.get();
             if steps >= limit {
                 return Err(RuntimeError::ExecutionLimit(
-                    crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit }
+                    crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit },
                 ));
             }
             self.step_counter.set(steps + 1);
@@ -522,17 +522,17 @@ impl Evaluator {
 
     /// Check execution timeout
     fn check_timeout(&self) -> Result<(), RuntimeError> {
-        if let Some(limit_ms) = self.limits.max_duration_ms {
-            if let Some(start) = self.start_time.get() {
-                let elapsed = start.elapsed().as_millis() as u64;
-                if elapsed >= limit_ms {
-                    return Err(RuntimeError::ExecutionLimit(
-                        crate::runtime::ExecutionLimitError::DurationExceeded {
-                            duration_ms: elapsed,
-                            limit: limit_ms
-                        }
-                    ));
-                }
+        if let Some(limit_ms) = self.limits.max_duration_ms
+            && let Some(start) = self.start_time.get()
+        {
+            let elapsed = start.elapsed().as_millis() as u64;
+            if elapsed >= limit_ms {
+                return Err(RuntimeError::ExecutionLimit(
+                    crate::runtime::ExecutionLimitError::DurationExceeded {
+                        duration_ms: elapsed,
+                        limit: limit_ms,
+                    },
+                ));
             }
         }
         Ok(())
@@ -544,7 +544,7 @@ impl Evaluator {
             let depth = self.call_stack_depth.get();
             if depth >= limit {
                 return Err(RuntimeError::ExecutionLimit(
-                    crate::runtime::ExecutionLimitError::RecursionDepthExceeded { depth, limit }
+                    crate::runtime::ExecutionLimitError::RecursionDepthExceeded { depth, limit },
                 ));
             }
             self.call_stack_depth.set(depth + 1);
@@ -604,7 +604,7 @@ impl Evaluator {
 
         // Register built-in functions with permissions
         let registry = BuiltInRegistry::with_permissions(permissions);
-        Self::register_builtins_into_env(&registry, &mut *env.borrow_mut());
+        Self::register_builtins_into_env(&registry, &mut env.borrow_mut());
 
         Evaluator {
             env,
@@ -719,7 +719,10 @@ impl Evaluator {
     }
 
     /// Filter trace entries by level
-    pub fn trace_by_level(&self, level: crate::runtime::TraceLevel) -> Vec<crate::runtime::TraceEntry> {
+    pub fn trace_by_level(
+        &self,
+        level: crate::runtime::TraceLevel,
+    ) -> Vec<crate::runtime::TraceEntry> {
         self.trace_entries
             .iter()
             .filter(|e| e.level == level)
@@ -755,7 +758,10 @@ impl Evaluator {
     }
 
     /// Apply complex filter to trace entries
-    pub fn trace_filter(&self, filter: &crate::runtime::TraceFilter) -> Vec<crate::runtime::TraceEntry> {
+    pub fn trace_filter(
+        &self,
+        filter: &crate::runtime::TraceFilter,
+    ) -> Vec<crate::runtime::TraceEntry> {
         self.trace_entries
             .iter()
             .filter(|e| filter.matches(e))
@@ -813,7 +819,7 @@ impl Evaluator {
         self.call_stack.clear();
 
         // Re-register built-in functions
-        Self::register_builtins_into_env(&self.registry, &mut *self.env.borrow_mut());
+        Self::register_builtins_into_env(&self.registry, &mut self.env.borrow_mut());
     }
 
     /// Set a global variable from the host (without requiring `eval`).
@@ -1738,9 +1744,10 @@ impl Evaluator {
                             Value::String(s) => s.clone(),
                             _ => {
                                 return {
-                                    let err = RuntimeError::CustomError(
-                                        format!("TRACE category must be a string, got {}", args[0].type_name())
-                                    );
+                                    let err = RuntimeError::CustomError(format!(
+                                        "TRACE category must be a string, got {}",
+                                        args[0].type_name()
+                                    ));
                                     let err = self.attach_call_stack_if_absent(err);
                                     let _ = self.call_stack.pop();
                                     self.exit_call();
@@ -1918,11 +1925,11 @@ impl Evaluator {
             .module_resolver
             .resolve(specifier, from_ctx)
             .map_err(|e| {
-                RuntimeError::ImportError(ImportError::from_resolve_error(
+                RuntimeError::ImportError(Box::new(ImportError::from_resolve_error(
                     specifier,
                     e,
                     chain_for_resolve,
-                ))
+                )))
             })?;
 
         let exports = self.load_module(resolved)?;
@@ -1938,11 +1945,11 @@ impl Evaluator {
                 .and_then(|a| a.clone())
                 .unwrap_or_else(|| name.clone());
             let v = exports.get(name).cloned().ok_or_else(|| {
-                RuntimeError::ImportError(ImportError::not_exported(
+                RuntimeError::ImportError(Box::new(ImportError::not_exported(
                     specifier,
                     name,
                     self.import_chain_with(specifier.to_string()),
-                ))
+                )))
             })?;
             self.env.borrow_mut().set(alias, v);
         }
@@ -1976,11 +1983,11 @@ impl Evaluator {
         if self.module_stack.contains(&resolved.module_id) {
             let mut chain = self.module_stack.clone();
             chain.push(resolved.module_id.clone());
-            return Err(RuntimeError::ImportError(ImportError::circular(
+            return Err(RuntimeError::ImportError(Box::new(ImportError::circular(
                 &resolved.module_id,
                 chain,
                 import_chain,
-            )));
+            ))));
         }
 
         self.module_stack.push(resolved.module_id.clone());
@@ -1991,10 +1998,8 @@ impl Evaluator {
             Ok(p) => p,
             Err(e) => {
                 let _ = self.module_stack.pop();
-                return Err(RuntimeError::ImportError(ImportError::parse_failed(
-                    &resolved.module_id,
-                    e.to_string(),
-                    import_chain,
+                return Err(RuntimeError::ImportError(Box::new(
+                    ImportError::parse_failed(&resolved.module_id, e.to_string(), import_chain),
                 )));
             }
         };
@@ -2002,7 +2007,7 @@ impl Evaluator {
         // Evaluate in an isolated environment with builtins registered.
         let prev_env = Rc::clone(&self.env);
         let module_env = Rc::new(RefCell::new(Environment::new()));
-        Self::register_builtins_into_env(&self.registry, &mut *module_env.borrow_mut());
+        Self::register_builtins_into_env(&self.registry, &mut module_env.borrow_mut());
         self.env = module_env;
 
         // Push module import base (for relative imports inside the module)

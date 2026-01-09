@@ -15,17 +15,6 @@ pub enum TraceLevel {
 }
 
 impl TraceLevel {
-    /// 从字符串解析级别
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "debug" => Some(Self::Debug),
-            "info" => Some(Self::Info),
-            "warn" | "warning" => Some(Self::Warn),
-            "error" => Some(Self::Error),
-            _ => None,
-        }
-    }
-
     /// 转换为字符串
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -33,6 +22,20 @@ impl TraceLevel {
             Self::Info => "INFO",
             Self::Warn => "WARN",
             Self::Error => "ERROR",
+        }
+    }
+}
+
+impl std::str::FromStr for TraceLevel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "debug" => Ok(Self::Debug),
+            "info" => Ok(Self::Info),
+            "warn" | "warning" => Ok(Self::Warn),
+            "error" => Ok(Self::Error),
+            _ => Err(format!("Invalid trace level: {}", s)),
         }
     }
 }
@@ -62,11 +65,7 @@ pub struct TraceEntry {
 
 impl TraceEntry {
     /// 创建新的 TRACE 条目
-    pub fn new(
-        level: TraceLevel,
-        category: String,
-        values: Vec<Value>,
-    ) -> Self {
+    pub fn new(level: TraceLevel, category: String, values: Vec<Value>) -> Self {
         Self {
             timestamp: Instant::now(),
             level,
@@ -146,28 +145,28 @@ impl TraceFilter {
 
     /// 检查条目是否匹配过滤器
     pub fn matches(&self, entry: &TraceEntry) -> bool {
-        if let Some(min_level) = self.min_level {
-            if entry.level < min_level {
-                return false;
-            }
+        if let Some(min_level) = self.min_level
+            && entry.level < min_level
+        {
+            return false;
         }
 
-        if let Some(ref category) = self.category {
-            if &entry.category != category {
-                return false;
-            }
+        if let Some(ref category) = self.category
+            && &entry.category != category
+        {
+            return false;
         }
 
-        if let Some(ref label) = self.label {
-            if entry.label.as_ref() != Some(label) {
-                return false;
-            }
+        if let Some(ref label) = self.label
+            && entry.label.as_ref() != Some(label)
+        {
+            return false;
         }
 
-        if let Some(since) = self.since {
-            if entry.timestamp < since {
-                return false;
-            }
+        if let Some(since) = self.since
+            && entry.timestamp < since
+        {
+            return false;
         }
 
         true
@@ -192,16 +191,17 @@ pub struct TraceStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_trace_level_from_str() {
-        assert_eq!(TraceLevel::from_str("debug"), Some(TraceLevel::Debug));
-        assert_eq!(TraceLevel::from_str("DEBUG"), Some(TraceLevel::Debug));
-        assert_eq!(TraceLevel::from_str("info"), Some(TraceLevel::Info));
-        assert_eq!(TraceLevel::from_str("warn"), Some(TraceLevel::Warn));
-        assert_eq!(TraceLevel::from_str("warning"), Some(TraceLevel::Warn));
-        assert_eq!(TraceLevel::from_str("error"), Some(TraceLevel::Error));
-        assert_eq!(TraceLevel::from_str("invalid"), None);
+        assert_eq!(TraceLevel::from_str("debug"), Ok(TraceLevel::Debug));
+        assert_eq!(TraceLevel::from_str("DEBUG"), Ok(TraceLevel::Debug));
+        assert_eq!(TraceLevel::from_str("info"), Ok(TraceLevel::Info));
+        assert_eq!(TraceLevel::from_str("warn"), Ok(TraceLevel::Warn));
+        assert_eq!(TraceLevel::from_str("warning"), Ok(TraceLevel::Warn));
+        assert_eq!(TraceLevel::from_str("error"), Ok(TraceLevel::Error));
+        assert!(TraceLevel::from_str("invalid").is_err());
     }
 
     #[test]
@@ -236,11 +236,8 @@ mod tests {
 
     #[test]
     fn test_trace_entry_with_label() {
-        let entry = TraceEntry::new(
-            TraceLevel::Info,
-            "test_category".to_string(),
-            vec![],
-        ).with_label("test_label".to_string());
+        let entry = TraceEntry::new(TraceLevel::Info, "test_category".to_string(), vec![])
+            .with_label("test_label".to_string());
 
         assert_eq!(entry.label, Some("test_label".to_string()));
     }
@@ -262,7 +259,8 @@ mod tests {
             TraceLevel::Error,
             "category2".to_string(),
             vec![Value::String("error_msg".to_string())],
-        ).with_label("test_label".to_string());
+        )
+        .with_label("test_label".to_string());
         let formatted2 = entry2.format();
         assert!(formatted2.contains("[ERROR:category2:test_label]"));
         assert!(formatted2.contains("error_msg"));
@@ -270,24 +268,11 @@ mod tests {
 
     #[test]
     fn test_trace_filter() {
-        let filter = TraceFilter::new()
-            .with_min_level(TraceLevel::Warn);
+        let filter = TraceFilter::new().with_min_level(TraceLevel::Warn);
 
-        let debug_entry = TraceEntry::new(
-            TraceLevel::Debug,
-            "test".to_string(),
-            vec![],
-        );
-        let warn_entry = TraceEntry::new(
-            TraceLevel::Warn,
-            "test".to_string(),
-            vec![],
-        );
-        let error_entry = TraceEntry::new(
-            TraceLevel::Error,
-            "test".to_string(),
-            vec![],
-        );
+        let debug_entry = TraceEntry::new(TraceLevel::Debug, "test".to_string(), vec![]);
+        let warn_entry = TraceEntry::new(TraceLevel::Warn, "test".to_string(), vec![]);
+        let error_entry = TraceEntry::new(TraceLevel::Error, "test".to_string(), vec![]);
 
         assert!(!filter.matches(&debug_entry));
         assert!(filter.matches(&warn_entry));
@@ -296,19 +281,10 @@ mod tests {
 
     #[test]
     fn test_trace_filter_with_category() {
-        let filter = TraceFilter::new()
-            .with_category("api_call".to_string());
+        let filter = TraceFilter::new().with_category("api_call".to_string());
 
-        let api_entry = TraceEntry::new(
-            TraceLevel::Info,
-            "api_call".to_string(),
-            vec![],
-        );
-        let db_entry = TraceEntry::new(
-            TraceLevel::Info,
-            "database".to_string(),
-            vec![],
-        );
+        let api_entry = TraceEntry::new(TraceLevel::Info, "api_call".to_string(), vec![]);
+        let db_entry = TraceEntry::new(TraceLevel::Info, "database".to_string(), vec![]);
 
         assert!(filter.matches(&api_entry));
         assert!(!filter.matches(&db_entry));
@@ -316,20 +292,13 @@ mod tests {
 
     #[test]
     fn test_trace_filter_with_label() {
-        let filter = TraceFilter::new()
+        let filter = TraceFilter::new().with_label("slow_request".to_string());
+
+        let entry1 = TraceEntry::new(TraceLevel::Warn, "api".to_string(), vec![])
             .with_label("slow_request".to_string());
 
-        let entry1 = TraceEntry::new(
-            TraceLevel::Warn,
-            "api".to_string(),
-            vec![],
-        ).with_label("slow_request".to_string());
-
-        let entry2 = TraceEntry::new(
-            TraceLevel::Warn,
-            "api".to_string(),
-            vec![],
-        ).with_label("fast_request".to_string());
+        let entry2 = TraceEntry::new(TraceLevel::Warn, "api".to_string(), vec![])
+            .with_label("fast_request".to_string());
 
         assert!(filter.matches(&entry1));
         assert!(!filter.matches(&entry2));
@@ -342,25 +311,13 @@ mod tests {
             .with_category("api".to_string());
 
         // 匹配：级别和类别都匹配
-        let entry1 = TraceEntry::new(
-            TraceLevel::Warn,
-            "api".to_string(),
-            vec![],
-        );
+        let entry1 = TraceEntry::new(TraceLevel::Warn, "api".to_string(), vec![]);
 
         // 不匹配：级别太低
-        let entry2 = TraceEntry::new(
-            TraceLevel::Info,
-            "api".to_string(),
-            vec![],
-        );
+        let entry2 = TraceEntry::new(TraceLevel::Info, "api".to_string(), vec![]);
 
         // 不匹配：类别不匹配
-        let entry3 = TraceEntry::new(
-            TraceLevel::Warn,
-            "database".to_string(),
-            vec![],
-        );
+        let entry3 = TraceEntry::new(TraceLevel::Warn, "database".to_string(), vec![]);
 
         assert!(filter.matches(&entry1));
         assert!(!filter.matches(&entry2));

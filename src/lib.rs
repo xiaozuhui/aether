@@ -199,11 +199,17 @@ pub use cache::{ASTCache, CacheStats};
 pub use environment::Environment;
 pub use evaluator::{ErrorReport, EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
-pub use sandbox::{SandboxConfig, SandboxPolicy, PathValidator, PathRestriction, PathValidationError, ScopedValidator, ModuleCacheManager, ModuleCacheStats, MetricsCollector, MetricsSnapshot, ExecutionMetrics, ModuleMetrics};
-pub use runtime::{ExecutionLimits, ExecutionLimitError, TraceEntry, TraceFilter, TraceLevel, TraceStats};
 pub use module_system::{DisabledModuleResolver, FileSystemModuleResolver, ModuleResolver};
 pub use optimizer::Optimizer;
 pub use parser::{ParseError, Parser};
+pub use runtime::{
+    ExecutionLimitError, ExecutionLimits, TraceEntry, TraceFilter, TraceLevel, TraceStats,
+};
+pub use sandbox::{
+    ExecutionMetrics, MetricsCollector, MetricsSnapshot, ModuleCacheManager, ModuleCacheStats,
+    ModuleMetrics, PathRestriction, PathValidationError, PathValidator, SandboxConfig,
+    SandboxPolicy, ScopedValidator,
+};
 pub use token::Token;
 pub use value::Value;
 
@@ -499,7 +505,10 @@ impl Aether {
     /// ```ignore
     /// let error_traces = engine.trace_by_level(crate::runtime::TraceLevel::Error);
     /// ```
-    pub fn trace_by_level(&self, level: crate::runtime::TraceLevel) -> Vec<crate::runtime::TraceEntry> {
+    pub fn trace_by_level(
+        &self,
+        level: crate::runtime::TraceLevel,
+    ) -> Vec<crate::runtime::TraceEntry> {
         self.evaluator.trace_by_level(level)
     }
 
@@ -535,7 +544,10 @@ impl Aether {
     ///     .with_category("api".to_string());
     /// let filtered = engine.trace_filter(&filter);
     /// ```
-    pub fn trace_filter(&self, filter: &crate::runtime::TraceFilter) -> Vec<crate::runtime::TraceEntry> {
+    pub fn trace_filter(
+        &self,
+        filter: &crate::runtime::TraceFilter,
+    ) -> Vec<crate::runtime::TraceEntry> {
         self.evaluator.trace_filter(filter)
     }
 

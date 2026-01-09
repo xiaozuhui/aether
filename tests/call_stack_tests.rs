@@ -18,7 +18,10 @@ MAP(A, BAD)
         .unwrap_err();
 
     // Base error
-    assert!(err.contains("Undefined variable"), "unexpected error: {err}");
+    assert!(
+        err.contains("Undefined variable"),
+        "unexpected error: {err}"
+    );
 
     // Phase 1: call stack should be present.
     assert!(err.contains("Call stack:"), "unexpected error: {err}");

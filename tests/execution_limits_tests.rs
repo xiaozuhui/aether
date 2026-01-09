@@ -108,7 +108,9 @@ fn test_execution_timeout() {
     println!("Error: {}", err);
     // 检查是否是限制错误
     assert!(
-        err.contains("limit exceeded") || err.contains("Execution limit") || err.contains("step limit"),
+        err.contains("limit exceeded")
+            || err.contains("Execution limit")
+            || err.contains("step limit"),
         "Error should be about limits: {}",
         err
     );

@@ -51,9 +51,9 @@ impl ExecutionLimits {
     /// 创建严格限制的配置（用于 DSL 安全模式）
     pub fn strict() -> Self {
         Self {
-            max_steps: Some(100_000),     // 10万步
+            max_steps: Some(100_000),       // 10万步
             max_recursion_depth: Some(100), // 100层
-            max_duration_ms: Some(5_000),  // 5秒
+            max_duration_ms: Some(5_000),   // 5秒
             max_memory_bytes: None,
         }
     }
@@ -61,7 +61,7 @@ impl ExecutionLimits {
     /// 创建宽松限制的配置（用于 CLI 模式）
     pub fn lenient() -> Self {
         Self {
-            max_steps: Some(10_000_000),    // 1000万步
+            max_steps: Some(10_000_000),     // 1000万步
             max_recursion_depth: Some(5000), // 5000层
             max_duration_ms: Some(300_000),  // 5分钟
             max_memory_bytes: None,

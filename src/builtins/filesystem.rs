@@ -23,7 +23,8 @@ fn validate_path(path_str: &str) -> Result<std::path::PathBuf, RuntimeError> {
     // 如果配置了路径验证器，使用它验证路径
     if let Some(validator) = get_filesystem_validator() {
         let path = Path::new(path_str);
-        validator.validate_and_normalize(path)
+        validator
+            .validate_and_normalize(path)
             .map_err(|e| RuntimeError::CustomError(format!("Path validation failed: {}", e)))
     } else {
         // 没有配置验证器，直接使用原始路径
@@ -58,7 +59,8 @@ pub fn read_file(args: &[Value]) -> Result<Value, RuntimeError> {
         Ok(content) => Ok(Value::String(content)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to read file '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }
@@ -92,7 +94,8 @@ pub fn write_file(args: &[Value]) -> Result<Value, RuntimeError> {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to write file '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }
@@ -122,20 +125,26 @@ pub fn append_file(args: &[Value]) -> Result<Value, RuntimeError> {
     // 验证路径
     let validated_path = validate_path(&path_str)?;
 
-    match fs::OpenOptions::new().create(true).append(true).open(&validated_path) {
+    match fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&validated_path)
+    {
         Ok(mut file) => {
             use std::io::Write;
             match file.write_all(content.as_bytes()) {
                 Ok(_) => Ok(Value::Boolean(true)),
                 Err(e) => Err(RuntimeError::CustomError(format!(
                     "Failed to append to file '{}': {}",
-                    validated_path.display(), e
+                    validated_path.display(),
+                    e
                 ))),
             }
         }
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to open file '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }
@@ -167,7 +176,8 @@ pub fn delete_file(args: &[Value]) -> Result<Value, RuntimeError> {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to delete file '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }
@@ -236,7 +246,8 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
         }
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to list directory '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }
@@ -268,7 +279,8 @@ pub fn create_dir(args: &[Value]) -> Result<Value, RuntimeError> {
         Ok(_) => Ok(Value::Boolean(true)),
         Err(e) => Err(RuntimeError::CustomError(format!(
             "Failed to create directory '{}': {}",
-            validated_path.display(), e
+            validated_path.display(),
+            e
         ))),
     }
 }

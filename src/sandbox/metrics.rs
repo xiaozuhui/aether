@@ -2,9 +2,9 @@
 //!
 //! 收集运行时指标，支持监控和调试。
 
+use crate::cache::CacheStats;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
-use crate::cache::CacheStats;
 
 /// 执行指标
 #[derive(Debug, Clone)]
@@ -162,7 +162,12 @@ impl MetricsCollector {
     }
 
     /// 获取当前指标快照
-    pub fn snapshot(&self, trace_entries: usize, module_cache_size: usize, ast_cache: &CacheStats) -> MetricsSnapshot {
+    pub fn snapshot(
+        &self,
+        trace_entries: usize,
+        module_cache_size: usize,
+        ast_cache: &CacheStats,
+    ) -> MetricsSnapshot {
         MetricsSnapshot {
             execution: self.execution.read().unwrap().clone(),
             modules: self.modules.read().unwrap().clone(),
@@ -227,17 +232,24 @@ mod tests {
         std::thread::sleep(Duration::from_millis(10));
         collector.record_execution_end();
 
-        let snapshot = collector.snapshot(0, 0, &CacheStats {
-            size: 0,
-            max_size: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-        });
+        let snapshot = collector.snapshot(
+            0,
+            0,
+            &CacheStats {
+                size: 0,
+                max_size: 0,
+                hits: 0,
+                misses: 0,
+                hit_rate: 0.0,
+            },
+        );
 
         assert_eq!(snapshot.execution.execution_count, 1);
         assert!(snapshot.execution.total_duration.as_millis() >= 10);
-        assert_eq!(snapshot.execution.min_duration, snapshot.execution.max_duration);
+        assert_eq!(
+            snapshot.execution.min_duration,
+            snapshot.execution.max_duration
+        );
     }
 
     #[test]
@@ -247,16 +259,20 @@ mod tests {
 
         // 记录模块加载
         collector.record_module_load("test_module", false); // 未命中
-        collector.record_module_load("test_module", true);  // 命中
+        collector.record_module_load("test_module", true); // 命中
         collector.record_module_load("other_module", true); // 命中
 
-        let snapshot = collector.snapshot(0, 0, &CacheStats {
-            size: 0,
-            max_size: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-        });
+        let snapshot = collector.snapshot(
+            0,
+            0,
+            &CacheStats {
+                size: 0,
+                max_size: 0,
+                hits: 0,
+                misses: 0,
+                hit_rate: 0.0,
+            },
+        );
 
         assert_eq!(snapshot.modules.load_count, 3);
         assert_eq!(snapshot.modules.cache_hits, 2);
@@ -273,13 +289,17 @@ mod tests {
         collector.record_execution_end();
         collector.record_module_load("test", true);
 
-        let snapshot = collector.snapshot(0, 0, &CacheStats {
-            size: 0,
-            max_size: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-        });
+        let snapshot = collector.snapshot(
+            0,
+            0,
+            &CacheStats {
+                size: 0,
+                max_size: 0,
+                hits: 0,
+                misses: 0,
+                hit_rate: 0.0,
+            },
+        );
 
         // 所有指标都应该是 0
         assert_eq!(snapshot.execution.execution_count, 0);
@@ -297,13 +317,17 @@ mod tests {
 
         collector.reset();
 
-        let snapshot = collector.snapshot(0, 0, &CacheStats {
-            size: 0,
-            max_size: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-        });
+        let snapshot = collector.snapshot(
+            0,
+            0,
+            &CacheStats {
+                size: 0,
+                max_size: 0,
+                hits: 0,
+                misses: 0,
+                hit_rate: 0.0,
+            },
+        );
 
         assert_eq!(snapshot.execution.execution_count, 0);
         assert_eq!(snapshot.modules.load_count, 0);

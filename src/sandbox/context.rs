@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 // 线程局部的沙箱上下文
 thread_local! {
-    static FILESYSTEM_VALIDATOR: RefCell<Option<PathValidator>> = RefCell::new(None);
+    static FILESYSTEM_VALIDATOR: RefCell<Option<PathValidator>> = const { RefCell::new(None) };
 }
 
 /// 设置文件系统路径验证器（线程局部）
