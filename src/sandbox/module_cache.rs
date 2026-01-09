@@ -153,9 +153,7 @@ impl ModuleCacheManager {
         let mut cache = self.cache.write().unwrap();
         let removed = cache.remove(module_id).is_some();
 
-        if removed
-            && let Ok(mut stats) = self.stats.write()
-        {
+        if removed && let Ok(mut stats) = self.stats.write() {
             stats.module_count = cache.len();
         }
 
