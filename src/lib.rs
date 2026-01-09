@@ -178,6 +178,7 @@ pub mod lexer;
 pub mod module_system;
 pub mod optimizer;
 pub mod parser;
+pub mod runtime;
 pub mod sandbox;
 pub mod stdlib;
 pub mod token;
@@ -199,6 +200,7 @@ pub use environment::Environment;
 pub use evaluator::{ErrorReport, EvalResult, Evaluator, RuntimeError};
 pub use lexer::Lexer;
 pub use sandbox::{SandboxConfig, SandboxPolicy, PathValidator, PathRestriction, PathValidationError, ScopedValidator, ModuleCacheManager, ModuleCacheStats, MetricsCollector, MetricsSnapshot, ExecutionMetrics, ModuleMetrics};
+pub use runtime::{ExecutionLimits, ExecutionLimitError};
 pub use module_system::{DisabledModuleResolver, FileSystemModuleResolver, ModuleResolver};
 pub use optimizer::Optimizer;
 pub use parser::{ParseError, Parser};
@@ -262,6 +264,26 @@ impl Aether {
     /// Load all standard library modules
     pub fn load_all_stdlib(&mut self) -> Result<(), String> {
         stdlib::preload_stdlib(self)
+    }
+
+    // ============================================================
+    // Execution Limits
+    // ============================================================
+
+    /// Create a new Aether engine with execution limits
+    pub fn with_limits(mut self, limits: ExecutionLimits) -> Self {
+        self.evaluator.set_limits(limits);
+        self
+    }
+
+    /// Set execution limits
+    pub fn set_limits(&mut self, limits: ExecutionLimits) {
+        self.evaluator.set_limits(limits);
+    }
+
+    /// Get current execution limits
+    pub fn limits(&self) -> &ExecutionLimits {
+        self.evaluator.limits()
     }
 
     // ============================================================

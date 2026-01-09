@@ -193,6 +193,9 @@ pub enum RuntimeError {
         call_stack: Vec<CallFrame>,
     },
 
+    /// Execution limit exceeded
+    ExecutionLimit(crate::runtime::ExecutionLimitError),
+
     /// Custom error message (用于IO操作等)
     CustomError(String),
 }
@@ -278,6 +281,7 @@ impl std::fmt::Display for RuntimeError {
                 Ok(())
             }
             RuntimeError::CustomError(msg) => write!(f, "{}", msg),
+            RuntimeError::ExecutionLimit(e) => write!(f, "{}", e),
         }
     }
 }
@@ -383,6 +387,7 @@ impl RuntimeError {
                 ImportErrorKind::ParseFailed => "ParseFailed",
             },
             RuntimeError::WithCallStack { .. } => "WithCallStack",
+            RuntimeError::ExecutionLimit(_) => "ExecutionLimit",
             RuntimeError::CustomError(_) => "CustomError",
         }
         .to_string()
@@ -478,6 +483,15 @@ pub struct Evaluator {
 
     /// Call stack for better debugging (user functions + builtins)
     call_stack: Vec<CallFrame>,
+
+    /// Execution limits configuration
+    limits: crate::runtime::ExecutionLimits,
+    /// Step counter (for step limit enforcement)
+    step_counter: std::cell::Cell<usize>,
+    /// Call stack depth counter (for recursion depth limit enforcement)
+    call_stack_depth: std::cell::Cell<usize>,
+    /// Execution start time (for timeout enforcement)
+    start_time: std::cell::Cell<Option<std::time::Instant>>,
 }
 
 impl Evaluator {
@@ -488,6 +502,70 @@ impl Evaluator {
             let arity = registry.get(&name).map(|(_, a)| a).unwrap_or(0);
             env.set(name.clone(), Value::BuiltIn { name, arity });
         }
+    }
+
+    /// Check and increment step counter
+    fn eval_step(&self) -> Result<(), RuntimeError> {
+        if let Some(limit) = self.limits.max_steps {
+            let steps = self.step_counter.get();
+            if steps >= limit {
+                return Err(RuntimeError::ExecutionLimit(
+                    crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit }
+                ));
+            }
+            self.step_counter.set(steps + 1);
+        }
+        Ok(())
+    }
+
+    /// Check execution timeout
+    fn check_timeout(&self) -> Result<(), RuntimeError> {
+        if let Some(limit_ms) = self.limits.max_duration_ms {
+            if let Some(start) = self.start_time.get() {
+                let elapsed = start.elapsed().as_millis() as u64;
+                if elapsed >= limit_ms {
+                    return Err(RuntimeError::ExecutionLimit(
+                        crate::runtime::ExecutionLimitError::DurationExceeded {
+                            duration_ms: elapsed,
+                            limit: limit_ms
+                        }
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Enter function call (check recursion depth)
+    fn enter_call(&self) -> Result<(), RuntimeError> {
+        if let Some(limit) = self.limits.max_recursion_depth {
+            let depth = self.call_stack_depth.get();
+            if depth >= limit {
+                return Err(RuntimeError::ExecutionLimit(
+                    crate::runtime::ExecutionLimitError::RecursionDepthExceeded { depth, limit }
+                ));
+            }
+            self.call_stack_depth.set(depth + 1);
+        }
+        Ok(())
+    }
+
+    /// Exit function call (decrement recursion depth)
+    fn exit_call(&self) {
+        if self.limits.max_recursion_depth.is_some() {
+            let depth = self.call_stack_depth.get();
+            self.call_stack_depth.set(depth.saturating_sub(1));
+        }
+    }
+
+    /// Set execution limits (public API)
+    pub fn set_limits(&mut self, limits: crate::runtime::ExecutionLimits) {
+        self.limits = limits;
+    }
+
+    /// Get execution limits (public API)
+    pub fn limits(&self) -> &crate::runtime::ExecutionLimits {
+        &self.limits
     }
 
     fn is_control_flow_error(err: &RuntimeError) -> bool {
@@ -539,6 +617,11 @@ impl Evaluator {
             import_base_stack: Vec::new(),
 
             call_stack: Vec::new(),
+
+            limits: crate::runtime::ExecutionLimits::default(),
+            step_counter: std::cell::Cell::new(0),
+            call_stack_depth: std::cell::Cell::new(0),
+            start_time: std::cell::Cell::new(None),
         }
     }
 
@@ -558,6 +641,11 @@ impl Evaluator {
             import_base_stack: Vec::new(),
 
             call_stack: Vec::new(),
+
+            limits: crate::runtime::ExecutionLimits::default(),
+            step_counter: std::cell::Cell::new(0),
+            call_stack_depth: std::cell::Cell::new(0),
+            start_time: std::cell::Cell::new(None),
         }
     }
 
@@ -654,6 +742,11 @@ impl Evaluator {
 
     /// Evaluate a program
     pub fn eval_program(&mut self, program: &Program) -> EvalResult {
+        // Record start time for timeout checking
+        if self.limits.max_duration_ms.is_some() {
+            self.start_time.set(Some(std::time::Instant::now()));
+        }
+
         let mut result = Value::Null;
 
         for stmt in program {
@@ -665,6 +758,10 @@ impl Evaluator {
 
     /// Evaluate a statement
     pub fn eval_statement(&mut self, stmt: &Stmt) -> EvalResult {
+        // Check execution limits before each statement
+        self.eval_step()?;
+        self.check_timeout()?;
+
         match stmt {
             Stmt::Set { name, value } => {
                 let val = self.eval_expression(value)?;
@@ -1382,6 +1479,9 @@ impl Evaluator {
         func: &Value,
         args: Vec<Value>,
     ) -> EvalResult {
+        // Check recursion depth limit
+        self.enter_call()?;
+
         let frame = match func {
             Value::Function { name, params, .. } => {
                 let display_name = name_hint
@@ -1430,6 +1530,7 @@ impl Evaluator {
                     };
                     let err = self.attach_call_stack_if_absent(err);
                     let _ = self.call_stack.pop();
+                    self.exit_call();
                     return Err(err);
                 }
 
@@ -1457,6 +1558,7 @@ impl Evaluator {
                             self.env = prev_env;
                             let e = self.attach_call_stack_if_absent(e);
                             let _ = self.call_stack.pop();
+                            self.exit_call();
                             return Err(e);
                         }
                     }
@@ -1464,6 +1566,7 @@ impl Evaluator {
 
                 self.env = prev_env;
                 let _ = self.call_stack.pop();
+                self.exit_call();
                 Ok(result)
             }
 
@@ -1479,6 +1582,7 @@ impl Evaluator {
                                 };
                                 let err = self.attach_call_stack_if_absent(err);
                                 let _ = self.call_stack.pop();
+                                self.exit_call();
                                 Err(err)
                             };
                         }
@@ -1526,6 +1630,7 @@ impl Evaluator {
                 };
 
                 let _ = self.call_stack.pop();
+                self.exit_call();
                 match res {
                     Ok(v) => Ok(v),
                     Err(e) => Err(self.attach_call_stack_if_absent(e)),
@@ -1536,6 +1641,7 @@ impl Evaluator {
                 let err = RuntimeError::NotCallable(func.type_name().to_string());
                 let err = self.attach_call_stack_if_absent(err);
                 let _ = self.call_stack.pop();
+                self.exit_call();
                 Err(err)
             }
         }

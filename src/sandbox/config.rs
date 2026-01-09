@@ -3,6 +3,7 @@
 //! 提供统一的沙箱配置入口，简化权限和安全管理。
 
 use crate::builtins::IOPermissions;
+use crate::runtime::ExecutionLimits;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -45,6 +46,9 @@ pub struct SandboxConfig {
 
     /// 模块缓存 TTL（秒，0 = 永不过期）
     pub module_cache_ttl_secs: u64,
+
+    /// 执行限制配置
+    pub execution_limits: ExecutionLimits,
 }
 
 impl Default for SandboxConfig {
@@ -58,14 +62,18 @@ impl Default for SandboxConfig {
             enable_metrics: false,
             max_module_cache_size: 100,
             module_cache_ttl_secs: 0,
+            execution_limits: ExecutionLimits::default(),
         }
     }
 }
 
 impl SandboxConfig {
-    /// 创建 DSL 安全默认配置（禁用所有 IO）
+    /// 创建 DSL 安全默认配置（禁用所有 IO，严格执行限制）
     pub fn dsl_safe() -> Self {
-        Self::default()
+        Self {
+            execution_limits: ExecutionLimits::strict(),
+            ..Default::default()
+        }
     }
 
     /// 创建 CLI 完全访问配置
@@ -75,6 +83,7 @@ impl SandboxConfig {
             filesystem_policy: SandboxPolicy::FullAccess,
             module_policy: SandboxPolicy::FullAccess,
             enable_metrics: true,
+            execution_limits: ExecutionLimits::lenient(),
             ..Default::default()
         }
     }
@@ -105,6 +114,7 @@ impl SandboxConfig {
                 allowed_extensions: Some(allowed_extensions),
             }),
             enable_metrics: true,
+            execution_limits: ExecutionLimits::default(),
             ..Default::default()
         }
     }
