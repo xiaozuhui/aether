@@ -641,31 +641,55 @@ cargo bench -- --baseline before
 
 ### Go
 
+Aether 提供完整的 Go 语言绑定,支持线程安全、变量操作、追踪调试等高级功能。
+
+```bash
+# 安装
+go get github.com/xiaozuhui/aether/bindings/go@latest
+```
+
 ```go
 package main
 
 import (
     "fmt"
-    "github.com/yourusername/aether-go"
+    aether "github.com/xiaozuhui/aether/bindings/go"
 )
 
 func main() {
     engine := aether.New()
     defer engine.Close()
-    
+
+    // 从 Go 设置变量
+    engine.SetGlobal("name", "Alice")
+
     result, err := engine.Eval(`
-        Set X 10
-        Set Y 20
-        Return (X + Y)
+        TRACE_DEBUG("api", "Processing")
+        ("Hello, " + name)
     `)
-    
+
     if err != nil {
         fmt.Println("Error:", err)
         return
     }
-    fmt.Println("Result:", result) // 30
+
+    fmt.Println("Result:", result) // Hello, Alice
+
+    // 获取追踪
+    traces, _ := engine.TakeTrace()
+    for _, trace := range traces {
+        fmt.Println(trace)
+    }
 }
 ```
+
+**特性:**
+- ✅ 线程安全,支持并发
+- ✅ 变量操作 (SetGlobal/GetGlobal)
+- ✅ 追踪与调试 (TRACE/TakeTrace)
+- ✅ 执行限制与缓存控制
+
+详细文档: [bindings/go/README.md](bindings/go/README.md)
 
 ### TypeScript/aether
 

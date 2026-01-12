@@ -13,6 +13,24 @@ typedef struct AetherHandle {
   uint8_t _opaque[0];
 } AetherHandle;
 
+/**
+ * Execution limits configuration
+ */
+typedef struct AetherLimits {
+  int max_steps;
+  int max_recursion_depth;
+  int max_duration_ms;
+} AetherLimits;
+
+/**
+ * Cache statistics
+ */
+typedef struct AetherCacheStats {
+  int hits;
+  int misses;
+  int size;
+} AetherCacheStats;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -62,6 +80,139 @@ void aether_free(struct AetherHandle *handle);
  * Free a string allocated by Aether
  */
 void aether_free_string(char *s);
+
+/**
+ * Set a global variable from host application
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - name: Variable name
+ * - value_json: Variable value as JSON string
+ *
+ * # Returns
+ * - 0 (Success) if variable was set
+ * - Non-zero error code if failed
+ */
+int aether_set_global(struct AetherHandle *handle, const char *name, const char *value_json);
+
+/**
+ * Get a variable's value as JSON
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - name: Variable name
+ * - value_json: Output parameter (must be freed with aether_free_string)
+ *
+ * # Returns
+ * - 0 (Success) if variable was found
+ * - VariableNotFound (6) if variable doesn't exist
+ * - Non-zero error code for other failures
+ */
+int aether_get_global(struct AetherHandle *handle, const char *name, char **value_json);
+
+/**
+ * Reset the runtime environment (clears all variables)
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ */
+void aether_reset_env(struct AetherHandle *handle);
+
+/**
+ * Get all trace entries as JSON array
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - trace_json: Output parameter (must be freed with aether_free_string)
+ *
+ * # Returns
+ * - 0 (Success) if trace was retrieved
+ * - Non-zero error code if failed
+ */
+int aether_take_trace(struct AetherHandle *handle, char **trace_json);
+
+/**
+ * Clear the trace buffer
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ */
+void aether_clear_trace(struct AetherHandle *handle);
+
+/**
+ * Get structured trace entries as JSON
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - trace_json: Output parameter (must be freed with aether_free_string)
+ *
+ * # Returns
+ * - 0 (Success) if trace was retrieved
+ * - Non-zero error code if failed
+ */
+int aether_trace_records(struct AetherHandle *handle, char **trace_json);
+
+/**
+ * Get trace statistics as JSON
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - stats_json: Output parameter (must be freed with aether_free_string)
+ *
+ * # Returns
+ * - 0 (Success) if stats were retrieved
+ * - Non-zero error code if failed
+ */
+int aether_trace_stats(struct AetherHandle *handle, char **stats_json);
+
+/**
+ * Set execution limits
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - limits: Limits configuration
+ */
+void aether_set_limits(struct AetherHandle *handle, const struct AetherLimits *limits);
+
+/**
+ * Get current execution limits
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - limits: Output parameter
+ */
+void aether_get_limits(struct AetherHandle *handle, struct AetherLimits *limits);
+
+/**
+ * Clear the AST cache
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ */
+void aether_clear_cache(struct AetherHandle *handle);
+
+/**
+ * Get cache statistics
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - stats: Output parameter
+ */
+void aether_cache_stats(struct AetherHandle *handle, struct AetherCacheStats *stats);
+
+/**
+ * Set optimization options
+ *
+ * # Parameters
+ * - handle: Aether engine handle
+ * - constant_folding: Enable constant folding (1 = yes, 0 = no)
+ * - dead_code_elimination: Enable dead code elimination (1 = yes, 0 = no)
+ * - tail_recursion: Enable tail recursion optimization (1 = yes, 0 = no)
+ */
+void aether_set_optimization(struct AetherHandle *handle,
+                             int constant_folding,
+                             int dead_code_elimination,
+                             int tail_recursion);
 
 extern void log(const str *s);
 

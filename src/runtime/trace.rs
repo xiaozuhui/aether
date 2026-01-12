@@ -3,10 +3,11 @@
 //! 提供带级别、分类、时间戳的结构化 TRACE 事件，支持过滤和查询。
 
 use crate::value::Value;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 /// TRACE 事件级别
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum TraceLevel {
     Debug = 0,
     Info = 1,
@@ -174,7 +175,7 @@ impl TraceFilter {
 }
 
 /// TRACE 统计信息
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TraceStats {
     /// 总记录数
     pub total_entries: usize,
