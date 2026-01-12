@@ -229,7 +229,7 @@ fn value_to_json(value: &Value) -> String {
         Value::String(s) => json!(s).to_string(),
         Value::Boolean(b) => json!(b).to_string(),
         Value::Array(arr) => {
-            let items: Vec<serde_json::Value> = arr.iter().map(|v| json_from_value(v)).collect();
+            let items: Vec<serde_json::Value> = arr.iter().map(json_from_value).collect();
             json!(items).to_string()
         }
         Value::Dict(map) => {
@@ -319,8 +319,13 @@ fn json_to_value(json_str: &str) -> Result<Value, String> {
 /// # Returns
 /// - 0 (Success) if variable was set
 /// - Non-zero error code if failed
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `name` must be a valid pointer to a null-terminated C string
+/// - `value_json` must be a valid pointer to a null-terminated C string
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_set_global(
+pub unsafe extern "C" fn aether_set_global(
     handle: *mut AetherHandle,
     name: *const c_char,
     value_json: *const c_char,
@@ -367,8 +372,13 @@ pub extern "C" fn aether_set_global(
 /// - 0 (Success) if variable was found
 /// - VariableNotFound (6) if variable doesn't exist
 /// - Non-zero error code for other failures
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `name` must be a valid pointer to a null-terminated C string
+/// - `value_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_get_global(
+pub unsafe extern "C" fn aether_get_global(
     handle: *mut AetherHandle,
     name: *const c_char,
     value_json: *mut *mut c_char,
@@ -437,8 +447,12 @@ pub extern "C" fn aether_reset_env(handle: *mut AetherHandle) {
 /// # Returns
 /// - 0 (Success) if trace was retrieved
 /// - Non-zero error code if failed
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `trace_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_take_trace(
+pub unsafe extern "C" fn aether_take_trace(
     handle: *mut AetherHandle,
     trace_json: *mut *mut c_char,
 ) -> c_int {
@@ -491,8 +505,12 @@ pub extern "C" fn aether_clear_trace(handle: *mut AetherHandle) {
 /// # Returns
 /// - 0 (Success) if trace was retrieved
 /// - Non-zero error code if failed
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `trace_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_trace_records(
+pub unsafe extern "C" fn aether_trace_records(
     handle: *mut AetherHandle,
     trace_json: *mut *mut c_char,
 ) -> c_int {
@@ -512,7 +530,7 @@ pub extern "C" fn aether_trace_records(
                     "level": format!("{:?}", entry.level),
                     "category": entry.category,
                     "timestamp": entry.timestamp.elapsed().as_secs(),
-                    "values": entry.values.iter().map(|v| value_to_json(v)).collect::<Vec<_>>(),
+                    "values": entry.values.iter().map(value_to_json).collect::<Vec<_>>(),
                     "label": entry.label,
                 })
             })
@@ -542,8 +560,12 @@ pub extern "C" fn aether_trace_records(
 /// # Returns
 /// - 0 (Success) if stats were retrieved
 /// - Non-zero error code if failed
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `stats_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_trace_stats(
+pub unsafe extern "C" fn aether_trace_stats(
     handle: *mut AetherHandle,
     stats_json: *mut *mut c_char,
 ) -> c_int {
@@ -588,8 +610,12 @@ pub extern "C" fn aether_trace_stats(
 /// # Parameters
 /// - handle: Aether engine handle
 /// - limits: Limits configuration
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `limits` must be a valid pointer to an AetherLimits struct
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_set_limits(handle: *mut AetherHandle, limits: *const AetherLimits) {
+pub unsafe extern "C" fn aether_set_limits(handle: *mut AetherHandle, limits: *const AetherLimits) {
     if handle.is_null() || limits.is_null() {
         return;
     }
@@ -626,8 +652,12 @@ pub extern "C" fn aether_set_limits(handle: *mut AetherHandle, limits: *const Ae
 /// # Parameters
 /// - handle: Aether engine handle
 /// - limits: Output parameter
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `limits` must be a valid pointer to an AetherLimits struct that will be filled with the current limits
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_get_limits(handle: *mut AetherHandle, limits: *mut AetherLimits) {
+pub unsafe extern "C" fn aether_get_limits(handle: *mut AetherHandle, limits: *mut AetherLimits) {
     if handle.is_null() || limits.is_null() {
         return;
     }
@@ -676,8 +706,12 @@ pub extern "C" fn aether_clear_cache(handle: *mut AetherHandle) {
 /// # Parameters
 /// - handle: Aether engine handle
 /// - stats: Output parameter
+///
+/// # Safety
+/// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+/// - `stats` must be a valid pointer to an AetherCacheStats struct that will be filled with the statistics
 #[unsafe(no_mangle)]
-pub extern "C" fn aether_cache_stats(handle: *mut AetherHandle, stats: *mut AetherCacheStats) {
+pub unsafe extern "C" fn aether_cache_stats(handle: *mut AetherHandle, stats: *mut AetherCacheStats) {
     if handle.is_null() || stats.is_null() {
         return;
     }

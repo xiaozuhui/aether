@@ -92,8 +92,15 @@ void aether_free_string(char *s);
  * # Returns
  * - 0 (Success) if variable was set
  * - Non-zero error code if failed
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `name` must be a valid pointer to a null-terminated C string
+ * - `value_json` must be a valid pointer to a null-terminated C string
  */
-int aether_set_global(struct AetherHandle *handle, const char *name, const char *value_json);
+int aether_set_global(struct AetherHandle *handle,
+                      const char *name,
+                      const char *value_json);
 
 /**
  * Get a variable's value as JSON
@@ -107,8 +114,15 @@ int aether_set_global(struct AetherHandle *handle, const char *name, const char 
  * - 0 (Success) if variable was found
  * - VariableNotFound (6) if variable doesn't exist
  * - Non-zero error code for other failures
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `name` must be a valid pointer to a null-terminated C string
+ * - `value_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
  */
-int aether_get_global(struct AetherHandle *handle, const char *name, char **value_json);
+int aether_get_global(struct AetherHandle *handle,
+                      const char *name,
+                      char **value_json);
 
 /**
  * Reset the runtime environment (clears all variables)
@@ -128,8 +142,13 @@ void aether_reset_env(struct AetherHandle *handle);
  * # Returns
  * - 0 (Success) if trace was retrieved
  * - Non-zero error code if failed
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `trace_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
  */
-int aether_take_trace(struct AetherHandle *handle, char **trace_json);
+int aether_take_trace(struct AetherHandle *handle,
+                      char **trace_json);
 
 /**
  * Clear the trace buffer
@@ -149,8 +168,13 @@ void aether_clear_trace(struct AetherHandle *handle);
  * # Returns
  * - 0 (Success) if trace was retrieved
  * - Non-zero error code if failed
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `trace_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
  */
-int aether_trace_records(struct AetherHandle *handle, char **trace_json);
+int aether_trace_records(struct AetherHandle *handle,
+                         char **trace_json);
 
 /**
  * Get trace statistics as JSON
@@ -162,8 +186,13 @@ int aether_trace_records(struct AetherHandle *handle, char **trace_json);
  * # Returns
  * - 0 (Success) if stats were retrieved
  * - Non-zero error code if failed
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `stats_json` must be a valid pointer to a `*mut c_char` that will be set to point to the result
  */
-int aether_trace_stats(struct AetherHandle *handle, char **stats_json);
+int aether_trace_stats(struct AetherHandle *handle,
+                       char **stats_json);
 
 /**
  * Set execution limits
@@ -171,8 +200,13 @@ int aether_trace_stats(struct AetherHandle *handle, char **stats_json);
  * # Parameters
  * - handle: Aether engine handle
  * - limits: Limits configuration
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `limits` must be a valid pointer to an AetherLimits struct
  */
-void aether_set_limits(struct AetherHandle *handle, const struct AetherLimits *limits);
+void aether_set_limits(struct AetherHandle *handle,
+                       const struct AetherLimits *limits);
 
 /**
  * Get current execution limits
@@ -180,8 +214,13 @@ void aether_set_limits(struct AetherHandle *handle, const struct AetherLimits *l
  * # Parameters
  * - handle: Aether engine handle
  * - limits: Output parameter
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `limits` must be a valid pointer to an AetherLimits struct that will be filled with the current limits
  */
-void aether_get_limits(struct AetherHandle *handle, struct AetherLimits *limits);
+void aether_get_limits(struct AetherHandle *handle,
+                       struct AetherLimits *limits);
 
 /**
  * Clear the AST cache
@@ -197,8 +236,13 @@ void aether_clear_cache(struct AetherHandle *handle);
  * # Parameters
  * - handle: Aether engine handle
  * - stats: Output parameter
+ *
+ * # Safety
+ * - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
+ * - `stats` must be a valid pointer to an AetherCacheStats struct that will be filled with the statistics
  */
-void aether_cache_stats(struct AetherHandle *handle, struct AetherCacheStats *stats);
+void aether_cache_stats(struct AetherHandle *handle,
+                        struct AetherCacheStats *stats);
 
 /**
  * Set optimization options
