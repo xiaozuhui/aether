@@ -711,7 +711,10 @@ pub extern "C" fn aether_clear_cache(handle: *mut AetherHandle) {
 /// - `handle` must be a valid pointer to an AetherHandle created by `aether_new` or `aether_new_with_permissions`
 /// - `stats` must be a valid pointer to an AetherCacheStats struct that will be filled with the statistics
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn aether_cache_stats(handle: *mut AetherHandle, stats: *mut AetherCacheStats) {
+pub unsafe extern "C" fn aether_cache_stats(
+    handle: *mut AetherHandle,
+    stats: *mut AetherCacheStats,
+) {
     if handle.is_null() || stats.is_null() {
         return;
     }
