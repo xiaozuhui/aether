@@ -223,11 +223,8 @@ fn value_to_string(value: &Value) -> String {
 fn value_to_json(value: &Value) -> String {
     match value {
         Value::Number(n) => {
-            if n.fract() == 0.0 {
-                json!(n.to_string()).to_string()
-            } else {
-                json!(n).to_string()
-            }
+            // 直接返回数字的 JSON 表示
+            json!(n).to_string()
         }
         Value::String(s) => json!(s).to_string(),
         Value::Boolean(b) => json!(b).to_string(),
@@ -254,13 +251,7 @@ fn value_to_json(value: &Value) -> String {
 /// Helper function to convert Value to serde_json::Value
 fn json_from_value(value: &Value) -> serde_json::Value {
     match value {
-        Value::Number(n) => {
-            if n.fract() == 0.0 {
-                json!(n.to_string())
-            } else {
-                json!(n)
-            }
-        }
+        Value::Number(n) => json!(n),
         Value::String(s) => json!(s),
         Value::Boolean(b) => json!(b),
         Value::Array(arr) => {
@@ -393,9 +384,11 @@ pub extern "C" fn aether_get_global(
             Err(_) => return AetherErrorCode::RuntimeError as c_int,
         };
 
-        // Try to evaluate the variable name
-        match engine.eval(name_str) {
-            Ok(val) => {
+        // 直接从环境获取变量值
+        let value = engine.evaluator.get_global(name_str);
+
+        match value {
+            Some(val) => {
                 let json_str = value_to_json(&val);
                 match CString::new(json_str) {
                     Ok(cstr) => {
@@ -405,7 +398,7 @@ pub extern "C" fn aether_get_global(
                     Err(_) => AetherErrorCode::RuntimeError as c_int,
                 }
             }
-            Err(_) => AetherErrorCode::VariableNotFound as c_int,
+            None => AetherErrorCode::VariableNotFound as c_int,
         }
     });
 

@@ -827,6 +827,11 @@ impl Evaluator {
         self.env.borrow_mut().set(name.into(), value);
     }
 
+    /// Get a global variable value from the environment
+    pub fn get_global(&self, name: &str) -> Option<Value> {
+        self.env.borrow().get(name)
+    }
+
     /// Enter a child scope (new environment whose parent is the current env).
     ///
     /// Returns the previous environment handle; pass it back to `restore_env()`.
