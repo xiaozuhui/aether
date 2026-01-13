@@ -31,10 +31,6 @@ fn test_sandbox_blocks_parent_traversal() {
     let validator = PathValidator::with_root_dir(sandbox_root.clone());
     let _scope = ScopedValidator::set(validator);
 
-    // 更改工作目录到沙箱根目录（使相对路径工作）
-    let original_dir = std::env::current_dir().unwrap();
-    std::env::set_current_dir(&sandbox_root).unwrap();
-
     // 1. 测试：在沙箱内读取文件应该成功
     let code = r#"
         Set CONTENT READ_FILE("test.txt")
@@ -77,7 +73,6 @@ fn test_sandbox_blocks_parent_traversal() {
     );
 
     // 清理
-    std::env::set_current_dir(original_dir).unwrap();
     fs::remove_dir_all(sandbox_root).unwrap();
 }
 
@@ -98,10 +93,6 @@ fn test_sandbox_write_operations() {
     // 设置路径验证器
     let validator = PathValidator::with_root_dir(sandbox_root.clone());
     let _scope = ScopedValidator::set(validator);
-
-    // 更改工作目录
-    let original_dir = std::env::current_dir().unwrap();
-    std::env::set_current_dir(&sandbox_root).unwrap();
 
     // 1. 测试：在沙箱内写入文件应该成功
     let code = r#"
@@ -133,7 +124,6 @@ fn test_sandbox_write_operations() {
     );
 
     // 清理
-    std::env::set_current_dir(original_dir).unwrap();
     fs::remove_dir_all(sandbox_root).unwrap();
 }
 
