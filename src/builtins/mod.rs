@@ -563,26 +563,6 @@ impl BuiltInRegistry {
             registry.register("HTTP_DELETE", network::http_delete, 1);
         }
 
-        // Report functions - Data formatting (always enabled)
-        registry.register("FORMAT_NUMBER", report::format_number, 1); // Variadic: 1-3 args
-        registry.register("FORMAT_CURRENCY", report::format_currency, 1); // Variadic: 1-3 args
-        registry.register("FORMAT_PERCENT", report::format_percent, 1); // Variadic: 1-2 args
-        registry.register("FORMAT_DATE", report::format_date, 1); // Variadic: 1-2 args
-
-        // Report functions - Excel operations (根据权限注册)
-        if permissions.filesystem_enabled {
-            registry.register("EXCEL_CREATE", report::excel_create, 0);
-            registry.register("EXCEL_WRITE_CELL", report::excel_write_cell, 5);
-            registry.register("EXCEL_WRITE_ROW", report::excel_write_row, 4);
-            registry.register("EXCEL_WRITE_COLUMN", report::excel_write_column, 4);
-            registry.register("EXCEL_WRITE_TABLE", report::excel_write_table, 5);
-            registry.register("EXCEL_SAVE", report::excel_save, 2);
-            registry.register("EXCEL_READ_SHEET", report::excel_read_sheet, 2);
-            registry.register("EXCEL_READ_CELL", report::excel_read_cell, 4);
-            registry.register("EXCEL_READ_RANGE", report::excel_read_range, 6);
-            registry.register("EXCEL_GET_SHEETS", report::excel_get_sheets, 1);
-        }
-
         registry
     }
 

@@ -47,7 +47,7 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - **数学**: 线性代数、统计、概率分布、矩阵运算
 - **精确计算**: 分数运算、固定精度金融计算
 - **薪资计算**: 工资、加班费、个税、社保（78个函数）
-- **报表生成**: Excel 创建/写入/保存、数据格式化（部分功能规划中）
+- **Excel 公式兼容（规划中）**: 未来将支持公式转写/兼容，不再内置 Excel 文件读写
 
 ---
 
@@ -412,27 +412,7 @@ Set RESULT HTTP_POST(
 PRINTLN(RESULT)
 ```
 
-### 8. 报表生成 (🆕)
-
-```aether
-// Excel 操作
-Set WORKBOOK EXCEL_CREATE()
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 0, "姓名")
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 1, "销售额")
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 0, 2, "完成率")
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 0, "张三")
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 1, 120000)
-EXCEL_WRITE_CELL(WORKBOOK, "Sheet1", 1, 2, 0.95)
-EXCEL_SAVE(WORKBOOK, "report.xlsx")
-
-// 数据格式化
-Set AMOUNT 1234567.89
-PRINTLN(FORMAT_NUMBER(AMOUNT, 2))         // "1,234,567.89"
-PRINTLN(FORMAT_CURRENCY(AMOUNT, "¥", 2)) // "¥1,234,567.89"
-PRINTLN(FORMAT_PERCENT(0.1234, 2))        // "12.34%"
-```
-
-### 9. 错误处理
+### 8. 错误处理
 
 ```aether
 // 错误示例
@@ -621,7 +601,6 @@ main();
 ### 专题指南
 
 - [薪酬计算指南](docs/PAYROLL_GUIDE.md) - 工资、加班费、个税、社保计算(78个函数)
-- [报表生成指南](docs/REPORT_GUIDE.md) - Excel 读写、数据格式化
 - [精确计算指南](docs/PRECISION_GUIDE.md) - 分数运算、固定精度金融计算
 - [大整数指南](docs/BIGINT_GUIDE.md) - 大整数支持和运算
 
@@ -698,21 +677,6 @@ LIST_DIR, DELETE_DIR, FILE_SIZE
 
 ```aether
 HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
-```
-
-### 报表生成 (🆕)
-
-```aether
-// 说明：部分 EXCEL_* / FORMAT_DATE 当前版本为占位符（调用会返回“尚未实现”）
-
-// Excel
-EXCEL_CREATE, EXCEL_WRITE_CELL, EXCEL_SAVE
-EXCEL_WRITE_ROW, EXCEL_WRITE_COLUMN, EXCEL_WRITE_TABLE
-EXCEL_READ_SHEET, EXCEL_READ_CELL, EXCEL_READ_RANGE, EXCEL_GET_SHEETS
-
-// 数据格式化
-FORMAT_NUMBER, FORMAT_CURRENCY, FORMAT_PERCENT
-FORMAT_DATE
 ```
 
 ### 类型转换

@@ -9,211 +9,24 @@
 - [PDF 生成](#pdf-生成)
 - [数据处理](#数据处理)
 - [模板引擎](#模板引擎)
-- [完整示例](#完整示例)
 
-## Excel 操作
+# 报表函数指南（暂缓）
 
-### 读取 Excel 文件
+当前版本已移除 Excel/Word/PDF 的读写与格式化内置函数，避免在 DSL 内承载重 IO 功能。
 
-```aether
-# 读取整个工作表
-data = EXCEL_READ_SHEET("sales.xlsx", "Sheet1")
-PRINT("数据行数:", LEN(data))
+后续方向：聚焦 **Excel 公式兼容 / 转写**，包括
 
-# 读取单个单元格
-value = EXCEL_READ_CELL("sales.xlsx", "Sheet1", 1, 2)  # 第1行第2列
-PRINT("单元格值:", value)
+- 解析 Excel 公式并映射到等价的 Aether 表达式
+- 将 Aether 表达式导出为 Excel 公式（生成模板时复用）
+- 优先覆盖数学/统计/文本函数，其次日期时间与查找引用
 
-# 读取指定范围
-range_data = EXCEL_READ_RANGE("sales.xlsx", "Sheet1", 1, 1, 10, 5)  # A1:E10
-PRINT("范围数据:", range_data)
-
-# 获取所有工作表名称
-sheets = EXCEL_GET_SHEETS("sales.xlsx")
-PRINT("工作表:", sheets)
-```
-
-### 创建和写入 Excel
-
-```aether
-# 创建新工作簿
-workbook = EXCEL_CREATE()
-
-# 写入单个单元格
-EXCEL_WRITE_CELL(workbook, "Sheet1", 0, 0, "姓名")
-EXCEL_WRITE_CELL(workbook, "Sheet1", 0, 1, "销售额")
-
-# 写入一行数据
-headers = ["姓名", "部门", "销售额"]
-EXCEL_WRITE_ROW(workbook, "Sheet1", 0, headers)
-
-# 写入一列数据
-names = ["张三", "李四", "王五"]
-EXCEL_WRITE_COLUMN(workbook, "Sheet1", 0, names)
-
-# 写入二维数据表
-data = [
-    ["姓名", "部门", "销售额"],
-    ["张三", "销售部", 100000],
-    ["李四", "市场部", 85000],
-    ["王五", "销售部", 120000]
-]
-EXCEL_WRITE_TABLE(workbook, "Sheet1", 0, 0, data)
-
-# 保存文件
-EXCEL_SAVE(workbook, "output.xlsx")
-```
-
-### Excel 格式化
-
-```aether
-workbook = EXCEL_CREATE()
-
-# 设置单元格格式
-format = {
-    "bold": TRUE,
-    "font_size": 14,
-    "bg_color": "#FFFF00",  # 黄色背景
-    "font_color": "#FF0000",  # 红色字体
-    "align": "center"
-}
-EXCEL_SET_CELL_FORMAT(workbook, "Sheet1", 0, 0, format)
-
-# 设置列宽
-EXCEL_SET_COLUMN_WIDTH(workbook, "Sheet1", 0, 20)  # A列宽度20
-
-# 设置行高
-EXCEL_SET_ROW_HEIGHT(workbook, "Sheet1", 0, 30)  # 第0行高度30
-
-# 合并单元格
-EXCEL_MERGE_CELLS(workbook, "Sheet1", 0, 0, 0, 3)  # 合并A1:D1
-
-# 添加公式
-EXCEL_ADD_FORMULA(workbook, "Sheet1", 5, 2, "=SUM(C2:C5)")
-
-EXCEL_SAVE(workbook, "formatted.xlsx")
-```
-
-### Excel 图表
-
-```aether
-workbook = EXCEL_CREATE()
-
-# 准备数据
-categories = ["Q1", "Q2", "Q3", "Q4"]
-values = [100, 120, 95, 140]
-
-# 添加柱状图
-EXCEL_ADD_BAR_CHART(workbook, "Sheet1", categories, values, "季度销售额")
-
-# 添加折线图
-EXCEL_ADD_LINE_CHART(workbook, "Sheet1", categories, values, "销售趋势")
-
-# 添加饼图
-labels = ["产品A", "产品B", "产品C"]
-sales = [300, 250, 180]
-EXCEL_ADD_PIE_CHART(workbook, "Sheet1", labels, sales, "产品销售占比")
-
-EXCEL_SAVE(workbook, "charts.xlsx")
-```
-
-## Word 文档
-
-### 创建 Word 文档
-
-```aether
-# 创建新文档
-doc = WORD_CREATE()
-
-# 添加标题
-WORD_ADD_HEADING(doc, "销售报告", 1)  # 一级标题
-WORD_ADD_HEADING(doc, "2024年第一季度", 2)  # 二级标题
-
-# 添加段落
-WORD_ADD_PARAGRAPH(doc, "本报告总结了2024年第一季度的销售情况。", "Normal")
-WORD_ADD_PARAGRAPH(doc, "总体销售额较去年同期增长15%。", "Normal")
-
-# 添加表格
-table_data = [
-    ["产品", "销售额", "增长率"],
-    ["产品A", "100万", "10%"],
-    ["产品B", "85万", "20%"],
-    ["产品C", "120万", "15%"]
-]
-WORD_ADD_TABLE(doc, table_data, TRUE)  # TRUE表示第一行是表头
-
-# 添加图片
-WORD_ADD_IMAGE(doc, "chart.png", 400, 300)  # 宽400，高300
-
-# 保存文档
-WORD_SAVE(doc, "sales_report.docx")
-```
-
-### Word 模板
-
-```aether
-# 加载模板
-doc = WORD_LOAD_TEMPLATE("contract_template.docx")
-
-# 填充变量
-variables = {
-    "company_name": "ABC科技有限公司",
-    "contract_date": "2024-01-15",
-    "amount": "500,000",
-    "employee_name": "张三",
-    "position": "高级工程师"
-}
-doc = WORD_FILL_TEMPLATE(doc, variables)
-
-# 替换特定文本
-WORD_REPLACE_TEXT(doc, "【公司名称】", "ABC科技有限公司")
-WORD_REPLACE_TEXT(doc, "【日期】", "2024-01-15")
-
-# 保存填充后的文档
-WORD_SAVE(doc, "contract_filled.docx")
-```
-
-## PDF 生成
-
-```aether
-# 创建 PDF
-pdf = PDF_CREATE()
-
-# 添加页面（A4尺寸: 595x842 点）
-page = PDF_ADD_PAGE(pdf, 595, 842)
-
-# 添加文本
-PDF_ADD_TEXT(pdf, page, "销售报告", 250, 800, 24)  # x, y, 字号
-PDF_ADD_TEXT(pdf, page, "2024年第一季度", 230, 770, 16)
-
-# 添加表格
-table_data = [
-    ["产品", "销售额", "增长率"],
-    ["产品A", "100万", "10%"],
-    ["产品B", "85万", "20%"]
-]
-PDF_ADD_TABLE(pdf, page, table_data, 50, 700)
-
-# 保存 PDF
-PDF_SAVE(pdf, "report.pdf")
-```
-
-## 数据处理
-
-### 数据透视表
-
-```aether
-# 原始数据
-sales_data = [
-    {"region": "华东", "product": "A", "amount": 100},
-    {"region": "华东", "product": "B", "amount": 150},
-    {"region": "华北", "product": "A", "amount": 120},
-    {"region": "华北", "product": "B", "amount": 130},
+设计草案请参见 [EXCEL_FORMULA_PLAN.md](EXCEL_FORMULA_PLAN.md)。
     {"region": "华南", "product": "A", "amount": 90},
     {"region": "华南", "product": "B", "amount": 110}
 ]
 
 # 创建数据透视表
+
 pivot = PIVOT_TABLE(
     sales_data,
     ["region"],           # 行字段
@@ -222,6 +35,7 @@ pivot = PIVOT_TABLE(
     "sum"                # 聚合函数
 )
 PRINT(pivot)
+
 ```
 
 ### 分组聚合
