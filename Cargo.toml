@@ -37,9 +37,6 @@ ureq = "3.1.4"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 
-# Python transpilation (optional)
-pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
-
 # 报表生成依赖
 calamine = "0.32.0"        # Excel 读取
 rust_xlsxwriter = "0.92.3" # Excel 写入
@@ -53,9 +50,9 @@ crossbeam = "0.8" # 无锁队列，用于引擎池
 tokio = { version = "1.49.0", features = ["rt", "sync"], optional = true }
 
 [features]
-default = ["pytranspile"]
+default = []
+# 异步支持
 async = ["tokio"]
-pytranspile = ["dep:pyo3"]
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

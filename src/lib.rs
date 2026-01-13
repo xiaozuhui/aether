@@ -190,8 +190,6 @@ pub mod ffi;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-pub mod pytranspile;
-
 // Re-export commonly used types
 pub use ast::{Expr, Program, Stmt};
 pub use builtins::{BuiltInRegistry, IOPermissions};
