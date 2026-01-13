@@ -584,53 +584,7 @@ cargo bench -- --baseline before
 
 Aether 提供完整的 Go 语言绑定,支持线程安全、变量操作、追踪调试等高级功能。
 
-```bash
-# 安装
-go get github.com/xiaozuhui/aether/bindings/go@latest
-```
-
-```go
-package main
-
-import (
-    "fmt"
-    aether "github.com/xiaozuhui/aether/bindings/go"
-)
-
-func main() {
-    engine := aether.New()
-    defer engine.Close()
-
-    // 从 Go 设置变量
-    engine.SetGlobal("name", "Alice")
-
-    result, err := engine.Eval(`
-        TRACE_DEBUG("api", "Processing")
-        ("Hello, " + name)
-    `)
-
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
-
-    fmt.Println("Result:", result) // Hello, Alice
-
-    // 获取追踪
-    traces, _ := engine.TakeTrace()
-    for _, trace := range traces {
-        fmt.Println(trace)
-    }
-}
-```
-
-**特性:**
-- ✅ 线程安全,支持并发
-- ✅ 变量操作 (SetGlobal/GetGlobal)
-- ✅ 追踪与调试 (TRACE/TakeTrace)
-- ✅ 执行限制与缓存控制
-
-详细文档: [bindings/go/README.md](bindings/go/README.md)
+**详情请见 [Aether-GO](https://github.com/xiaozuhui/aether-go/)**
 
 ### TypeScript/aether
 
@@ -652,6 +606,24 @@ async function main() {
 
 main();
 ```
+
+---
+
+## 📚 更多文档
+
+### 用户指南
+
+- [完整用户指南](docs/USER_GUIDE.md) - 所有语言特性和内置函数的完整参考手册
+- [调试指南](docs/DEBUG_GUIDE.md) - 调试工具、错误追踪和排错技巧
+- [引擎模式指南](docs/ENGINE_MODES_GUIDE.md) - GlobalEngine/EnginePool/ScopedEngine 使用说明
+- [安全沙箱指南](docs/SANDBOX_GUIDE.md) - 权限控制、IO限制和安全最佳实践
+
+### 专题指南
+
+- [薪酬计算指南](docs/PAYROLL_GUIDE.md) - 工资、加班费、个税、社保计算(78个函数)
+- [报表生成指南](docs/REPORT_GUIDE.md) - Excel 读写、数据格式化
+- [精确计算指南](docs/PRECISION_GUIDE.md) - 分数运算、固定精度金融计算
+- [大整数指南](docs/BIGINT_GUIDE.md) - 大整数支持和运算
 
 ---
 
