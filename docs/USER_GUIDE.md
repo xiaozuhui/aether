@@ -370,14 +370,17 @@ Println(evens)  # [2, 4]
 
 #### Reduce(array, function, initial)
 
-累积计算数组值。
+累积计算数组值，回调可选第三参数为索引。
 
 **示例**:
 
 ```aether
 Set arr [1, 2, 3, 4]
-Set sum Reduce(arr, Function(acc, x) Return acc + x EndFunction, 0)
-Println(sum)  # 10
+# 基本用法（2 参回调）
+Set sum Reduce(arr, Function(acc, x) Return acc + x EndFunction, 0)  # 10
+
+# 带索引（3 参回调）
+Set weighted Reduce(arr, Function(acc, x, i) Return acc + x * i EndFunction, 0)  # 20
 ```
 
 ---

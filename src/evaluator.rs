@@ -1886,11 +1886,40 @@ impl Evaluator {
             }
         };
 
-        let mut accumulator = args[1].clone();
-        let func = &args[2];
+        let func = match &args[1] {
+            Value::Function { .. } | Value::BuiltIn { .. } => &args[1],
+            other => {
+                return Err(RuntimeError::TypeErrorDetailed {
+                    expected: "Function".to_string(),
+                    got: format!("{:?}", other),
+                });
+            }
+        };
 
-        for item in arr {
-            accumulator = self.call_function(None, func, vec![accumulator, item.clone()])?;
+        let mut accumulator = args[2].clone();
+
+        for (idx, item) in arr.iter().enumerate() {
+            let arg_count = match func {
+                Value::Function { params, .. } => params.len(),
+                Value::BuiltIn { arity, .. } => *arity,
+                _ => 0,
+            };
+
+            let mut call_args = Vec::new();
+            call_args.push(accumulator);
+            call_args.push(item.clone());
+            if arg_count >= 3 {
+                call_args.push(Value::Number(idx as f64));
+            }
+
+            if arg_count < 2 {
+                return Err(RuntimeError::WrongArity {
+                    expected: 2,
+                    got: arg_count,
+                });
+            }
+
+            accumulator = self.call_function(None, func, call_args)?;
         }
 
         Ok(accumulator)

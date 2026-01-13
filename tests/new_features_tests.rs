@@ -355,7 +355,6 @@ fn test_lambda_closure() {
 }
 
 #[test]
-#[ignore] // REDUCE function not yet implemented in stdlib
 fn test_lambda_with_reduce() {
     let mut engine = Aether::new();
 
@@ -370,6 +369,38 @@ fn test_lambda_with_reduce() {
         .unwrap();
 
     assert_eq!(result, Value::Number(15.0));
+}
+
+#[test]
+fn test_lambda_with_reduce_indexed() {
+    let mut engine = Aether::new();
+
+    let result = engine
+        .eval(
+            r#"
+        Set NUMBERS [1, 2, 3]
+        Set TOTAL REDUCE(NUMBERS, Func(ACC, X, I) { Return ACC + X + I }, 0)
+        TOTAL
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(result, Value::Number(9.0));
+}
+
+#[test]
+fn test_reduce_type_error_on_callback() {
+    let mut engine = Aether::new();
+
+    let err = engine.eval(
+        r#"
+        Set NUMBERS [1, 2]
+        // second arg is not a function -> should error
+        REDUCE(NUMBERS, 42, 0)
+    "#,
+    );
+
+    assert!(err.is_err());
 }
 
 #[test]

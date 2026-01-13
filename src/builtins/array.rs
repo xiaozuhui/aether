@@ -567,8 +567,9 @@ pub fn filter(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// # 实际使用（由求值器处理）:
-/// Set sum Reduce([1, 2, 3, 4], 0, Fun(acc, x) { Return acc + x })  # 10
+/// # 实际使用（由求值器处理，参数顺序：array, func, initial）:
+/// # 回调可选第三参数索引 (acc, item, index)
+/// Set sum REDUCE([1, 2, 3, 4], Fun(acc, x, i) { Return acc + x + i }, 0)  # 16
 /// ```
 pub fn reduce(_args: &[Value]) -> Result<Value, RuntimeError> {
     Err(RuntimeError::InvalidOperation(
