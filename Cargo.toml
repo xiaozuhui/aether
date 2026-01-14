@@ -9,15 +9,18 @@ repository = "https://github.com/xiaozuhui/aether"
 documentation = "https://docs.rs/aether-azathoth/latest/aether/"
 homepage = "https://github.com/xiaozuhui/aether"
 readme = "README.md"
-keywords = ["dsl", "interpreter", "scripting", "embedded", "language"]
-categories = ["parser-implementations", "development-tools", "embedded"]
+keywords = ["dsl", "interpreter", "scripting", "language"]
+categories = ["parser-implementations", "development-tools"]
 exclude = [
     "target/*",
     ".git/*",
     ".github/*",
-    "benches/*",
     "examples/*.aether",
     "docs/*",
+    "scripts/*",
+    "tests/*",
+    ".idea/*",
+    ".claude/*",
 ]
 
 [lib]
@@ -60,9 +63,6 @@ tokio = { version = "1.49.0", features = ["full"] }
 name = "async_demo"
 required-features = ["async"]
 
-[[bench]]
-name = "aether_benchmarks"
-harness = false
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.106"

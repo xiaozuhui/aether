@@ -78,14 +78,14 @@ fn validate_stdlib(crate_dir: &str) {
     for path in &aether_files {
         match validate_aether_file_basic(path) {
             Ok(()) => {
-                println!(
-                    "cargo:warning=✓ {}",
-                    path.file_name().unwrap().to_string_lossy()
-                );
+                // println!(
+                //     "cargo:warning=✓ {}",
+                //     path.file_name().unwrap().to_string_lossy()
+                // );
             }
             Err(e) => {
                 println!(
-                    "cargo:warning=✗ {}: {}",
+                    "cargo:error=✗ {}: {}",
                     path.file_name().unwrap().to_string_lossy(),
                     e
                 );
@@ -97,8 +97,8 @@ fn validate_stdlib(crate_dir: &str) {
     if all_valid {
         println!("cargo:warning=共 {} 个标准库文件检查成功！", file_count);
     } else {
-        println!("cargo:warning=ERROR: Some standard library files have potential issues!");
-        println!("cargo:warning=Run 'cargo test' to verify standard library functionality.");
+        println!("cargo:error=ERROR: Some standard library files have potential issues!");
+        println!("cargo:error=Run 'cargo test' to verify standard library functionality.");
     }
 }
 

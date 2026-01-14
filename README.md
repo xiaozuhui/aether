@@ -541,21 +541,6 @@ engine.set_optimization(
 );
 ```
 
-### 性能测试
-
-```bash
-# 运行基准测试
-cargo bench
-
-# 快速测试
-cargo bench -- --sample-size 10
-
-# 对比优化效果
-cargo bench -- --save-baseline before
-# 进行优化...
-cargo bench -- --baseline before
-```
-
 ---
 
 ## 🔗 语言绑定
@@ -771,7 +756,9 @@ CALC_HOUSING_FUND
 
 ## 📄 许可证
 
-根据 GNU General Public License Version 3 (GPLv3) 许可，附加例外条款（[LICENSE](LICENSE)）。>
+根据 GNU General Public License Version 3 (GPLv3) 许可，附加例外条款（[LICENSE](LICENSE)）。
+
+**注意**：所有为该项目添加代码的成员都必须签署`DCO协议`[DCO](DCO.md)
 
 ---
 
