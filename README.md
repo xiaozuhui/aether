@@ -6,7 +6,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether-azathoth)
 [![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether-azathoth/latest/aether/)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 **高性能 · 易集成 · 跨平台 · 安全优先**
 
@@ -771,7 +771,7 @@ CALC_HOUSING_FUND
 
 ## 📄 许可证
 
-根据 Apache License 2.0 许可（[LICENSE-APACHE](LICENSE-APACHE) 或 <http://www.apache.org/licenses/LICENSE-2.0）。>
+根据 GNU General Public License Version 3 (GPLv3) 许可，附加例外条款（[LICENSE](LICENSE)）。>
 
 ---
 
