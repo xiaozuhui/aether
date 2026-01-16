@@ -76,12 +76,64 @@ aether --debug script.aether
 文件: script.aether
 标准库: 已加载
 
-Result:
-60
 === 执行结果 ===
+60
 
 === 执行完成 ===
 ```
+
+说明：`--debug` 目前主要用于打印“运行元信息”（文件名、是否加载标准库、结果分段等），不会逐步打印每条语句或变量变化。
+
+### 3.1 打印 TRACE 缓冲区 (`--trace`)
+
+如果脚本中使用了 `TRACE(...)`（用于 DSL 安全调试的内存 trace），你可以用 `--trace` 在执行结束后把缓冲区内容打印出来：
+
+```bash
+aether --trace script.aether
+```
+
+输出示例：
+
+```
+=== 执行结果 ===
+...
+
+=== TRACE ===
+#1 123
+#2 [demo] hello
+```
+
+### 3.2 打印 TRACE 统计信息 (`--trace-stats`)
+
+执行结束后输出 TRACE 的统计信息（缓冲区大小、是否丢弃过最老记录、按级别/类别计数）：
+
+```bash
+aether --trace-stats script.aether
+```
+
+输出示例：
+
+```
+=== TRACE STATS ===
+buffer_size: 1024
+total_entries: 12
+buffer_full: false
+by_level: {Info: 10, Warn: 2}
+by_category: {"api": 5, "demo": 7}
+```
+
+说明：`--trace-stats` 统计的是结构化 TRACE（`TRACE_DEBUG/TRACE_INFO/TRACE_WARN/TRACE_ERROR`）。
+如果你的脚本只使用 `TRACE(...)`，它会出现在 `--trace` 输出中，但不会计入按级别/类别的统计。
+
+### 3.3 设置 TRACE 缓冲区大小 (`--trace-buffer-size <N>`)
+
+默认 TRACE 缓冲区容量为 1024 条。如果你需要在一次运行中保留更多/更少的 trace，可调整容量：
+
+```bash
+aether --trace-buffer-size 4096 --trace script.aether
+```
+
+注意：当缓冲区满时，会自动丢弃最旧的记录。
 
 ### 4. 帮助信息 (`--help` 或 `-h`)
 
@@ -155,6 +207,9 @@ aether script.aether              # 运行脚本（自动加载标准库）
 aether --check script.aether      # 只检查语法
 aether --ast script.aether        # 显示 AST
 aether --debug script.aether      # 调试模式运行
+aether --trace script.aether      # 运行并打印 TRACE 缓冲区
+aether --trace-stats script.aether # 运行并打印 TRACE 统计
+aether --trace-buffer-size 4096 --trace script.aether # 调大 TRACE 缓冲区
 
 # 标准库控制
 aether --no-stdlib script.aether  # 不加载标准库

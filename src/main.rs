@@ -12,6 +12,9 @@ fn main() {
         let show_ast = args.contains(&"--ast".to_string());
         let check_only = args.contains(&"--check".to_string());
         let debug_mode = args.contains(&"--debug".to_string());
+        let show_trace = args.contains(&"--trace".to_string());
+        let show_trace_stats = args.contains(&"--trace-stats".to_string());
+        let trace_buffer_size = get_usize_flag_value(&args, "--trace-buffer-size");
         let json_error = args.contains(&"--json-error".to_string());
         let show_help = args.contains(&"--help".to_string()) || args.contains(&"-h".to_string());
 
@@ -21,22 +24,24 @@ fn main() {
         }
 
         // 获取脚本文件名
-        // 默认：第一个非 flag 参数
-        let script_file = args.iter().skip(1).find(|arg| {
-            if arg.starts_with("--") {
-                return false;
-            }
-            !arg.starts_with('-')
-        });
+        // 默认：第一个“位置参数”（跳过 flag 以及 flag 的取值参数）
+        let script_file = find_script_file(&args);
 
         if let Some(file) = script_file {
-            let file = file.as_str();
             if check_only {
                 check_file(file);
             } else if show_ast {
                 show_ast_for_file(file);
             } else {
-                run_file(file, use_stdlib, debug_mode, json_error);
+                run_file(
+                    file,
+                    use_stdlib,
+                    debug_mode,
+                    json_error,
+                    show_trace,
+                    show_trace_stats,
+                    trace_buffer_size,
+                );
             }
         } else {
             eprintln!("错误: 未指定脚本文件");
@@ -61,17 +66,58 @@ fn print_cli_help() {
     println!("  -h, --help               显示此帮助信息");
     println!("  --check                  只检查语法，不执行代码");
     println!("  --ast                    显示抽象语法树 (AST)");
-    println!("  --debug                  启用调试模式（显示求值过程）");
+    println!("  --debug                  启用调试模式（打印额外运行信息）");
     println!("  --no-stdlib              不自动加载标准库");
     println!("  --json-error             出错时输出结构化 JSON 错误（写到 stderr）");
+    println!("  --trace                  执行后打印 TRACE 缓冲区内容");
+    println!("  --trace-stats            执行后打印 TRACE 统计信息");
+    println!("  --trace-buffer-size <N>  设置 TRACE 缓冲区容量（条目数）");
     println!();
     println!("示例:");
     println!("  aether script.aether              # 运行脚本");
     println!("  aether --check script.aether      # 检查语法");
     println!("  aether --ast script.aether        # 查看 AST");
     println!("  aether --debug script.aether      # 调试模式运行");
+    println!("  aether --trace script.aether      # 运行并打印 TRACE");
+    println!("  aether --trace --trace-stats script.aether  # 运行并打印 TRACE + 统计");
+    println!("  aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区后打印 TRACE");
     println!("  aether --no-stdlib script.aether  # 不加载标准库");
     println!();
+}
+
+fn get_usize_flag_value(args: &[String], flag: &str) -> Option<usize> {
+    args.iter().position(|a| a == flag).and_then(|idx| {
+        args.get(idx + 1)
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+    })
+}
+
+fn find_script_file(args: &[String]) -> Option<&str> {
+    let mut i = 1;
+    while i < args.len() {
+        let arg = &args[i];
+
+        // Flags with a following value
+        if arg == "--trace-buffer-size" {
+            i += 2;
+            continue;
+        }
+
+        if arg.starts_with("--") {
+            i += 1;
+            continue;
+        }
+
+        if arg.starts_with('-') {
+            i += 1;
+            continue;
+        }
+
+        return Some(arg.as_str());
+    }
+
+    None
 }
 
 /// 检查文件语法
@@ -156,7 +202,15 @@ fn show_ast_for_file(filename: &str) {
 }
 
 /// 运行 Aether 脚本文件
-fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool, json_error: bool) {
+fn run_file(
+    filename: &str,
+    load_stdlib: bool,
+    debug_mode: bool,
+    json_error: bool,
+    show_trace: bool,
+    show_trace_stats: bool,
+    trace_buffer_size: Option<usize>,
+) {
     // 作为独立语言使用时，默认启用所有IO权限
     let mut engine = if load_stdlib {
         match Aether::with_stdlib() {
@@ -187,6 +241,14 @@ fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool, json_error: boo
 
     // Enable filesystem Import/Export for CLI file runs.
     engine.set_module_resolver(Box::new(FileSystemModuleResolver::default()));
+
+    if let Some(size) = trace_buffer_size {
+        engine.set_trace_buffer_size(size);
+        if debug_mode {
+            println!("TRACE 缓冲区大小: {}", size);
+            println!();
+        }
+    }
 
     if json_error {
         match engine.eval_file_report(filename) {
@@ -219,6 +281,30 @@ fn run_file(filename: &str, load_stdlib: bool, debug_mode: bool, json_error: boo
             }
             if debug_mode {
                 println!("\n=== 执行完成 ===");
+            }
+
+            if show_trace {
+                let trace = engine.take_trace();
+                println!("=== TRACE ===");
+                if trace.is_empty() {
+                    println!("(empty)");
+                } else {
+                    for line in trace {
+                        println!("{}", line);
+                    }
+                }
+                println!();
+            }
+
+            if show_trace_stats {
+                let stats = engine.trace_stats();
+                println!("=== TRACE STATS ===");
+                println!("buffer_size: {}", stats.buffer_size);
+                println!("total_entries: {}", stats.total_entries);
+                println!("buffer_full: {}", stats.buffer_full);
+                println!("by_level: {:?}", stats.by_level);
+                println!("by_category: {:?}", stats.by_category);
+                println!();
             }
         }
         Err(e) => {
