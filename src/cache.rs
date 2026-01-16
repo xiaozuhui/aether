@@ -3,8 +3,8 @@
 
 use crate::ast::Program;
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 /// AST缓存,用于存储已解析的程序

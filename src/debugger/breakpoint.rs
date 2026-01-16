@@ -5,14 +5,9 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum BreakpointType {
     /// Line breakpoint at a specific file and line
-    Line {
-        file: String,
-        line: usize,
-    },
+    Line { file: String, line: usize },
     /// Function entry breakpoint
-    Function {
-        name: String,
-    },
+    Function { name: String },
     /// Conditional breakpoint (evaluates condition before pausing)
     Conditional {
         file: String,
@@ -50,12 +45,10 @@ impl Breakpoint {
         }
 
         let matches = match &self.bp_type {
-            BreakpointType::Line { file: f, line: l } => {
-                f == file && *l == line
-            }
-            BreakpointType::Conditional { file: f, line: l, .. } => {
-                f == file && *l == line
-            }
+            BreakpointType::Line { file: f, line: l } => f == file && *l == line,
+            BreakpointType::Conditional {
+                file: f, line: l, ..
+            } => f == file && *l == line,
             BreakpointType::Function { .. } => false, // Function breakpoints are checked separately
         };
 
@@ -95,7 +88,11 @@ impl Breakpoint {
             BreakpointType::Function { name } => {
                 format!("function '{}'", name)
             }
-            BreakpointType::Conditional { file, line, condition } => {
+            BreakpointType::Conditional {
+                file,
+                line,
+                condition,
+            } => {
                 format!("{}:{} if {}", file, line, condition)
             }
         }
@@ -108,10 +105,13 @@ mod tests {
 
     #[test]
     fn test_breakpoint_creation() {
-        let bp = Breakpoint::new(1, BreakpointType::Line {
-            file: "test.aether".to_string(),
-            line: 10,
-        });
+        let bp = Breakpoint::new(
+            1,
+            BreakpointType::Line {
+                file: "test.aether".to_string(),
+                line: 10,
+            },
+        );
 
         assert_eq!(bp.id, 1);
         assert!(bp.enabled);
@@ -120,10 +120,13 @@ mod tests {
 
     #[test]
     fn test_breakpoint_trigger() {
-        let mut bp = Breakpoint::new(1, BreakpointType::Line {
-            file: "test.aether".to_string(),
-            line: 10,
-        });
+        let mut bp = Breakpoint::new(
+            1,
+            BreakpointType::Line {
+                file: "test.aether".to_string(),
+                line: 10,
+            },
+        );
 
         assert!(bp.should_trigger("test.aether", 10));
         assert!(!bp.should_trigger("test.aether", 11));
@@ -132,10 +135,13 @@ mod tests {
 
     #[test]
     fn test_disabled_breakpoint() {
-        let mut bp = Breakpoint::new(1, BreakpointType::Line {
-            file: "test.aether".to_string(),
-            line: 10,
-        });
+        let mut bp = Breakpoint::new(
+            1,
+            BreakpointType::Line {
+                file: "test.aether".to_string(),
+                line: 10,
+            },
+        );
         bp.enabled = false;
 
         assert!(!bp.should_trigger("test.aether", 10));
@@ -143,10 +149,13 @@ mod tests {
 
     #[test]
     fn test_ignore_count() {
-        let mut bp = Breakpoint::new(1, BreakpointType::Line {
-            file: "test.aether".to_string(),
-            line: 10,
-        });
+        let mut bp = Breakpoint::new(
+            1,
+            BreakpointType::Line {
+                file: "test.aether".to_string(),
+                line: 10,
+            },
+        );
         bp.ignore_count = 2;
 
         assert!(!bp.should_trigger("test.aether", 10)); // hit 1, ignored
@@ -156,9 +165,12 @@ mod tests {
 
     #[test]
     fn test_function_breakpoint() {
-        let bp = Breakpoint::new(1, BreakpointType::Function {
-            name: "myFunc".to_string(),
-        });
+        let bp = Breakpoint::new(
+            1,
+            BreakpointType::Function {
+                name: "myFunc".to_string(),
+            },
+        );
 
         assert!(bp.is_function_breakpoint("myFunc"));
         assert!(!bp.is_function_breakpoint("otherFunc"));

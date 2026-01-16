@@ -37,6 +37,7 @@ echo "🔍 步骤 2/7: 检查代码格式..."
 cargo fmt --check || {
     echo "⚠️  代码格式不符合规范，正在自动格式化..."
     cargo fmt
+    exit 1
 }
 
 echo ""

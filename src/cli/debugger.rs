@@ -1,10 +1,10 @@
 // src/cli/debugger.rs
 //! Debugger CLI implementation
 
-use aether::debugger::{DebuggerSession, CommandAction};
+use aether::debugger::{CommandAction, DebuggerSession};
+use std::cell::RefCell;
 use std::io::{self, Write};
 use std::rc::Rc;
-use std::cell::RefCell;
 
 pub fn run_debugger(filename: &str) {
     // Read source code
@@ -103,9 +103,9 @@ fn show_current_context(session: &DebuggerSession, source: &str) {
         let start = line.saturating_sub(3);
         let end = (line + 2).min(lines.len());
 
-        for i in start..end {
-            let marker = if i + 1 == *line { "=>" } else { "  " };
-            println!("{} {:4}: {}", marker, i + 1, lines[i]);
+        for (idx, line_content) in lines.iter().enumerate().take(end).skip(start) {
+            let marker = if idx + 1 == *line { "=>" } else { "  " };
+            println!("{} {:4}: {}", marker, idx + 1, line_content);
         }
     }
 }

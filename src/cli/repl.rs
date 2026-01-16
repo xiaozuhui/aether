@@ -67,7 +67,9 @@ pub fn run_repl() {
                     }
                     Err(e) => {
                         eprintln!("✗ {}", e);
-                        if let Some((line, col)) = error_context::extract_line_column(&e.to_string()) {
+                        if let Some((line, col)) =
+                            error_context::extract_line_column(&e.to_string())
+                        {
                             error_context::print_source_context(input, line, col);
                         }
                     }

@@ -30,7 +30,9 @@ pub fn print_cli_help() {
     println!(
         "  aether --metrics-json script.aether                    # JSON 输出（含结果与指标）"
     );
-    println!("  aether --metrics-json-pretty script.aether             # 格式化 JSON 输出（含结果与指标）");
+    println!(
+        "  aether --metrics-json-pretty script.aether             # 格式化 JSON 输出（含结果与指标）"
+    );
     println!("  aether --trace script.aether                           # 运行并打印 TRACE");
     println!("  aether --trace --trace-stats script.aether             # 运行并打印 TRACE + 统计");
     println!("  aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区后打印 TRACE");

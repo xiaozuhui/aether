@@ -4,8 +4,8 @@
 use crate::debugger::breakpoint::BreakpointType;
 use crate::debugger::state::{DebuggerState, ExecutionMode};
 use crate::evaluator::Evaluator;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 /// Action to take after executing a command
 #[derive(Debug, Clone, PartialEq)]
@@ -65,7 +65,7 @@ impl DebuggerSession {
 
     /// Handle a debugger command, returning (message, action)
     pub fn handle_command(&mut self, cmd: &str) -> (String, CommandAction) {
-        let parts: Vec<&str> = cmd.trim().split_whitespace().collect();
+        let parts: Vec<&str> = cmd.split_whitespace().collect();
         if parts.is_empty() {
             return (String::new(), CommandAction::Stay);
         }
@@ -89,7 +89,13 @@ impl DebuggerSession {
             "list" | "l" => self.cmd_list(args),
             "help" | "h" | "?" => self.cmd_help(args),
             "quit" | "q" => self.cmd_quit(args),
-            _ => (format!("Unknown command: {}. Type 'help' for available commands.", command), CommandAction::Stay),
+            _ => (
+                format!(
+                    "Unknown command: {}. Type 'help' for available commands.",
+                    command
+                ),
+                CommandAction::Stay,
+            ),
         };
 
         (msg, action)
@@ -99,7 +105,10 @@ impl DebuggerSession {
 
     fn cmd_break(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: break [file:]line | break function_name".to_string(), CommandAction::Stay);
+            return (
+                "Usage: break [file:]line | break function_name".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         let loc = args[0];
@@ -107,7 +116,9 @@ impl DebuggerSession {
         // Try parsing as line number first
         if let Ok(line) = loc.parse::<usize>() {
             // Line number only - use current file
-            let file = self.state.current_location()
+            let file = self
+                .state
+                .current_location()
                 .map(|(f, _)| f.clone())
                 .or_else(|| self.source_file.clone())
                 .unwrap_or_else(|| "<unknown>".to_string());
@@ -116,15 +127,24 @@ impl DebuggerSession {
                 file: file.clone(),
                 line,
             });
-            return (format!("Breakpoint {} set at {}:{}", id, file, line), CommandAction::Stay);
+            return (
+                format!("Breakpoint {} set at {}:{}", id, file, line),
+                CommandAction::Stay,
+            );
         }
 
         // Try file:line format
         if let Some(pos) = loc.find(':') {
             let file = loc[..pos].to_string();
-            if let Ok(line) = loc[pos+1..].parse::<usize>() {
-                let id = self.state.set_breakpoint(BreakpointType::Line { file: file.clone(), line });
-                return (format!("Breakpoint {} set at {}:{}", id, file, line), CommandAction::Stay);
+            if let Ok(line) = loc[pos + 1..].parse::<usize>() {
+                let id = self.state.set_breakpoint(BreakpointType::Line {
+                    file: file.clone(),
+                    line,
+                });
+                return (
+                    format!("Breakpoint {} set at {}:{}", id, file, line),
+                    CommandAction::Stay,
+                );
             }
         }
 
@@ -132,14 +152,20 @@ impl DebuggerSession {
         let id = self.state.set_breakpoint(BreakpointType::Function {
             name: loc.to_string(),
         });
-        (format!("Breakpoint {} set at function '{}'", id, loc), CommandAction::Stay)
+        (
+            format!("Breakpoint {} set at function '{}'", id, loc),
+            CommandAction::Stay,
+        )
     }
 
     fn cmd_delete(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
             let count = self.state.list_breakpoints().len();
             self.state.remove_all_breakpoints();
-            return (format!("All breakpoints deleted ({})", count), CommandAction::Stay);
+            return (
+                format!("All breakpoints deleted ({})", count),
+                CommandAction::Stay,
+            );
         }
 
         if let Ok(id) = args[0].parse::<usize>() {
@@ -155,7 +181,10 @@ impl DebuggerSession {
 
     fn cmd_disable(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: disable <breakpoint_id>".to_string(), CommandAction::Stay);
+            return (
+                "Usage: disable <breakpoint_id>".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         if let Ok(id) = args[0].parse::<usize>() {
@@ -171,7 +200,10 @@ impl DebuggerSession {
 
     fn cmd_enable(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: enable <breakpoint_id>".to_string(), CommandAction::Stay);
+            return (
+                "Usage: enable <breakpoint_id>".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         if let Ok(id) = args[0].parse::<usize>() {
@@ -187,7 +219,10 @@ impl DebuggerSession {
 
     fn cmd_info(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: info breakpoints | info locals | info args".to_string(), CommandAction::Stay);
+            return (
+                "Usage: info breakpoints | info locals | info args".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         match args[0] {
@@ -202,7 +237,10 @@ impl DebuggerSession {
                     let status = if bp.enabled { " enabled" } else { " disabled" };
                     result.push_str(&format!(
                         "  ID: {:3}{} | {} | hits: {} | {}\n",
-                        bp.id, status, bp.location_string(), bp.hit_count,
+                        bp.id,
+                        status,
+                        bp.location_string(),
+                        bp.hit_count,
                         if bp.ignore_count > 0 {
                             format!("(ignore first {})", bp.ignore_count)
                         } else {
@@ -214,12 +252,19 @@ impl DebuggerSession {
             }
             "locals" => {
                 // TODO: Need to add API to Evaluator to get all variables
-                ("Local variables: Not yet implemented".to_string(), CommandAction::Stay)
+                (
+                    "Local variables: Not yet implemented".to_string(),
+                    CommandAction::Stay,
+                )
             }
-            "args" => {
-                ("Arguments: Not yet implemented".to_string(), CommandAction::Stay)
-            }
-            _ => (format!("Unknown info command: {}", args[0]), CommandAction::Stay),
+            "args" => (
+                "Arguments: Not yet implemented".to_string(),
+                CommandAction::Stay,
+            ),
+            _ => (
+                format!("Unknown info command: {}", args[0]),
+                CommandAction::Stay,
+            ),
         }
     }
 
@@ -257,7 +302,10 @@ impl DebuggerSession {
 
         self.state.set_execution_mode(ExecutionMode::StepOut);
         self.state.set_step_over_depth(depth);
-        ("Running until current function returns...".to_string(), CommandAction::Continue)
+        (
+            "Running until current function returns...".to_string(),
+            CommandAction::Continue,
+        )
     }
 
     fn cmd_continue(&mut self, _args: &[&str]) -> (String, CommandAction) {
@@ -267,7 +315,10 @@ impl DebuggerSession {
 
     fn cmd_print(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: print <variable_name>".to_string(), CommandAction::Stay);
+            return (
+                "Usage: print <variable_name>".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         let var_name = args[0];
@@ -275,7 +326,10 @@ impl DebuggerSession {
 
         match evaluator.get_global(var_name) {
             Some(value) => (format!("{} = {}", var_name, value), CommandAction::Stay),
-            None => (format!("Variable '{}' not found", var_name), CommandAction::Stay),
+            None => (
+                format!("Variable '{}' not found", var_name),
+                CommandAction::Stay,
+            ),
         }
     }
 
@@ -304,11 +358,17 @@ impl DebuggerSession {
 
     fn cmd_frame(&mut self, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
-            return ("Usage: frame <frame_number>".to_string(), CommandAction::Stay);
+            return (
+                "Usage: frame <frame_number>".to_string(),
+                CommandAction::Stay,
+            );
         }
 
         if let Ok(_frame_num) = args[0].parse::<usize>() {
-            ("Frame selection not yet implemented".to_string(), CommandAction::Stay)
+            (
+                "Frame selection not yet implemented".to_string(),
+                CommandAction::Stay,
+            )
         } else {
             ("Invalid frame number".to_string(), CommandAction::Stay)
         }
@@ -322,7 +382,9 @@ impl DebuggerSession {
         };
 
         if let Some(source) = &self.source_code {
-            let current_line = self.state.current_location()
+            let current_line = self
+                .state
+                .current_location()
                 .map(|(_, line)| *line)
                 .unwrap_or(1);
 
@@ -331,9 +393,9 @@ impl DebuggerSession {
             let end = (start + count).min(lines.len());
 
             let mut result = String::new();
-            for i in start..end {
-                let marker = if i + 1 == current_line { "=>" } else { "  " };
-                result.push_str(&format!("{} {:4}: {}\n", marker, i + 1, lines[i]));
+            for (idx, line) in lines.iter().enumerate().take(end).skip(start) {
+                let marker = if idx + 1 == current_line { "=>" } else { "  " };
+                result.push_str(&format!("{} {:4}: {}\n", marker, idx + 1, line));
             }
             (result, CommandAction::Stay)
         } else {
@@ -402,7 +464,7 @@ mod tests {
         let mut session = DebuggerSession::new(evaluator);
         session.set_source(
             "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n".to_string(),
-            "test.aether".to_string()
+            "test.aether".to_string(),
         );
         session
     }

@@ -522,12 +522,12 @@ impl Evaluator {
     fn eval_step(&self) -> Result<(), RuntimeError> {
         let steps = self.step_counter.get();
 
-        if let Some(limit) = self.limits.max_steps {
-            if steps >= limit {
-                return Err(RuntimeError::ExecutionLimit(
-                    crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit },
-                ));
-            }
+        if let Some(limit) = self.limits.max_steps
+            && steps >= limit
+        {
+            return Err(RuntimeError::ExecutionLimit(
+                crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit },
+            ));
         }
 
         self.step_counter.set(steps + 1);

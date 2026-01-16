@@ -176,23 +176,23 @@ impl DebuggerState {
             }
             ExecutionMode::StepOver => {
                 // Pause when stack depth returns to the same level
-                if let Some(target_depth) = self.step_over_depth {
-                    if call_stack_depth <= target_depth {
-                        self.step_over_depth = None;
-                        self.execution_mode = ExecutionMode::Normal;
-                        return true;
-                    }
+                if let Some(target_depth) = self.step_over_depth
+                    && call_stack_depth <= target_depth
+                {
+                    self.step_over_depth = None;
+                    self.execution_mode = ExecutionMode::Normal;
+                    return true;
                 }
                 false
             }
             ExecutionMode::StepOut => {
                 // Pause when stack depth becomes less than current
-                if let Some(target_depth) = self.step_over_depth {
-                    if call_stack_depth < target_depth {
-                        self.step_over_depth = None;
-                        self.execution_mode = ExecutionMode::Normal;
-                        return true;
-                    }
+                if let Some(target_depth) = self.step_over_depth
+                    && call_stack_depth < target_depth
+                {
+                    self.step_over_depth = None;
+                    self.execution_mode = ExecutionMode::Normal;
+                    return true;
                 }
                 false
             }
