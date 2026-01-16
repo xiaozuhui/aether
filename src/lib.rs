@@ -558,12 +558,18 @@ impl Aether {
 
     /// 设置 TRACE 缓冲区大小
     ///
-    /// 注意：此方法是为未来实现准备的占位符。
-    /// 目前，缓冲区大小固定为 1024 条目。
-    #[allow(dead_code)]
-    pub fn set_trace_buffer_size(&mut self, _size: usize) {
-        // TODO: 实现可配置的缓冲区大小
-        // 目前，缓冲区大小固定为 TRACE_MAX_ENTRIES (1024)
+    /// 这将设置 TRACE 缓冲区可以存储的最大条目数。
+    /// 如果新大小小于当前条目数，多余的条目将被从缓冲区前端移除。
+    ///
+    /// # 示例
+    /// ```rust
+    /// use aether::Aether;
+    ///
+    /// let mut engine = Aether::new();
+    /// engine.set_trace_buffer_size(2048); // 设置为 2048 条目
+    /// ```
+    pub fn set_trace_buffer_size(&mut self, size: usize) {
+        self.evaluator.set_trace_buffer_size(size);
     }
 
     /// 配置用于 `Import/Export` 的模块解析器。

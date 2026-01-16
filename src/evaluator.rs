@@ -471,6 +471,8 @@ pub struct Evaluator {
     trace_seq: u64,
     /// Structured trace entries (new in Stage 3.2)
     trace_entries: VecDeque<crate::runtime::TraceEntry>,
+    /// Maximum number of trace entries to keep in buffer
+    trace_buffer_size: usize,
 
     /// Module resolver (Import/Export). Defaults to disabled for DSL safety.
     module_resolver: Box<dyn ModuleResolver>,
@@ -497,7 +499,8 @@ pub struct Evaluator {
 }
 
 impl Evaluator {
-    const TRACE_MAX_ENTRIES: usize = 1024;
+    /// Default maximum number of trace entries to keep in buffer
+    const DEFAULT_TRACE_BUFFER_SIZE: usize = 1024;
 
     fn register_builtins_into_env(registry: &BuiltInRegistry, env: &mut Environment) {
         for name in registry.names() {
@@ -595,11 +598,22 @@ impl Evaluator {
 
     /// Create a new evaluator (默认禁用IO)
     pub fn new() -> Self {
-        Self::with_permissions(crate::builtins::IOPermissions::default())
+        Self::with_permissions_and_trace_buffer(
+            crate::builtins::IOPermissions::default(),
+            Self::DEFAULT_TRACE_BUFFER_SIZE,
+        )
     }
 
     /// Create a new evaluator with custom IO permissions
     pub fn with_permissions(permissions: crate::builtins::IOPermissions) -> Self {
+        Self::with_permissions_and_trace_buffer(permissions, Self::DEFAULT_TRACE_BUFFER_SIZE)
+    }
+
+    /// Create a new evaluator with custom IO permissions and trace buffer size
+    pub fn with_permissions_and_trace_buffer(
+        permissions: crate::builtins::IOPermissions,
+        trace_buffer_size: usize,
+    ) -> Self {
         let env = Rc::new(RefCell::new(Environment::new()));
 
         // Register built-in functions with permissions
@@ -612,6 +626,7 @@ impl Evaluator {
             trace: VecDeque::new(),
             trace_seq: 0,
             trace_entries: VecDeque::new(),
+            trace_buffer_size,
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -637,6 +652,7 @@ impl Evaluator {
             trace: VecDeque::new(),
             trace_seq: 0,
             trace_entries: VecDeque::new(),
+            trace_buffer_size: Self::DEFAULT_TRACE_BUFFER_SIZE,
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -683,7 +699,7 @@ impl Evaluator {
         self.trace_seq = self.trace_seq.saturating_add(1);
         let entry = format!("#{} {}", self.trace_seq, msg);
 
-        if self.trace.len() >= Self::TRACE_MAX_ENTRIES {
+        if self.trace.len() >= self.trace_buffer_size {
             self.trace.pop_front();
         }
         self.trace.push_back(entry);
@@ -694,7 +710,7 @@ impl Evaluator {
         self.trace_seq = self.trace_seq.saturating_add(1);
 
         // Add to structured entries
-        if self.trace_entries.len() >= Self::TRACE_MAX_ENTRIES {
+        if self.trace_entries.len() >= self.trace_buffer_size {
             self.trace_entries.pop_front();
         }
         self.trace_entries.push_back(entry.clone());
@@ -702,7 +718,7 @@ impl Evaluator {
         // Also add to formatted trace (for backward compatibility)
         let formatted = entry.format();
         let msg = format!("#{} {}", self.trace_seq, formatted);
-        if self.trace.len() >= Self::TRACE_MAX_ENTRIES {
+        if self.trace.len() >= self.trace_buffer_size {
             self.trace.pop_front();
         }
         self.trace.push_back(msg);
@@ -785,8 +801,8 @@ impl Evaluator {
             total_entries: self.trace_entries.len(),
             by_level,
             by_category,
-            buffer_size: Self::TRACE_MAX_ENTRIES,
-            buffer_full: self.trace_entries.len() >= Self::TRACE_MAX_ENTRIES,
+            buffer_size: self.trace_buffer_size,
+            buffer_full: self.trace_entries.len() >= self.trace_buffer_size,
         }
     }
 
@@ -795,6 +811,22 @@ impl Evaluator {
         self.trace.clear();
         self.trace_entries.clear();
         self.trace_seq = 0;
+    }
+
+    /// Set the maximum number of trace entries to keep in buffer
+    ///
+    /// If the new size is smaller than the current number of entries,
+    /// excess entries will be removed from the front of the buffer.
+    pub fn set_trace_buffer_size(&mut self, size: usize) {
+        self.trace_buffer_size = size;
+
+        // Trim existing buffers if necessary
+        while self.trace.len() > size {
+            self.trace.pop_front();
+        }
+        while self.trace_entries.len() > size {
+            self.trace_entries.pop_front();
+        }
     }
 
     /// Reset the environment (clear all variables and re-register built-ins)

@@ -67,8 +67,8 @@ fn clear_trace_resets_sequence() {
 fn trace_buffer_has_max_capacity_and_drops_oldest() {
     let mut engine = Aether::new();
 
-    // Keep this in sync with Evaluator::TRACE_MAX_ENTRIES
-    let max_entries: usize = 1024;
+    // Get the current buffer size from trace stats
+    let max_entries = engine.trace_stats().buffer_size;
 
     let mut code = String::new();
     for i in 1..=(max_entries + 2) {
@@ -96,4 +96,30 @@ fn trace_multi_args_without_string_label_is_not_labeled() {
 
     let trace = engine.take_trace();
     assert_eq!(trace, vec!["#1 1 2 3".to_string()]);
+}
+
+#[test]
+fn set_trace_buffer_size_works() {
+    let mut engine = Aether::new();
+
+    // Set a small buffer size
+    engine.set_trace_buffer_size(3);
+
+    // Add more entries than the buffer size
+    for i in 1..=5 {
+        engine.eval(&format!("TRACE({})", i)).unwrap();
+    }
+
+    let trace = engine.take_trace();
+    assert_eq!(trace.len(), 3);
+
+    // Should only keep the last 3 entries
+    assert_eq!(trace[0], "#3 3");
+    assert_eq!(trace[1], "#4 4");
+    assert_eq!(trace[2], "#5 5");
+
+    // Verify stats reflect the new buffer size
+    let stats = engine.trace_stats();
+    assert_eq!(stats.buffer_size, 3);
+    assert_eq!(stats.total_entries, 0); // Buffer was cleared by take_trace
 }
