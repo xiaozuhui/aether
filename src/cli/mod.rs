@@ -1,4 +1,5 @@
 mod args;
+mod debugger;
 mod error_context;
 mod file_cmd;
 mod help;

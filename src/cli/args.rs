@@ -2,6 +2,7 @@
 pub struct RunOptions {
     pub load_stdlib: bool,
     pub debug_mode: bool,
+    pub debugger_mode: bool,
     pub json_error: bool,
     pub metrics_mode: bool,
     pub metrics_json_mode: bool,
@@ -31,6 +32,7 @@ pub fn parse(args: &[String]) -> CliCommand {
     let show_ast = args.contains(&"--ast".to_string());
     let check_only = args.contains(&"--check".to_string());
     let debug_mode = args.contains(&"--debug".to_string());
+    let debugger_mode = args.contains(&"--debugger".to_string());
 
     let metrics_mode = args.contains(&"--metrics".to_string());
     let metrics_json_mode = args.contains(&"--metrics-json".to_string());
@@ -72,6 +74,7 @@ pub fn parse(args: &[String]) -> CliCommand {
         options: RunOptions {
             load_stdlib,
             debug_mode,
+            debugger_mode,
             json_error,
             metrics_mode,
             metrics_json_mode: metrics_json_output,

@@ -198,6 +198,9 @@ pub enum RuntimeError {
 
     /// Custom error message (用于IO操作等)
     CustomError(String),
+
+    /// Debugger pause (not a real error, used for control flow)
+    DebugPause,
 }
 
 impl std::fmt::Display for RuntimeError {
@@ -282,6 +285,7 @@ impl std::fmt::Display for RuntimeError {
             }
             RuntimeError::CustomError(msg) => write!(f, "{}", msg),
             RuntimeError::ExecutionLimit(e) => write!(f, "{}", e),
+            RuntimeError::DebugPause => write!(f, "Debugger pause"),
         }
     }
 }
@@ -389,6 +393,7 @@ impl RuntimeError {
             RuntimeError::WithCallStack { .. } => "WithCallStack",
             RuntimeError::ExecutionLimit(_) => "ExecutionLimit",
             RuntimeError::CustomError(_) => "CustomError",
+            RuntimeError::DebugPause => "DebugPause",
         }
         .to_string()
     }
@@ -490,6 +495,10 @@ pub struct Evaluator {
 
     /// Execution limits configuration
     limits: crate::runtime::ExecutionLimits,
+    /// Current source file being executed (for debugger)
+    current_source_file: Option<String>,
+    /// Current line number being executed (for debugger)
+    current_line: std::cell::Cell<usize>,
     /// Step counter (for step limit enforcement)
     step_counter: std::cell::Cell<usize>,
     /// Call stack depth counter (for recursion depth limit enforcement)
@@ -537,6 +546,36 @@ impl Evaluator {
     /// Note: this counts evaluated statements (one increment per statement).
     pub fn step_count(&self) -> usize {
         self.step_counter.get()
+    }
+
+    /// Set the current source file (for debugger)
+    pub fn set_source_file(&mut self, file: String) {
+        self.current_source_file = Some(file);
+    }
+
+    /// Get the current source file (for debugger)
+    pub fn get_source_file(&self) -> Option<&str> {
+        self.current_source_file.as_deref()
+    }
+
+    /// Set the current line number (for debugger)
+    pub fn set_current_line(&self, line: usize) {
+        self.current_line.set(line);
+    }
+
+    /// Get the current line number (for debugger)
+    pub fn get_current_line(&self) -> usize {
+        self.current_line.get()
+    }
+
+    /// Get the call stack (for debugger)
+    pub fn get_call_stack(&self) -> &[CallFrame] {
+        &self.call_stack
+    }
+
+    /// Get call stack depth (for debugger)
+    pub fn get_call_stack_depth(&self) -> usize {
+        self.call_stack_depth.get()
     }
 
     /// Check execution timeout
@@ -596,6 +635,7 @@ impl Evaluator {
                 | RuntimeError::Yield(_)
                 | RuntimeError::Break
                 | RuntimeError::Continue
+                | RuntimeError::DebugPause
         )
     }
 
@@ -653,6 +693,8 @@ impl Evaluator {
             call_stack: Vec::new(),
 
             limits: crate::runtime::ExecutionLimits::default(),
+            current_source_file: None,
+            current_line: std::cell::Cell::new(0),
             step_counter: std::cell::Cell::new(0),
             call_stack_depth: std::cell::Cell::new(0),
             start_time: std::cell::Cell::new(None),
@@ -679,6 +721,8 @@ impl Evaluator {
             call_stack: Vec::new(),
 
             limits: crate::runtime::ExecutionLimits::default(),
+            current_source_file: None,
+            current_line: std::cell::Cell::new(0),
             step_counter: std::cell::Cell::new(0),
             call_stack_depth: std::cell::Cell::new(0),
             start_time: std::cell::Cell::new(None),

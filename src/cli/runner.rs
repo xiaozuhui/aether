@@ -4,6 +4,12 @@ use serde_json::json;
 use std::fs;
 
 pub fn run_file(filename: &str, options: RunOptions) {
+    // Check if debugger mode is enabled
+    if options.debugger_mode {
+        crate::cli::debugger::run_debugger(filename);
+        return;
+    }
+
     let mut engine = if options.load_stdlib {
         match Aether::with_stdlib() {
             Ok(engine) => engine,

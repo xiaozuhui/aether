@@ -10,6 +10,7 @@ pub fn print_cli_help() {
     println!("  --check                  只检查语法，不执行代码");
     println!("  --ast                    显示抽象语法树 (AST)");
     println!("  --debug                  启用调试模式（打印额外运行信息）");
+    println!("  --debugger               启动交互式调试器 (类似GDB)");
     println!("  --metrics                执行后打印性能指标（耗时/缓存/trace 统计）");
     println!("  --metrics-json           以 JSON 输出结果 + 性能指标（机器可读）");
     println!("  --metrics-json-pretty    以格式化 JSON 输出结果 + 性能指标（机器可读）");
@@ -24,6 +25,7 @@ pub fn print_cli_help() {
     println!("  aether --check script.aether                           # 检查语法");
     println!("  aether --ast script.aether                             # 查看 AST");
     println!("  aether --debug script.aether                           # 调试模式运行");
+    println!("  aether --debugger script.aether                        # 启动调试器");
     println!("  aether --metrics script.aether                         # 运行并打印性能指标");
     println!(
         "  aether --metrics-json script.aether                    # JSON 输出（含结果与指标）"

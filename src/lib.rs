@@ -171,6 +171,7 @@
 pub mod ast;
 pub mod builtins;
 pub mod cache;
+pub mod debugger;
 pub mod engine;
 pub mod environment;
 pub mod evaluator;
