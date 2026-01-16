@@ -84,6 +84,29 @@ aether --debug script.aether
 
 说明：`--debug` 目前主要用于打印“运行元信息”（文件名、是否加载标准库、结果分段等），不会逐步打印每条语句或变量变化。
 
+### 3.4 性能指标 (`--metrics`)
+
+`--metrics` 会在脚本执行结束后打印一次性性能指标，适合做粗粒度性能对比（例如不同脚本/不同标准库加载策略的耗时差异）。
+
+```bash
+aether --metrics script.aether
+```
+
+输出示例：
+
+```
+=== METRICS ===
+wall_time_ms: 12
+ast_cache: size 0/100 -> 1/100, hits 0 -> 0, misses 0 -> 1, hit_rate 0.00% -> 0.00%
+structured_trace: total_entries=0, buffer_size=1024, buffer_full=false
+```
+
+说明：
+
+- `wall_time_ms`：本次脚本的“墙钟时间”（从开始 eval 到结束的耗时）。
+- `ast_cache`：Aether 的 AST 缓存统计（命中/未命中/命中率）。
+- `structured_trace`：结构化 TRACE（`TRACE_*`）缓冲统计。
+
 ### 3.1 打印 TRACE 缓冲区 (`--trace`)
 
 如果脚本中使用了 `TRACE(...)`（用于 DSL 安全调试的内存 trace），你可以用 `--trace` 在执行结束后把缓冲区内容打印出来：
@@ -207,6 +230,7 @@ aether script.aether              # 运行脚本（自动加载标准库）
 aether --check script.aether      # 只检查语法
 aether --ast script.aether        # 显示 AST
 aether --debug script.aether      # 调试模式运行
+aether --metrics script.aether    # 打印性能指标
 aether --trace script.aether      # 运行并打印 TRACE 缓冲区
 aether --trace-stats script.aether # 运行并打印 TRACE 统计
 aether --trace-buffer-size 4096 --trace script.aether # 调大 TRACE 缓冲区

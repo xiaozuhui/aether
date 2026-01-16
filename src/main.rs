@@ -12,6 +12,7 @@ fn main() {
         let show_ast = args.contains(&"--ast".to_string());
         let check_only = args.contains(&"--check".to_string());
         let debug_mode = args.contains(&"--debug".to_string());
+        let metrics_mode = args.contains(&"--metrics".to_string());
         let show_trace = args.contains(&"--trace".to_string());
         let show_trace_stats = args.contains(&"--trace-stats".to_string());
         let trace_buffer_size = get_usize_flag_value(&args, "--trace-buffer-size");
@@ -38,6 +39,7 @@ fn main() {
                     use_stdlib,
                     debug_mode,
                     json_error,
+                    metrics_mode,
                     show_trace,
                     show_trace_stats,
                     trace_buffer_size,
@@ -67,6 +69,7 @@ fn print_cli_help() {
     println!("  --check                  只检查语法，不执行代码");
     println!("  --ast                    显示抽象语法树 (AST)");
     println!("  --debug                  启用调试模式（打印额外运行信息）");
+    println!("  --metrics                执行后打印性能指标（耗时/缓存/trace 统计）");
     println!("  --no-stdlib              不自动加载标准库");
     println!("  --json-error             出错时输出结构化 JSON 错误（写到 stderr）");
     println!("  --trace                  执行后打印 TRACE 缓冲区内容");
@@ -74,14 +77,15 @@ fn print_cli_help() {
     println!("  --trace-buffer-size <N>  设置 TRACE 缓冲区容量（条目数）");
     println!();
     println!("示例:");
-    println!("  aether script.aether              # 运行脚本");
-    println!("  aether --check script.aether      # 检查语法");
-    println!("  aether --ast script.aether        # 查看 AST");
-    println!("  aether --debug script.aether      # 调试模式运行");
-    println!("  aether --trace script.aether      # 运行并打印 TRACE");
-    println!("  aether --trace --trace-stats script.aether  # 运行并打印 TRACE + 统计");
+    println!("  aether script.aether                                   # 运行脚本");
+    println!("  aether --check script.aether                           # 检查语法");
+    println!("  aether --ast script.aether                             # 查看 AST");
+    println!("  aether --debug script.aether                           # 调试模式运行");
+    println!("  aether --metrics script.aether                         # 运行并打印性能指标");
+    println!("  aether --trace script.aether                           # 运行并打印 TRACE");
+    println!("  aether --trace --trace-stats script.aether             # 运行并打印 TRACE + 统计");
     println!("  aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区后打印 TRACE");
-    println!("  aether --no-stdlib script.aether  # 不加载标准库");
+    println!("  aether --no-stdlib script.aether                       # 不加载标准库");
     println!();
 }
 
@@ -207,6 +211,7 @@ fn run_file(
     load_stdlib: bool,
     debug_mode: bool,
     json_error: bool,
+    metrics_mode: bool,
     show_trace: bool,
     show_trace_stats: bool,
     trace_buffer_size: Option<usize>,
@@ -251,6 +256,8 @@ fn run_file(
     }
 
     if json_error {
+        let start = std::time::Instant::now();
+        let cache_before = engine.cache_stats();
         match engine.eval_file_report(filename) {
             Ok(result) => {
                 if debug_mode {
@@ -259,6 +266,14 @@ fn run_file(
                 if result != aether::Value::Null {
                     println!("{}", result);
                 }
+
+                if metrics_mode {
+                    let elapsed = start.elapsed();
+                    let cache_after = engine.cache_stats();
+                    let trace_stats = engine.trace_stats();
+                    print_metrics(elapsed, &cache_before, &cache_after, &trace_stats);
+                }
+
                 if debug_mode {
                     println!("\n=== 执行完成 ===");
                 }
@@ -271,6 +286,8 @@ fn run_file(
         return;
     }
 
+    let start = std::time::Instant::now();
+    let cache_before = engine.cache_stats();
     match engine.eval_file(filename) {
         Ok(result) => {
             if debug_mode {
@@ -279,6 +296,14 @@ fn run_file(
             if result != aether::Value::Null {
                 println!("{}", result);
             }
+
+            if metrics_mode {
+                let elapsed = start.elapsed();
+                let cache_after = engine.cache_stats();
+                let trace_stats = engine.trace_stats();
+                print_metrics(elapsed, &cache_before, &cache_after, &trace_stats);
+            }
+
             if debug_mode {
                 println!("\n=== 执行完成 ===");
             }
@@ -320,6 +345,36 @@ fn run_file(
             std::process::exit(1);
         }
     }
+}
+
+fn print_metrics(
+    elapsed: std::time::Duration,
+    cache_before: &aether::CacheStats,
+    cache_after: &aether::CacheStats,
+    trace_stats: &aether::TraceStats,
+) {
+    println!("=== METRICS ===");
+    println!("wall_time_ms: {}", elapsed.as_millis());
+
+    println!(
+        "ast_cache: size {}/{} -> {}/{}, hits {} -> {}, misses {} -> {}, hit_rate {:.2}% -> {:.2}%",
+        cache_before.size,
+        cache_before.max_size,
+        cache_after.size,
+        cache_after.max_size,
+        cache_before.hits,
+        cache_after.hits,
+        cache_before.misses,
+        cache_after.misses,
+        cache_before.hit_rate * 100.0,
+        cache_after.hit_rate * 100.0
+    );
+
+    println!(
+        "structured_trace: total_entries={}, buffer_size={}, buffer_full={}",
+        trace_stats.total_entries, trace_stats.buffer_size, trace_stats.buffer_full
+    );
+    println!();
 }
 
 /// 打印详细的错误信息，包含源代码上下文
