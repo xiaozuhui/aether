@@ -2,8 +2,9 @@
 //! AST缓存机制,减少重复解析
 
 use crate::ast::Program;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 /// AST缓存,用于存储已解析的程序
@@ -101,7 +102,7 @@ impl Default for ASTCache {
 }
 
 /// 缓存统计信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheStats {
     /// 当前缓存大小
     pub size: usize,

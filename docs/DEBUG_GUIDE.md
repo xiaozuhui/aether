@@ -97,6 +97,7 @@ aether --metrics script.aether
 ```
 === METRICS ===
 wall_time_ms: 12
+step_count: 42
 ast_cache: size 0/100 -> 1/100, hits 0 -> 0, misses 0 -> 1, hit_rate 0.00% -> 0.00%
 structured_trace: total_entries=0, buffer_size=1024, buffer_full=false
 ```
@@ -104,8 +105,41 @@ structured_trace: total_entries=0, buffer_size=1024, buffer_full=false
 说明：
 
 - `wall_time_ms`：本次脚本的“墙钟时间”（从开始 eval 到结束的耗时）。
+- `step_count`：本次执行的“语句步数”（每求值一条语句 +1），可用于粗略比较脚本执行量。
 - `ast_cache`：Aether 的 AST 缓存统计（命中/未命中/命中率）。
 - `structured_trace`：结构化 TRACE（`TRACE_*`）缓冲统计。
+
+### 3.5 JSON 性能输出 (`--metrics-json`)
+
+当你希望把执行结果与指标喂给脚本/CI 做基准对比时，推荐使用 `--metrics-json`：
+
+```bash
+aether --metrics-json script.aether
+```
+
+输出为单行 JSON（写到 stdout），包含：
+
+- `ok`: 是否成功
+- `result`: 成功时的结果（`null` 或字符串化的值）
+- `metrics.wall_time_ms`
+- `metrics.step_count`
+- `metrics.ast_cache.before/after`
+- `metrics.structured_trace`
+
+失败时会输出：
+
+- `ok: false`
+- `error`: 错误对象（若使用 `--json-error` 走结构化错误报告，否则为运行时错误字符串）
+
+### 3.6 格式化 JSON 性能输出 (`--metrics-json-pretty`)
+
+如果你希望输出更易读（缩进、多行）的 JSON，可以使用 `--metrics-json-pretty`：
+
+```bash
+aether --metrics-json-pretty script.aether
+```
+
+说明：该选项和 `--metrics-json` 输出结构一致，只是 JSON 变为 pretty 格式（更适合人读，不适合逐行解析）。
 
 ### 3.1 打印 TRACE 缓冲区 (`--trace`)
 
@@ -231,6 +265,8 @@ aether --check script.aether      # 只检查语法
 aether --ast script.aether        # 显示 AST
 aether --debug script.aether      # 调试模式运行
 aether --metrics script.aether    # 打印性能指标
+aether --metrics-json script.aether # JSON 输出（含结果与指标）
+aether --metrics-json-pretty script.aether # 格式化 JSON 输出（含结果与指标）
 aether --trace script.aether      # 运行并打印 TRACE 缓冲区
 aether --trace-stats script.aether # 运行并打印 TRACE 统计
 aether --trace-buffer-size 4096 --trace script.aether # 调大 TRACE 缓冲区
@@ -306,7 +342,6 @@ aether --no-stdlib --check test.aether
 计划中的功能：
 
 - [ ] 执行过程跟踪（每一步的变量状态）
-- [ ] 性能分析工具
+- [x] 基础性能指标（`--metrics` / `--metrics-json` / `--metrics-json-pretty`）
 - [ ] 断点调试支持
 - [ ] 更详细的类型信息显示
-- [ ] 代码覆盖率分析

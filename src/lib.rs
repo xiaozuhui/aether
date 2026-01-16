@@ -426,6 +426,7 @@ impl Aether {
     pub fn eval(&mut self, code: &str) -> Result<Value, String> {
         // 在开始新的顶级求值之前清除任何之前的调用栈帧。
         self.evaluator.clear_call_stack();
+        self.evaluator.reset_step_counter();
 
         // 尝试从缓存获取AST
         let program = if let Some(cached_program) = self.cache.get(code) {
@@ -457,6 +458,7 @@ impl Aether {
     pub fn eval_report(&mut self, code: &str) -> Result<Value, ErrorReport> {
         // 在开始新的顶级求值之前清除任何之前的调用栈帧。
         self.evaluator.clear_call_stack();
+        self.evaluator.reset_step_counter();
 
         // 首先尝试 AST 缓存
         let program = if let Some(cached_program) = self.cache.get(code) {
@@ -570,6 +572,15 @@ impl Aether {
     /// ```
     pub fn set_trace_buffer_size(&mut self, size: usize) {
         self.evaluator.set_trace_buffer_size(size);
+    }
+
+    /// 获取当前顶级执行的 step 计数。
+    ///
+    /// 该计数在每次调用 `eval(...)` / `eval_report(...)`（以及它们的文件包装器）开始时被重置。
+    ///
+    /// 说明：step 目前按“语句级”计数（每求值一条语句 +1）。
+    pub fn step_count(&self) -> usize {
+        self.evaluator.step_count()
     }
 
     /// 配置用于 `Import/Export` 的模块解析器。

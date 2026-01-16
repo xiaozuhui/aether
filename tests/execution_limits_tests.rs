@@ -237,6 +237,38 @@ fn test_normal_execution_with_limits() {
 }
 
 #[test]
+fn test_step_count_tracks_statements_and_resets_per_eval() {
+    let mut engine = Aether::new();
+
+    let code1 = r#"
+        Set X 10
+        Set Y 20
+        (X + Y)
+    "#;
+    let _ = engine.eval(code1).unwrap();
+    let steps1 = engine.step_count();
+    assert!(
+        steps1 >= 3,
+        "step_count should count statements (>= 3), got {steps1}"
+    );
+
+    let code2 = r#"
+        Set Z 1
+        (Z + 1)
+    "#;
+    let _ = engine.eval(code2).unwrap();
+    let steps2 = engine.step_count();
+    assert!(
+        steps2 >= 2,
+        "step_count should reset per eval (>= 2), got {steps2}"
+    );
+    assert!(
+        steps2 <= steps1,
+        "second eval should not accumulate previous steps"
+    );
+}
+
+#[test]
 fn test_step_counter_with_simple_code() {
     // 测试步数计数器对简单代码的计数
     let limits = ExecutionLimits {

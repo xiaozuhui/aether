@@ -511,16 +511,32 @@ impl Evaluator {
 
     /// Check and increment step counter
     fn eval_step(&self) -> Result<(), RuntimeError> {
+        let steps = self.step_counter.get();
+
         if let Some(limit) = self.limits.max_steps {
-            let steps = self.step_counter.get();
             if steps >= limit {
                 return Err(RuntimeError::ExecutionLimit(
                     crate::runtime::ExecutionLimitError::StepLimitExceeded { steps, limit },
                 ));
             }
-            self.step_counter.set(steps + 1);
         }
+
+        self.step_counter.set(steps + 1);
         Ok(())
+    }
+
+    /// Reset execution step counter (host-facing).
+    ///
+    /// This is intended to be called at the start of a *top-level* evaluation.
+    pub fn reset_step_counter(&mut self) {
+        self.step_counter.set(0);
+    }
+
+    /// Return the current execution step count.
+    ///
+    /// Note: this counts evaluated statements (one increment per statement).
+    pub fn step_count(&self) -> usize {
+        self.step_counter.get()
     }
 
     /// Check execution timeout

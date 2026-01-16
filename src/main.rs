@@ -1,4 +1,5 @@
 use aether::{Aether, FileSystemModuleResolver};
+use serde_json::json;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -13,6 +14,9 @@ fn main() {
         let check_only = args.contains(&"--check".to_string());
         let debug_mode = args.contains(&"--debug".to_string());
         let metrics_mode = args.contains(&"--metrics".to_string());
+        let metrics_json_mode = args.contains(&"--metrics-json".to_string());
+        let metrics_json_pretty_mode = args.contains(&"--metrics-json-pretty".to_string());
+        let metrics_json_output = metrics_json_mode || metrics_json_pretty_mode;
         let show_trace = args.contains(&"--trace".to_string());
         let show_trace_stats = args.contains(&"--trace-stats".to_string());
         let trace_buffer_size = get_usize_flag_value(&args, "--trace-buffer-size");
@@ -40,6 +44,8 @@ fn main() {
                     debug_mode,
                     json_error,
                     metrics_mode,
+                    metrics_json_output,
+                    metrics_json_pretty_mode,
                     show_trace,
                     show_trace_stats,
                     trace_buffer_size,
@@ -70,6 +76,8 @@ fn print_cli_help() {
     println!("  --ast                    显示抽象语法树 (AST)");
     println!("  --debug                  启用调试模式（打印额外运行信息）");
     println!("  --metrics                执行后打印性能指标（耗时/缓存/trace 统计）");
+    println!("  --metrics-json           以 JSON 输出结果 + 性能指标（机器可读）");
+    println!("  --metrics-json-pretty    以格式化 JSON 输出结果 + 性能指标（机器可读）");
     println!("  --no-stdlib              不自动加载标准库");
     println!("  --json-error             出错时输出结构化 JSON 错误（写到 stderr）");
     println!("  --trace                  执行后打印 TRACE 缓冲区内容");
@@ -82,6 +90,12 @@ fn print_cli_help() {
     println!("  aether --ast script.aether                             # 查看 AST");
     println!("  aether --debug script.aether                           # 调试模式运行");
     println!("  aether --metrics script.aether                         # 运行并打印性能指标");
+    println!(
+        "  aether --metrics-json script.aether                    # JSON 输出（含结果与指标）"
+    );
+    println!(
+        "  aether --metrics-json-pretty script.aether             # 格式化 JSON 输出（含结果与指标）"
+    );
     println!("  aether --trace script.aether                           # 运行并打印 TRACE");
     println!("  aether --trace --trace-stats script.aether             # 运行并打印 TRACE + 统计");
     println!("  aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区后打印 TRACE");
@@ -212,6 +226,8 @@ fn run_file(
     debug_mode: bool,
     json_error: bool,
     metrics_mode: bool,
+    metrics_json_mode: bool,
+    metrics_json_pretty_mode: bool,
     show_trace: bool,
     show_trace_stats: bool,
     trace_buffer_size: Option<usize>,
@@ -260,6 +276,33 @@ fn run_file(
         let cache_before = engine.cache_stats();
         match engine.eval_file_report(filename) {
             Ok(result) => {
+                if metrics_json_mode {
+                    let elapsed = start.elapsed();
+                    let cache_after = engine.cache_stats();
+                    let trace_stats = engine.trace_stats();
+                    let payload = json!({
+                        "ok": true,
+                        "result": if result == aether::Value::Null { serde_json::Value::Null } else { serde_json::Value::String(result.to_string()) },
+                        "metrics": {
+                            "wall_time_ms": elapsed.as_millis(),
+                            "step_count": engine.step_count(),
+                            "ast_cache": {
+                                "before": cache_before,
+                                "after": cache_after
+                            },
+                            "structured_trace": trace_stats
+                        }
+                    });
+                    let s = if metrics_json_pretty_mode {
+                        serde_json::to_string_pretty(&payload)
+                    } else {
+                        serde_json::to_string(&payload)
+                    }
+                    .unwrap_or_else(|_| "{}".to_string());
+                    println!("{}", s);
+                    return;
+                }
+
                 if debug_mode {
                     println!("=== 执行结果 ===");
                 }
@@ -271,7 +314,14 @@ fn run_file(
                     let elapsed = start.elapsed();
                     let cache_after = engine.cache_stats();
                     let trace_stats = engine.trace_stats();
-                    print_metrics(elapsed, &cache_before, &cache_after, &trace_stats);
+                    let step_count = engine.step_count();
+                    print_metrics(
+                        elapsed,
+                        &cache_before,
+                        &cache_after,
+                        &trace_stats,
+                        step_count,
+                    );
                 }
 
                 if debug_mode {
@@ -279,6 +329,20 @@ fn run_file(
                 }
             }
             Err(report) => {
+                if metrics_json_mode {
+                    let payload = json!({
+                        "ok": false,
+                        "error": report.to_json_value(),
+                    });
+                    let s = if metrics_json_pretty_mode {
+                        serde_json::to_string_pretty(&payload)
+                    } else {
+                        serde_json::to_string(&payload)
+                    }
+                    .unwrap_or_else(|_| "{}".to_string());
+                    println!("{}", s);
+                    std::process::exit(1);
+                }
                 eprintln!("{}", report.to_json_pretty());
                 std::process::exit(1);
             }
@@ -290,6 +354,33 @@ fn run_file(
     let cache_before = engine.cache_stats();
     match engine.eval_file(filename) {
         Ok(result) => {
+            if metrics_json_mode {
+                let elapsed = start.elapsed();
+                let cache_after = engine.cache_stats();
+                let trace_stats = engine.trace_stats();
+                let payload = json!({
+                    "ok": true,
+                    "result": if result == aether::Value::Null { serde_json::Value::Null } else { serde_json::Value::String(result.to_string()) },
+                    "metrics": {
+                        "wall_time_ms": elapsed.as_millis(),
+                        "step_count": engine.step_count(),
+                        "ast_cache": {
+                            "before": cache_before,
+                            "after": cache_after
+                        },
+                        "structured_trace": trace_stats
+                    }
+                });
+                let s = if metrics_json_pretty_mode {
+                    serde_json::to_string_pretty(&payload)
+                } else {
+                    serde_json::to_string(&payload)
+                }
+                .unwrap_or_else(|_| "{}".to_string());
+                println!("{}", s);
+                return;
+            }
+
             if debug_mode {
                 println!("=== 执行结果 ===");
             }
@@ -301,7 +392,14 @@ fn run_file(
                 let elapsed = start.elapsed();
                 let cache_after = engine.cache_stats();
                 let trace_stats = engine.trace_stats();
-                print_metrics(elapsed, &cache_before, &cache_after, &trace_stats);
+                let step_count = engine.step_count();
+                print_metrics(
+                    elapsed,
+                    &cache_before,
+                    &cache_after,
+                    &trace_stats,
+                    step_count,
+                );
             }
 
             if debug_mode {
@@ -333,6 +431,20 @@ fn run_file(
             }
         }
         Err(e) => {
+            if metrics_json_mode {
+                let payload = json!({
+                    "ok": false,
+                    "error": e,
+                });
+                let s = if metrics_json_pretty_mode {
+                    serde_json::to_string_pretty(&payload)
+                } else {
+                    serde_json::to_string(&payload)
+                }
+                .unwrap_or_else(|_| "{}".to_string());
+                println!("{}", s);
+                std::process::exit(1);
+            }
             eprintln!("✗ 运行时错误:");
 
             // Best-effort source context
@@ -352,9 +464,11 @@ fn print_metrics(
     cache_before: &aether::CacheStats,
     cache_after: &aether::CacheStats,
     trace_stats: &aether::TraceStats,
+    step_count: usize,
 ) {
     println!("=== METRICS ===");
     println!("wall_time_ms: {}", elapsed.as_millis());
+    println!("step_count: {}", step_count);
 
     println!(
         "ast_cache: size {}/{} -> {}/{}, hits {} -> {}, misses {} -> {}, hit_rate {:.2}% -> {:.2}%",
