@@ -9,15 +9,21 @@
 // CSV_PARSE - 解析 CSV 文本为二维数组
 // 参数:
 //   TEXT - CSV 文本字符串
-//   DELIMITER - 分隔符（默认为逗号","）
+//   DELIMITER - 分隔符（可选，默认为逗号","）
 // 返回: 二维数组，每行为一个数组
 // 示例:
 //   Set CSV_TEXT "name,age,city\nAlice,30,Beijing\nBob,25,Shanghai"
 //   Set DATA CSV_PARSE(CSV_TEXT, ",")
 //   // [["name","age","city"], ["Alice","30","Beijing"], ["Bob","25","Shanghai"]]
-Func CSV_PARSE(CSV_TEXT) {
+Func CSV_PARSE(CSV_TEXT, DELIMITER) {
     If (TYPE(CSV_TEXT) != "String") {
         Return []
+    }
+    
+    // 默认分隔符
+    Set SEP ","
+    If (TYPE(DELIMITER) == "String" && LEN(DELIMITER) > 0) {
+        Set SEP DELIMITER
     }
     
     Set LINES SPLIT(CSV_TEXT, "\n")
@@ -28,7 +34,7 @@ Func CSV_PARSE(CSV_TEXT) {
     While (I < LEN_LINES) {
         Set LINE TRIM(LINES[I])
         If (LEN(LINE) > 0) {
-            Set ROW SPLIT(LINE, ",")
+            Set ROW SPLIT(LINE, SEP)
             Set RESULT PUSH(RESULT, ROW)
         }
         Set I (I + 1)
@@ -55,6 +61,57 @@ Func CSV_PARSE_DEFAULT(TEXT) {
 //   Set CSV_TEXT "name,age,city\nAlice,30,Beijing\nBob,25,Shanghai"
 //   Set USERS CSV_TO_DICT_ARRAY(CSV_TEXT, ",")
 //   // [{"name":"Alice","age":"30","city":"Beijing"}, {"name":"Bob","age":"25","city":"Shanghai"}]
+Func CSV_TO_DICT_ARRAY(TEXT, DELIMITER) {
+    If (TYPE(TEXT) != "String") {
+        Return []
+    }
+    
+    // 默认分隔符
+    Set SEP ","
+    If (TYPE(DELIMITER) == "String" && LEN(DELIMITER) > 0) {
+        Set SEP DELIMITER
+    }
+    
+    // 先解析为数组
+    Set ROWS CSV_PARSE(TEXT, SEP)
+    If (LEN(ROWS) < 2) {
+        Return []
+    }
+    
+    // 第一行作为标题
+    Set HEADERS ROWS[0]
+    Set RESULT []
+    Set I 1
+    Set LEN_ROWS LEN(ROWS)
+    
+    While (I < LEN_ROWS) {
+        Set ROW ROWS[I]
+        Set DICT {}
+        Set J 0
+        Set LEN_HEADERS LEN(HEADERS)
+        
+        While (J < LEN_HEADERS && J < LEN(ROW)) {
+            Set KEY HEADERS[J]
+            Set VALUE ROW[J]
+            Set DICT[KEY] VALUE
+            Set J (J + 1)
+        }
+        
+        Set RESULT PUSH(RESULT, DICT)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
+}
+
+// CSV_TRANSPOSE - 转置 CSV 数据（行变列，列变行）
+// 参数:
+//   CSV_DATA - 二维数组（CSV 数据）
+// 返回: 转置后的二维数组
+// 示例:
+//   Set DATA [["a","b","c"], ["1","2","3"]]
+//   Set TRANSPOSED CSV_TRANSPOSE(DATA)
+//   // [["a","1"], ["b","2"], ["c","3"]]
 Func CSV_TRANSPOSE(CSV_DATA) {
     If (TYPE(CSV_DATA) != "Array" || LEN(CSV_DATA) == 0) {
         Return []
@@ -240,19 +297,19 @@ Func CSV_COLUMN(DATA, COL) {
 //   COL - 列名
 //   VALUE - 匹配值
 // 返回: 过滤后的数组
-Func CSV_FILTER_ROWS(CSV_DATA, COL_INDEX, VALUE) {
-    If (TYPE(CSV_DATA) != "Array") {
+Func CSV_FILTER_ROWS(DATA, COL, VALUE) {
+    If (TYPE(DATA) != "Array") {
         Return []
     }
     
     Set RESULT []
     Set I 0
-    Set LEN_DATA LEN(CSV_DATA)
+    Set LEN_DATA LEN(DATA)
     
     While (I < LEN_DATA) {
-        Set ROW CSV_DATA[I]
-        If (TYPE(ROW) == "Array" && COL_INDEX < LEN(ROW)) {
-            Set CELL_VALUE ROW[COL_INDEX]
+        Set ROW DATA[I]
+        If (TYPE(ROW) == "Dict" && HAS(ROW, COL)) {
+            Set CELL_VALUE ROW[COL]
             If (CELL_VALUE == VALUE) {
                 Set RESULT PUSH(RESULT, ROW)
             }
@@ -431,45 +488,59 @@ Func CSV_COUNT_BY(DATA, COL) {
 // CSV 实用工具
 // ============================================================
 
-// CSV_JOIN - 连接两个 CSV 数据集
+// CSV_JOIN - 连接两个字典数组数据集
 // 参数:
 //   DATA1 - 第一个数据集（字典数组）
 //   DATA2 - 第二个数据集（字典数组）
 //   KEY - 连接键（列名）
-// 返回: 连接后的数据集
-Func CSV_JOIN(CSV_DATA1, CSV_DATA2, COL_INDEX1, COL_INDEX2) {
-    If (TYPE(CSV_DATA1) != "Array" || TYPE(CSV_DATA2) != "Array") {
+// 返回: 连接后的数据集（字典数组）
+Func CSV_JOIN(DATA1, DATA2, KEY) {
+    If (TYPE(DATA1) != "Array" || TYPE(DATA2) != "Array") {
         Return []
     }
     
     Set RESULT []
     Set I 0
-    Set LEN1 LEN(CSV_DATA1)
+    Set LEN1 LEN(DATA1)
     
     While (I < LEN1) {
-        Set ROW1 CSV_DATA1[I]
-        If (TYPE(ROW1) == "Array" && COL_INDEX1 < LEN(ROW1)) {
-            Set KEY1 ROW1[COL_INDEX1]
+        Set ROW1 DATA1[I]
+        If (TYPE(ROW1) == "Dict" && HAS(ROW1, KEY)) {
+            Set KEY_VALUE ROW1[KEY]
             
             Set J 0
-            Set LEN2 LEN(CSV_DATA2)
+            Set LEN2 LEN(DATA2)
             While (J < LEN2) {
-                Set ROW2 CSV_DATA2[J]
-                If (TYPE(ROW2) == "Array" && COL_INDEX2 < LEN(ROW2)) {
-                    Set KEY2 ROW2[COL_INDEX2]
+                Set ROW2 DATA2[J]
+                If (TYPE(ROW2) == "Dict" && HAS(ROW2, KEY)) {
+                    Set ROW2_KEY_VALUE ROW2[KEY]
                     
-                    If (KEY1 == KEY2) {
-                        Set JOINED_ROW []
+                    If (KEY_VALUE == ROW2_KEY_VALUE) {
+                        // 创建连接后的字典，合并两个字典
+                        Set JOINED_ROW {}
+                        
+                        // 复制第一个字典的所有字段
+                        Set KEYS1 KEYS(ROW1)
                         Set K 0
-                        While (K < LEN(ROW1)) {
-                            Set JOINED_ROW PUSH(JOINED_ROW, ROW1[K])
+                        Set LEN_KEYS1 LEN(KEYS1)
+                        While (K < LEN_KEYS1) {
+                            Set FIELD KEYS1[K]
+                            Set JOINED_ROW[FIELD] ROW1[FIELD]
                             Set K (K + 1)
                         }
+                        
+                        // 复制第二个字典的所有字段（除了连接键）
+                        Set KEYS2 KEYS(ROW2)
                         Set K 0
-                        While (K < LEN(ROW2)) {
-                            Set JOINED_ROW PUSH(JOINED_ROW, ROW2[K])
+                        Set LEN_KEYS2 LEN(KEYS2)
+                        While (K < LEN_KEYS2) {
+                            Set FIELD KEYS2[K]
+                            If (FIELD != KEY) {
+                                Set JOINED_ROW[FIELD] ROW2[FIELD]
+                            }
                             Set K (K + 1)
                         }
+                        
                         Set RESULT PUSH(RESULT, JOINED_ROW)
                     }
                 }
@@ -482,10 +553,167 @@ Func CSV_JOIN(CSV_DATA1, CSV_DATA2, COL_INDEX1, COL_INDEX2) {
     Return RESULT
 }
 
-// CSV_SORT_BY - 按列排序（简单版本）
-// 注意：需要实现排序算法，这里返回原数据
-Func CSV_SORT_BY(DATA, COL) {
-    // TODO: 实现排序算法
-    Return DATA
+// CSV_SORT_BY - 按列排序
+// 参数:
+//   DATA - 字典数组
+//   COL - 列名
+//   ORDER - 比较函数（可选，默认为升序）
+//         比较函数接受两个参数 (a, b)，返回:
+//         负数: a < b
+//         0: a == b  
+//         正数: a > b
+// 返回: 按指定列排序后的新数组
+Func CSV_SORT_BY(DATA, COL, ORDER) {
+    If (TYPE(DATA) != "Array" || LEN(DATA) == 0) {
+        Return []
+    }
+    
+    // 提取排序键和索引
+    Set SORT_ITEMS []
+    Set I 0
+    Set LEN_DATA LEN(DATA)
+    
+    While (I < LEN_DATA) {
+        Set ROW DATA[I]
+        Set SORT_KEY Null
+        
+        If (TYPE(ROW) == "Dict" && HAS(ROW, COL)) {
+            Set SORT_KEY ROW[COL]
+        }
+        
+        // 创建排序项：{index: I, key: SORT_KEY}
+        Set ITEM {}
+        Set ITEM["index"] I
+        Set ITEM["key"] SORT_KEY
+        Set SORT_ITEMS PUSH(SORT_ITEMS, ITEM)
+        
+        Set I (I + 1)
+    }
+    
+    // 冒泡排序
+    Set J 0
+    While (J < LEN(SORT_ITEMS)) {
+        Set K 0
+        While (K < (LEN(SORT_ITEMS) - 1 - J)) {
+            Set CURRENT SORT_ITEMS[K]
+            Set NEXT SORT_ITEMS[K + 1]
+            
+            // 比较逻辑：Null 值排在最后
+            Set SHOULD_SWAP False
+            
+            Set A CURRENT["key"]
+            Set B NEXT["key"]
+            
+            If (TYPE(A) == "Null" && TYPE(B) != "Null") {
+                Set SHOULD_SWAP True
+            } Elif (TYPE(A) != "Null" && TYPE(B) == "Null") {
+                Set SHOULD_SWAP False
+            } Elif (TYPE(A) != "Null" && TYPE(B) != "Null") {
+                // 使用比较函数或默认比较
+                Set COMPARE_RESULT 0
+                
+                If (TYPE(ORDER) == "Function") {
+                    // 使用提供的比较函数
+                    Set COMPARE_RESULT ORDER(A, B)
+                } Else {
+                    // 默认智能比较：尝试按数值比较数字字符串，否则按字符串比较
+                    Set A_IS_NUM False
+                    Set B_IS_NUM False
+                    
+                    If (TYPE(A) == "Number") {
+                        Set A_IS_NUM True
+                    } Elif (TYPE(A) == "String") {
+                        // 检查是否是数字字符串
+                        Set A_STR A
+                        Set A_NUM_STR True
+                        Set IDX 0
+                        While (IDX < LEN(A_STR)) {
+                            Set CHAR CHARAT(A_STR, IDX)
+                            If (!((CHAR >= "0" && CHAR <= "9") || CHAR == "." || CHAR == "-")) {
+                                Set A_NUM_STR False
+                                Set IDX LEN(A_STR)
+                            }
+                            Set IDX (IDX + 1)
+                        }
+                        If (A_NUM_STR && LEN(A_STR) > 0) {
+                            Set A_IS_NUM True
+                            Set A TO_NUMBER(A)
+                        }
+                    }
+                    
+                    If (TYPE(B) == "Number") {
+                        Set B_IS_NUM True
+                    } Elif (TYPE(B) == "String") {
+                        // 检查是否是数字字符串
+                        Set B_STR B
+                        Set B_NUM_STR True
+                        Set IDX 0
+                        While (IDX < LEN(B_STR)) {
+                            Set CHAR CHARAT(B_STR, IDX)
+                            If (!((CHAR >= "0" && CHAR <= "9") || CHAR == "." || CHAR == "-")) {
+                                Set B_NUM_STR False
+                                Set IDX LEN(B_STR)
+                            }
+                            Set IDX (IDX + 1)
+                        }
+                        If (B_NUM_STR && LEN(B_STR) > 0) {
+                            Set B_IS_NUM True
+                            Set B TO_NUMBER(B)
+                        }
+                    }
+                    
+                    // 数值比较
+                    If (A_IS_NUM && B_IS_NUM) {
+                        If (A > B) {
+                            Set COMPARE_RESULT 1
+                        } Elif (A < B) {
+                            Set COMPARE_RESULT -1
+                        } Else {
+                            Set COMPARE_RESULT 0
+                        }
+                    } Else {
+                        // 字符串比较（转换为字符串）
+                        Set A_STR TO_STRING(A)
+                        Set B_STR TO_STRING(B)
+                        If (A_STR > B_STR) {
+                            Set COMPARE_RESULT 1
+                        } Elif (A_STR < B_STR) {
+                            Set COMPARE_RESULT -1
+                        } Else {
+                            Set COMPARE_RESULT 0
+                        }
+                    }
+                }
+                
+                // 升序排序：如果 A > B 则交换
+                If (COMPARE_RESULT > 0) {
+                    Set SHOULD_SWAP True
+                }
+            }
+            
+            If (SHOULD_SWAP) {
+                // 交换
+                Set TEMP SORT_ITEMS[K]
+                Set SORT_ITEMS[K] SORT_ITEMS[K + 1]
+                Set SORT_ITEMS[K + 1] TEMP
+            }
+            
+            Set K (K + 1)
+        }
+        Set J (J + 1)
+    }
+    
+    // 根据排序后的索引重新排列数据
+    Set RESULT []
+    Set I 0
+    While (I < LEN(SORT_ITEMS)) {
+        Set SORT_ITEM SORT_ITEMS[I]
+        Set ORIGINAL_INDEX SORT_ITEM["index"]
+        Set ORIGINAL_ROW DATA[ORIGINAL_INDEX]
+        Set RESULT PUSH(RESULT, ORIGINAL_ROW)
+        Set I (I + 1)
+    }
+    
+    Return RESULT
 }
 

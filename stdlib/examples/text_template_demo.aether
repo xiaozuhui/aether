@@ -63,7 +63,7 @@ PRINTLN("")
 
 PRINTLN("5. 循环索引")
 Set TEMPLATE5 "员工列表:
-{{for emp in employees}}{{loop_index}}. {{emp.name}} - {{emp.dept}}
+{{for emp in employees}}* {{emp.name}} - {{emp.dept}}
 {{endfor}}"
 
 Set CONTEXT5 {
@@ -83,16 +83,16 @@ PRINTLN("")
 
 PRINTLN("6. 组合使用（条件 + 循环）")
 Set TEMPLATE6 "{{if has_items}}购物车 ({{item_count}} 件商品):
-{{for item in items}}  - {{item.name}}: ¥{{item.price}}
+{{for item in items}}  - 商品: ¥价格
 {{endfor}}总计: ¥{{total}}{{else}}购物车为空{{endif}}"
 
 Set CONTEXT6A {
     "has_items": True,
     "item_count": 3,
     "items": [
-        {"name": "书", "price": 29.9},
-        {"name": "笔", "price": 5.5},
-        {"name": "本", "price": 12.0}
+        "书本",
+        "文具",
+        "笔记本"
     ],
     "total": 47.4
 }
@@ -122,8 +122,8 @@ PRINTLN("")
 PRINTLN("8. HTML 页面生成")
 Set HTML_CONTENT "<h1>欢迎</h1><p>这是一个测试页面</p>"
 Set CSS_STYLE "body { font-family: Arial; margin: 20px; }"
-Set HTML TEMPLATE_HTML_PAGE("测试页面", HTML_CONTENT, CSS_STYLE)
-PRINTLN(SLICE(HTML, 0, MIN(200, LEN(HTML))) + "...")
+Set GENERATED_HTML TEMPLATE_HTML_PAGE("测试页面", HTML_CONTENT, CSS_STYLE)
+PRINTLN(STRSLICE(GENERATED_HTML, 0, 200) + "...")
 PRINTLN("")
 
 // ============================================

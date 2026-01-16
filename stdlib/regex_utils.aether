@@ -100,7 +100,7 @@ Func REGEX_FIND_BETWEEN(TEXT, PREFIX, SUFFIX) {
         
         // 提取内容
         Set CONTENT STRSLICE(TEXT, CONTENT_START, SUFFIX_POS)
-        PUSH(RESULTS, CONTENT)
+        Set RESULTS PUSH(RESULTS, CONTENT)
         
         Set START (SUFFIX_POS + LEN(SUFFIX))
     }
@@ -117,7 +117,7 @@ Func REGEX_FIND_LINES_STARTING_WITH(TEXT, PREFIX) {
     While (I < LEN(LINES)) {
         Set LINE LINES[I]
         If (STARTS_WITH(TRIM(LINE), PREFIX)) {
-            PUSH(RESULTS, LINE)
+            Set RESULTS PUSH(RESULTS, LINE)
         }
         Set I (I + 1)
     }
@@ -134,7 +134,7 @@ Func REGEX_FIND_LINES_CONTAINING(TEXT, NEEDLE) {
     While (I < LEN(LINES)) {
         Set LINE LINES[I]
         If (CONTAINS(LINE, NEEDLE)) {
-            PUSH(RESULTS, LINE)
+            Set RESULTS PUSH(RESULTS, LINE)
         }
         Set I (I + 1)
     }
@@ -161,9 +161,9 @@ Func REGEX_REPLACE_PATTERN(TEXT, PATTERN, REPLACEMENT) {
     While (I < LEN(WORDS)) {
         Set WORD WORDS[I]
         If (REGEX_WILDCARD_MATCH(WORD, PATTERN)) {
-            PUSH(RESULTS, REPLACEMENT)
+            Set RESULTS PUSH(RESULTS, REPLACEMENT)
         } Else {
-            PUSH(RESULTS, WORD)
+            Set RESULTS PUSH(RESULTS, WORD)
         }
         Set I (I + 1)
     }
@@ -198,7 +198,7 @@ Func REGEX_EXTRACT_NUMBERS(TEXT) {
             Set CURRENT (CURRENT + CHAR)
         } Else {
             If (IN_NUMBER) {
-                PUSH(RESULTS, TO_NUMBER(CURRENT))
+                Set RESULTS PUSH(RESULTS, TO_NUMBER(CURRENT))
                 Set CURRENT ""
                 Set IN_NUMBER False
             }
@@ -209,7 +209,7 @@ Func REGEX_EXTRACT_NUMBERS(TEXT) {
     
     // 处理末尾的数字
     If (IN_NUMBER) {
-        PUSH(RESULTS, TO_NUMBER(CURRENT))
+        Set RESULTS PUSH(RESULTS, TO_NUMBER(CURRENT))
     }
     
     Return RESULTS
@@ -228,7 +228,7 @@ Func REGEX_EXTRACT_WORDS(TEXT) {
             Set CURRENT (CURRENT + CHAR)
         } Else {
             If (LEN(CURRENT) > 0) {
-                PUSH(RESULTS, CURRENT)
+                Set RESULTS PUSH(RESULTS, CURRENT)
                 Set CURRENT ""
             }
         }
@@ -238,7 +238,7 @@ Func REGEX_EXTRACT_WORDS(TEXT) {
     
     // 处理末尾的单词
     If (LEN(CURRENT) > 0) {
-        PUSH(RESULTS, CURRENT)
+        Set RESULTS PUSH(RESULTS, CURRENT)
     }
     
     Return RESULTS
@@ -253,7 +253,7 @@ Func REGEX_EXTRACT_EMAILS(TEXT) {
     While (I < LEN(WORDS)) {
         Set WORD TRIM(WORDS[I])
         If (REGEX_IS_EMAIL(WORD)) {
-            PUSH(RESULTS, WORD)
+            Set RESULTS PUSH(RESULTS, WORD)
         }
         Set I (I + 1)
     }
@@ -270,7 +270,7 @@ Func REGEX_EXTRACT_URLS(TEXT) {
     While (I < LEN(WORDS)) {
         Set WORD TRIM(WORDS[I])
         If (REGEX_IS_URL(WORD)) {
-            PUSH(RESULTS, WORD)
+            Set RESULTS PUSH(RESULTS, WORD)
         }
         Set I (I + 1)
     }

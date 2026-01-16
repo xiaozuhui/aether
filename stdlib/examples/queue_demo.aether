@@ -1,74 +1,74 @@
 // stdlib/examples/queue_demo.aether
 // Queue（队列）数据结构示例
 
-PRINTLN("=== Aether Queue（队列）示例 ===")
+PRINTLN(CLI_BLUE("🌊 === Aether Queue（队列）示例 ==="))
 PRINTLN("")
 
 // 创建队列
-PRINTLN("1. 创建和基本操作")
+PRINTLN(CLI_BLUE("📦 1. 创建和基本操作"))
 Set QUEUE QUEUE_NEW()
-PRINTLN("创建空队列: " + QUEUE_TO_STRING(QUEUE))
+PRINTLN("创建空队列: " + CLI_YELLOW("📭 " + QUEUE_TO_STRING(QUEUE)))
 
 // 入队
 Set QUEUE QUEUE_ENQUEUE(QUEUE, "第一个")
 Set QUEUE QUEUE_ENQUEUE(QUEUE, "第二个")
 Set QUEUE QUEUE_ENQUEUE(QUEUE, "第三个")
-PRINTLN("入队 3 个元素: " + QUEUE_TO_STRING(QUEUE))
-PRINTLN("队列大小: " + TO_STRING(QUEUE_SIZE(QUEUE)))
+PRINTLN(CLI_GREEN("➕ 入队 3 个元素: ") + CLI_YELLOW("📬 " + QUEUE_TO_STRING(QUEUE)))
+PRINTLN("队列大小: " + CLI_CYAN("📏 " + TO_STRING(QUEUE_SIZE(QUEUE))))
 PRINTLN("")
 
 // 查看队首
-PRINTLN("2. 查看元素")
-PRINTLN("队首元素: " + QUEUE_PEEK(QUEUE))
-PRINTLN("队尾元素: " + QUEUE_PEEK_BACK(QUEUE))
+PRINTLN(CLI_BLUE("👀 2. 查看元素"))
+PRINTLN("队首元素: " + CLI_YELLOW("🎯 " + QUEUE_PEEK(QUEUE)))
+PRINTLN("队尾元素: " + CLI_YELLOW("🎯 " + QUEUE_PEEK_BACK(QUEUE)))
 PRINTLN("")
 
 // 出队
-PRINTLN("3. 出队操作")
+PRINTLN(CLI_BLUE("➖ 3. 出队操作"))
 Set RESULT QUEUE_DEQUEUE(QUEUE)
 Set QUEUE RESULT["queue"]
-PRINTLN("出队元素: " + RESULT["value"])
-PRINTLN("出队后的队列: " + QUEUE_TO_STRING(QUEUE))
+PRINTLN(CLI_RED("🚀 出队元素: ") + CLI_YELLOW("📤 " + RESULT["value"]))
+PRINTLN("出队后的队列: " + CLI_YELLOW("📬 " + QUEUE_TO_STRING(QUEUE)))
 
 Set RESULT QUEUE_DEQUEUE(QUEUE)
 Set QUEUE RESULT["queue"]
-PRINTLN("再次出队: " + RESULT["value"])
-PRINTLN("当前队列: " + QUEUE_TO_STRING(QUEUE))
+PRINTLN(CLI_RED("🚀 再次出队: ") + CLI_YELLOW("📤 " + RESULT["value"]))
+PRINTLN("当前队列: " + CLI_YELLOW("📬 " + QUEUE_TO_STRING(QUEUE)))
 PRINTLN("")
 
 // 批量操作
-PRINTLN("4. 批量操作")
+PRINTLN(CLI_BLUE("🔄 4. 批量操作"))
 Set ITEMS [10, 20, 30, 40, 50]
 Set QUEUE QUEUE_ENQUEUE_ALL(QUEUE, ITEMS)
-PRINTLN("批量入队: " + QUEUE_TO_STRING(QUEUE))
+PRINTLN(CLI_GREEN("📦 批量入队: ") + CLI_YELLOW("📬 " + QUEUE_TO_STRING(QUEUE)))
 
 Set RESULT QUEUE_DEQUEUE_N(QUEUE, 3)
 Set QUEUE RESULT["queue"]
-PRINTLN("批量出队 3 个: " + TO_STRING(RESULT["values"]))
-PRINTLN("剩余队列: " + QUEUE_TO_STRING(QUEUE))
+PRINTLN(CLI_RED("🚀 批量出队 3 个: ") + CLI_YELLOW("📤 " + TO_STRING(RESULT["values"])))
+PRINTLN("剩余队列: " + CLI_YELLOW("📬 " + QUEUE_TO_STRING(QUEUE)))
 PRINTLN("")
 
 // 实际应用：任务队列
-PRINTLN("5. 实际应用：任务处理队列")
+PRINTLN(CLI_BLUE("⚡ 5. 实际应用：任务处理队列"))
 Set TASK_QUEUE QUEUE_NEW()
 Set TASK_QUEUE QUEUE_ENQUEUE(TASK_QUEUE, "发送邮件")
 Set TASK_QUEUE QUEUE_ENQUEUE(TASK_QUEUE, "生成报告")
 Set TASK_QUEUE QUEUE_ENQUEUE(TASK_QUEUE, "备份数据")
 Set TASK_QUEUE QUEUE_ENQUEUE(TASK_QUEUE, "清理缓存")
 
-PRINTLN("待处理任务: " + QUEUE_TO_STRING(TASK_QUEUE))
+PRINTLN("待处理任务: " + CLI_YELLOW("📋 " + QUEUE_TO_STRING(TASK_QUEUE)))
 PRINTLN("")
 
-PRINTLN("开始处理任务...")
+PRINTLN(CLI_CYAN("▶️  开始处理任务..."))
 While (!QUEUE_IS_EMPTY(TASK_QUEUE)) {
     Set RESULT QUEUE_DEQUEUE(TASK_QUEUE)
     Set TASK_QUEUE RESULT["queue"]
     Set TASK RESULT["value"]
-    PRINTLN("正在处理: " + TASK)
+    PRINTLN(CLI_GREEN("⚙️  正在处理: ") + CLI_YELLOW("📝 " + TASK))
 }
 
-PRINTLN("所有任务已完成！")
-PRINTLN("队列为空: " + TO_STRING(QUEUE_IS_EMPTY(TASK_QUEUE)))
+PRINTLN(CLI_GREEN("✅ 所有任务已完成！"))
+PRINTLN("队列为空: " + CLI_CYAN("🔍 " + TO_STRING(QUEUE_IS_EMPTY(TASK_QUEUE))))
 
 PRINTLN("")
-PRINTLN("=== 示例完成 ===")
+PRINTLN(CLI_BLUE("🎉 === 示例完成 ==="))

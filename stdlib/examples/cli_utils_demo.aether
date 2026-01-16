@@ -40,9 +40,9 @@ PRINTLN("  选项: " + JSON_STRINGIFY(PARSED["options"]))
 PRINTLN("  位置参数: " + JSON_STRINGIFY(PARSED["args"]))
 PRINTLN("")
 
-Set NAME CLI_GET_OPTION(PARSED, "name", "匿名")
+Set NAME CLI_GET_OPTION(PARSED["options"], "name", "匿名")
 PRINTLN("获取 name: " + NAME)
-PRINTLN("检查 -v 标志: " + TO_STRING(CLI_HAS_FLAG(PARSED, "v")))
+PRINTLN("检查 -v 标志: " + TO_STRING(CLI_HAS_FLAG(PARSED["flags"], "v")))
 PRINTLN("")
 
 // ============================================
@@ -51,11 +51,11 @@ PRINTLN("")
 
 PRINTLN(CLI_BOLD("3. 表格格式化"))
 
-Set HEADERS ["姓名", "年龄", "城市"]
+Set HEADERS ["Name", "Age", "City"]
 
-Set ROW1 ["张三", "25", "北京"]
-Set ROW2 ["李四", "30", "上海"]
-Set ROW3 ["王五", "28", "广州"]
+Set ROW1 ["Zhang", "25", "Beijing"]
+Set ROW2 ["Li", "30", "Shanghai"]
+Set ROW3 ["Wang", "28", "Guangzhou"]
 Set ROWS [ROW1, ROW2, ROW3]
 
 Set TABLE_OPTIONS {}

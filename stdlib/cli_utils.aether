@@ -112,16 +112,12 @@ Func CLI_INFO(TEXT) {
 // ============================================
 
 // 解析命令行参数
-// 返回字典: { "flags": {...}, "options": {...}, "args": [...] }
+// 返回字典: { "flags": [...], "options": [[key, value], ...], "args": [...] }
 Func CLI_PARSE_ARGS(ARGS_ARRAY) {
-    Set FLAGS_DICT {}
-    Set OPTIONS_DICT {}
-    Set ARGS_LIST []
-    
     Set RESULT {}
-    Set RESULT["flags"] FLAGS_DICT
-    Set RESULT["options"] OPTIONS_DICT
-    Set RESULT["args"] ARGS_LIST
+    Set RESULT["flags"] []
+    Set RESULT["options"] []
+    Set RESULT["args"] []
     
     Set I 0
     While (I < LEN(ARGS_ARRAY)) {
@@ -131,25 +127,24 @@ Func CLI_PARSE_ARGS(ARGS_ARRAY) {
         If (STARTS_WITH(ARG, "--")) {
             Set KEY STRSLICE(ARG, 2, LEN(ARG))
             
-            // 检查是否有等号
             If (CONTAINS(KEY, "=")) {
                 Set PARTS SPLIT(KEY, "=")
                 Set OPT_NAME PARTS[0]
                 Set OPT_VALUE PARTS[1]
-                Set RESULT["options"][OPT_NAME] OPT_VALUE
+                Set RESULT["options"] PUSH(RESULT["options"], [OPT_NAME, OPT_VALUE])
             } Else {
                 // 检查下一个参数是否是值
                 Set NEXT_I (I + 1)
                 If (NEXT_I < LEN(ARGS_ARRAY)) {
                     Set NEXT_ARG ARGS_ARRAY[NEXT_I]
                     If (Not (STARTS_WITH(NEXT_ARG, "-"))) {
-                        Set RESULT["options"][KEY] NEXT_ARG
+                        Set RESULT["options"] PUSH(RESULT["options"], [KEY, NEXT_ARG])
                         Set I (I + 1)
                     } Else {
-                        Set RESULT["flags"][KEY] True
+                        Set RESULT["flags"] PUSH(RESULT["flags"], KEY)
                     }
                 } Else {
-                    Set RESULT["flags"][KEY] True
+                    Set RESULT["flags"] PUSH(RESULT["flags"], KEY)
                 }
             }
         } Elif (STARTS_WITH(ARG, "-")) {
@@ -158,12 +153,12 @@ Func CLI_PARSE_ARGS(ARGS_ARRAY) {
             Set J 0
             While (J < LEN(FLAGS)) {
                 Set FLAG_CHAR CHARAT(FLAGS, J)
-                Set RESULT["flags"][FLAG_CHAR] True
+                Set RESULT["flags"] PUSH(RESULT["flags"], FLAG_CHAR)
                 Set J (J + 1)
             }
         } Else {
             // 位置参数
-            PUSH(RESULT["args"], ARG)
+            Set RESULT["args"] PUSH(RESULT["args"], ARG)
         }
         
         Set I (I + 1)
@@ -173,18 +168,21 @@ Func CLI_PARSE_ARGS(ARGS_ARRAY) {
 }
 
 // 获取选项值，带默认值
-Func CLI_GET_OPTION(PARSED, NAME, DEFAULT) {
-    Set OPTIONS PARSED["options"]
-    If (HAS(OPTIONS, NAME)) {
-        Return OPTIONS[NAME]
+Func CLI_GET_OPTION(OPTIONS_LIST, NAME, DEFAULT) {
+    Set I 0
+    While (I < LEN(OPTIONS_LIST)) {
+        Set PAIR OPTIONS_LIST[I]
+        If (PAIR[0] == NAME) {
+            Return PAIR[1]
+        }
+        Set I (I + 1)
     }
     Return DEFAULT
 }
 
 // 检查标志是否存在
-Func CLI_HAS_FLAG(PARSED, NAME) {
-    Set FLAGS PARSED["flags"]
-    Return HAS(FLAGS, NAME)
+Func CLI_HAS_FLAG(FLAGS_LIST, NAME) {
+    Return CONTAINS(FLAGS_LIST, NAME)
 }
 
 // ============================================
@@ -209,69 +207,70 @@ Func CLI_TABLE(HEADERS, ROWS, OPTIONS) {
     }
     
     // 计算每列的最大宽度
-    Set COL_WIDTHS []
-    Set NUM_COLS LEN(HEADERS)
+    Set W1 LEN(TO_STRING(HEADERS[0]))
+    Set W2 LEN(TO_STRING(HEADERS[1]))
+    Set W3 LEN(TO_STRING(HEADERS[2]))
     
-    Set I 0
-    While (I < NUM_COLS) {
-        Set MAX_WIDTH LEN(TO_STRING(HEADERS[I]))
-        
-        // 检查每行数据
-        Set J 0
-        While (J < LEN(ROWS)) {
-            Set ROW ROWS[J]
-            If (I < LEN(ROW)) {
-                Set CELL_LEN LEN(TO_STRING(ROW[I]))
-                If (CELL_LEN > MAX_WIDTH) {
-                    Set MAX_WIDTH CELL_LEN
-                }
-            }
-            Set J (J + 1)
+    // 检查每行数据
+    Set J 0
+    While (J < LEN(ROWS)) {
+        Set ROW ROWS[J]
+        If (LEN(ROW) > 0) {
+            Set L LEN(TO_STRING(ROW[0]))
+            If (L > W1) { Set W1 L }
         }
-        
-        PUSH(COL_WIDTHS, MAX_WIDTH)
-        Set I (I + 1)
+        If (LEN(ROW) > 1) {
+            Set L LEN(TO_STRING(ROW[1]))
+            If (L > W2) { Set W2 L }
+        }
+        If (LEN(ROW) > 2) {
+            Set L LEN(TO_STRING(ROW[2]))
+            If (L > W3) { Set W3 L }
+        }
+        Set J (J + 1)
     }
     
+    Set COL_WIDTHS [W1, W2, W3]
+    
     // 构建表格
-    Set RESULT []
+    Set RESULT ""
     
     // 顶部边框
     If (BORDER) {
-        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "top"))
+        Set RESULT (RESULT + CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "top") + "\n")
     }
     
     // 表头
-    PUSH(RESULT, CLI_TABLE_ROW(HEADERS, COL_WIDTHS, PADDING, BORDER))
+    Set RESULT (RESULT + CLI_TABLE_ROW(HEADERS, COL_WIDTHS, PADDING, BORDER) + "\n")
     
     // 表头分隔线
     If (BORDER) {
-        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "middle"))
+        Set RESULT (RESULT + CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "middle") + "\n")
     }
     
     // 数据行
     Set I 0
     While (I < LEN(ROWS)) {
         Set ROW ROWS[I]
-        PUSH(RESULT, CLI_TABLE_ROW(ROW, COL_WIDTHS, PADDING, BORDER))
+        Set RESULT (RESULT + CLI_TABLE_ROW(ROW, COL_WIDTHS, PADDING, BORDER) + "\n")
         Set I (I + 1)
     }
     
     // 底部边框
     If (BORDER) {
-        PUSH(RESULT, CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "bottom"))
+        Set RESULT (RESULT + CLI_TABLE_BORDER(COL_WIDTHS, PADDING, "bottom") + "\n")
     }
     
-    Return JOIN(RESULT, "\n")
+    Return RESULT
 }
 
 // 内部函数：生成表格行
 Func CLI_TABLE_ROW(CELLS, COL_WIDTHS, PADDING, BORDER) {
-    Set PARTS []
+    Set RESULT ""
     Set PAD_STR REPEAT(" ", PADDING)
     
     If (BORDER) {
-        PUSH(PARTS, "│")
+        Set RESULT (RESULT + "│")
     }
     
     Set I 0
@@ -280,18 +279,18 @@ Func CLI_TABLE_ROW(CELLS, COL_WIDTHS, PADDING, BORDER) {
         Set WIDTH COL_WIDTHS[I]
         Set PADDED (CELL + REPEAT(" ", (WIDTH - LEN(CELL))))
         
-        PUSH(PARTS, PAD_STR)
-        PUSH(PARTS, PADDED)
-        PUSH(PARTS, PAD_STR)
+        Set RESULT (RESULT + PAD_STR)
+        Set RESULT (RESULT + PADDED)
+        Set RESULT (RESULT + PAD_STR)
         
         If (BORDER) {
-            PUSH(PARTS, "│")
+            Set RESULT (RESULT + "│")
         }
         
         Set I (I + 1)
     }
     
-    Return JOIN(PARTS, "")
+    Return RESULT
 }
 
 // 内部函数：生成表格边框
@@ -446,26 +445,26 @@ Func CLI_HELP(CONFIG) {
         If (HAS(CONFIG, "version")) {
             Set TITLE (TITLE + " v" + CONFIG["version"])
         }
-        PUSH(LINES, CLI_BOLD(TITLE))
-        PUSH(LINES, "")
+        Set LINES PUSH(LINES, CLI_BOLD(TITLE))
+        Set LINES PUSH(LINES, "")
     }
     
     // 描述
     If (HAS(CONFIG, "description")) {
-        PUSH(LINES, CONFIG["description"])
-        PUSH(LINES, "")
+        Set LINES PUSH(LINES, CONFIG["description"])
+        Set LINES PUSH(LINES, "")
     }
     
     // 用法
     If (HAS(CONFIG, "usage")) {
-        PUSH(LINES, CLI_BOLD("用法:"))
-        PUSH(LINES, "  " + CONFIG["usage"])
-        PUSH(LINES, "")
+        Set LINES PUSH(LINES, CLI_BOLD("用法:"))
+        Set LINES PUSH(LINES, "  " + CONFIG["usage"])
+        Set LINES PUSH(LINES, "")
     }
     
     // 选项
     If (HAS(CONFIG, "options")) {
-        PUSH(LINES, CLI_BOLD("选项:"))
+        Set LINES PUSH(LINES, CLI_BOLD("选项:"))
         Set OPTIONS CONFIG["options"]
         Set I 0
         While (I < LEN(OPTIONS)) {
@@ -475,23 +474,23 @@ Func CLI_HELP(CONFIG) {
             
             // 对齐描述
             Set PADDING REPEAT(" ", (20 - LEN(FLAG)))
-            PUSH(LINES, "  " + CLI_GREEN(FLAG) + PADDING + DESC)
+            Set LINES PUSH(LINES, "  " + CLI_GREEN(FLAG) + PADDING + DESC)
             
             Set I (I + 1)
         }
-        PUSH(LINES, "")
+        Set LINES PUSH(LINES, "")
     }
     
     // 示例
     If (HAS(CONFIG, "examples")) {
-        PUSH(LINES, CLI_BOLD("示例:"))
+        Set LINES PUSH(LINES, CLI_BOLD("示例:"))
         Set EXAMPLES CONFIG["examples"]
         Set I 0
         While (I < LEN(EXAMPLES)) {
-            PUSH(LINES, "  $ " + CLI_DIM(EXAMPLES[I]))
+            Set LINES PUSH(LINES, "  $ " + CLI_DIM(EXAMPLES[I]))
             Set I (I + 1)
         }
-        PUSH(LINES, "")
+        Set LINES PUSH(LINES, "")
     }
     
     Return JOIN(LINES, "\n")

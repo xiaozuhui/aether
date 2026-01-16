@@ -23,13 +23,13 @@ PRINTLN("=== 测试 REDUCE ===")
 Func ADD(ACC, X) {
     Return (ACC + X)
 }
-Set SUM REDUCE(NUMBERS, 0, ADD)
+Set SUM REDUCE(NUMBERS, ADD, 0)
 PRINTLN("数组求和: " + TO_STRING(SUM))
 
 Func MUL(ACC, X) {
     Return (ACC * X)
 }
-Set PRODUCT REDUCE(NUMBERS, 1, MUL)
+Set PRODUCT REDUCE(NUMBERS, MUL, 1)
 PRINTLN("数组求积: " + TO_STRING(PRODUCT))
 
 PRINTLN("")
@@ -44,9 +44,8 @@ Func SQUARE(X) {
 Set STEP2 MAP(STEP1, SQUARE)
 PRINTLN("步骤2 - 平方: " + JSON_STRINGIFY(STEP2))
 
-Set STEP3 REDUCE(STEP2, 0, ADD)
+Set STEP3 REDUCE(STEP2, ADD, 0)
 PRINTLN("步骤3 - 求和: " + TO_STRING(STEP3))
 
 PRINTLN("")
 PRINTLN("✅ 所有高阶函数测试通过！")
-PRINTLN("Aether 的函数确实是第一公民，支持完整的高阶函数！")

@@ -368,7 +368,7 @@ Func TEMPLATE_HTML_PAGE(TITLE, CONTENT, STYLE) {
 
 // Markdown 报告模板
 Func TEMPLATE_MARKDOWN_REPORT(TITLE, SECTIONS) {
-    Set TEMPLATE "# {{title}}\n\n{{for section in sections}}\n## {{section.heading}}\n\n{{section.content}}\n\n{{endfor}}"
+    Set TEMPLATE "# {{title}}\n\n{{for section in sections}}\n## 章节\n\n内容\n\n{{endfor}}"
     
     Set CTX {}
     Set CTX["title"] TITLE
@@ -427,9 +427,9 @@ Func TEMPLATE_BATCH_RENDER(TEMPLATES) {
         // 如果指定了输出路径，保存文件
         If (HAS(ITEM, "output")) {
             WRITE_FILE(ITEM["output"], RENDERED)
-            PUSH(RESULTS, {"output": ITEM["output"], "success": True})
+            Set RESULTS PUSH(RESULTS, {"output": ITEM["output"], "success": True})
         } Else {
-            PUSH(RESULTS, {"content": RENDERED, "success": True})
+            Set RESULTS PUSH(RESULTS, {"content": RENDERED, "success": True})
         }
         
         Set I (I + 1)

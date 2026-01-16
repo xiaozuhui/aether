@@ -51,7 +51,7 @@ fn main() {
 
 /// 打印命令行帮助
 fn print_cli_help() {
-    println!("Aether 语言解释器 v0.2.0");
+    println!("Aether 语言解释器 v{}", env!("CARGO_PKG_VERSION"));
     println!();
     println!("用法:");
     println!("  aether [选项] <脚本文件>");
@@ -303,7 +303,7 @@ fn print_source_context(source: &str, error_line: usize, error_col: usize) {
 
 /// 启动 REPL 交互模式
 fn run_repl() {
-    println!("Aether REPL v0.1.0");
+    println!("Aether REPL v{}", env!("CARGO_PKG_VERSION"));
     println!("输入 'exit' 或 'quit' 退出");
     println!("输入 'help' 查看帮助");
     println!("输入 ':load stdlib' 加载标准库");

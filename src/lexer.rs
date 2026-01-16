@@ -362,7 +362,7 @@ impl Lexer {
     /// Process escape sequences in strings
     fn process_escapes(&self, s: &str) -> String {
         let mut result = String::new();
-        let mut chars = s.chars();
+        let mut chars = s.chars().peekable();
 
         while let Some(ch) = chars.next() {
             if ch == '\\' {
@@ -372,6 +372,35 @@ impl Lexer {
                     Some('r') => result.push('\r'),
                     Some('\\') => result.push('\\'),
                     Some('"') => result.push('"'),
+                    Some('u') => {
+                        // Handle \uXXXX Unicode escape sequences
+                        let mut hex = String::new();
+                        for _ in 0..4 {
+                            if let Some(c) = chars.next() {
+                                hex.push(c);
+                            } else {
+                                // Invalid escape sequence, keep as is
+                                result.push_str("\\u");
+                                result.push_str(&hex);
+                                break;
+                            }
+                        }
+                        if hex.len() == 4 {
+                            if let Ok(code) = u32::from_str_radix(&hex, 16) {
+                                if let Some(unicode_char) = char::from_u32(code) {
+                                    result.push(unicode_char);
+                                } else {
+                                    // Invalid Unicode code point, keep as is
+                                    result.push_str("\\u");
+                                    result.push_str(&hex);
+                                }
+                            } else {
+                                // Invalid hex, keep as is
+                                result.push_str("\\u");
+                                result.push_str(&hex);
+                            }
+                        }
+                    }
                     Some(c) => {
                         result.push('\\');
                         result.push(c);

@@ -1,18 +1,18 @@
-//! Aether - A lightweight, embeddable domain-specific language
+//! Aether - 一个轻量级、可嵌入的领域特定语言
 //!
-//! This crate provides a complete implementation of the Aether language,
-//! including lexer, parser, evaluator, and standard library.
+//! 这个 crate 提供了 Aether 语言的完整实现，
+//! 包括词法分析器、解析器、求值器和标准库。
 //!
-//! # Quick Start
+//! # 快速开始
 //!
-//! ## As a DSL (Embedded in Your Application)
+//! ## 作为 DSL（嵌入到您的应用程序中）
 //!
-//! When embedding Aether as a DSL, IO operations are **disabled by default** for security:
+//! 当将 Aether 作为 DSL 嵌入时，IO 操作**默认禁用**以确保安全性：
 //!
 //! ```
 //! use aether::Aether;
 //!
-//! // Default: IO disabled (safe for user scripts)
+//! // 默认：IO 禁用（对用户脚本安全）
 //! let mut engine = Aether::new();
 //! let code = r#"
 //!     Set X 10
@@ -26,111 +26,111 @@
 //! }
 //! ```
 //!
-//! Enable IO only when needed:
+//! 仅在需要时启用 IO：
 //!
 //! ```
 //! use aether::{Aether, IOPermissions};
 //!
-//! // Enable only filesystem
+//! // 仅启用文件系统
 //! let mut perms = IOPermissions::default();
 //! perms.filesystem_enabled = true;
 //! let mut engine = Aether::with_permissions(perms);
 //!
-//! // Or enable all IO
+//! // 或启用所有 IO
 //! let mut engine = Aether::with_all_permissions();
 //! ```
 //!
-//! ## High-Performance Engine Modes (New!)
+//! ## 高性能引擎模式（新增！）
 //!
-//! For **high-frequency, large-scale DSL execution**, Aether provides three optimized engine modes:
+//! 对于**高频、大规模 DSL 执行**，Aether 提供了三种优化的引擎模式：
 //!
-//! ### 1. GlobalEngine - Global Singleton (Best for Single-Thread)
+//! ### 1. GlobalEngine - 全局单例（最适合单线程）
 //!
 //! ```rust
 //! use aether::engine::GlobalEngine;
 //!
-//! // Execute with isolated environment (variables cleared each time)
+//! // 使用隔离环境执行（每次清除变量）
 //! let result = GlobalEngine::eval_isolated("Set X 10\n(X + 20)").unwrap();
 //! println!("Result: {}", result);
 //!
-//! // Benefits:
-//! // - ✅ Maximum performance (engine created only once)
-//! // - ✅ AST cache accumulates (up to 142x speedup!)
-//! // - ✅ Environment isolation (variables cleared between calls)
-//! // - ⚠️ Single-threaded (uses Mutex)
+//! // 优势：
+//! // - ✅ 最大性能（引擎仅创建一次）
+//! // - ✅ AST 缓存累积（高达 142 倍加速！）
+//! // - ✅ 环境隔离（每次调用清除变量）
+//! // - ⚠️ 单线程（使用 Mutex）
 //! ```
 //!
-//! ### 2. EnginePool - Engine Pool (Best for Multi-Thread)
+//! ### 2. EnginePool - 引擎池（最适合多线程）
 //!
 //! ```rust
 //! use aether::engine::EnginePool;
 //! use std::thread;
 //!
-//! // Create pool once (size = 2-4x CPU cores recommended)
+//! // 一次性创建池（大小 = 推荐 2-4 倍 CPU 核心数）
 //! let pool = EnginePool::new(8);
 //!
-//! // Use across threads
+//! // 跨线程使用
 //! let handles: Vec<_> = (0..4).map(|i| {
 //!     let pool = pool.clone();
 //!     thread::spawn(move || {
-//!         let mut engine = pool.acquire(); // Auto-acquire
+//!         let mut engine = pool.acquire(); // 自动获取
 //!         let code = format!("Set X {}\n(X * 2)", i);
 //!         engine.eval(&code)
-//!     }) // Auto-return on scope exit
+//!     }) // 作用域退出时自动返回
 //! }).collect();
 //!
-//! // Benefits:
-//! // - ✅ Multi-thread safe (lock-free queue)
-//! // - ✅ RAII pattern (auto-return to pool)
-//! // - ✅ Environment isolation (cleared on acquire)
-//! // - ✅ AST cache per engine
+//! // 优势：
+//! // - ✅ 多线程安全（无锁队列）
+//! // - ✅ RAII 模式（自动返回池）
+//! // - ✅ 环境隔离（获取时清除）
+//! // - ✅ 每个引擎的 AST 缓存
 //! ```
 //!
-//! ### 3. ScopedEngine - Closure Style (Best for Simplicity)
+//! ### 3. ScopedEngine - 闭包风格（最适合简单性）
 //!
 //! ```rust
 //! use aether::engine::ScopedEngine;
 //!
-//! // Closure style (like Py3o)
+//! // 闭包风格（类似 Py3o）
 //! let result = ScopedEngine::with(|engine| {
 //!     engine.eval("Set X 10")?;
 //!     engine.eval("(X + 20)")
 //! }).unwrap();
 //!
-//! // Or simplified version
+//! // 或简化版本
 //! let result = ScopedEngine::eval("Set X 10\n(X + 20)").unwrap();
 //!
-//! // Benefits:
-//! // - ✅ Complete isolation (new engine each time)
-//! // - ✅ Clean API (auto lifetime management)
-//! // - ⚠️ Lower performance (no cache reuse)
+//! // 优势：
+//! // - ✅ 完全隔离（每次新建引擎）
+//! // - ✅ 简洁 API（自动生命周期管理）
+//! // - ⚠️ 较低性能（无缓存重用）
 //! ```
 //!
-//! ### Mode Comparison
+//! ### 模式对比
 //!
-//! | Feature | GlobalEngine | EnginePool | ScopedEngine |
+//! | 特性 | GlobalEngine | EnginePool | ScopedEngine |
 //! |---------|-------------|------------|--------------|
-//! | Performance | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-//! | Multi-thread | ❌ | ✅ | ✅ |
-//! | Isolation | ✅ | ✅ | ✅ |
-//! | AST Cache | ✅ | ✅ | ❌ |
-//! | Use Case | Single-thread high-freq | Multi-thread | Occasional |
+//! | 性能 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+//! | 多线程 | ❌ | ✅ | ✅ |
+//! | 隔离 | ✅ | ✅ | ✅ |
+//! | AST 缓存 | ✅ | ✅ | ❌ |
+//! | 使用场景 | 单线程高频 | 多线程 | 偶尔使用 |
 //!
-//! ### Selective Standard Library Loading (Recommended for DSL)
+//! ### 选择性标准库加载（推荐用于 DSL）
 //!
-//! For better performance, load only the stdlib modules you need:
+//! 为获得更好性能，仅加载您需要的 stdlib 模块：
 //!
 //! ```
 //! use aether::Aether;
 //!
-//! // Load only string and array utilities
+//! // 仅加载字符串和数组工具
 //! let mut engine = Aether::new()
 //!     .with_stdlib_string_utils()
 //!     .unwrap()
 //!     .with_stdlib_array_utils()
 //!     .unwrap();
 //!
-//! // Or load data structures
+//! // 或加载数据结构
 //! let mut engine2 = Aether::new()
 //!     .with_stdlib_set()
 //!     .unwrap()
@@ -139,7 +139,7 @@
 //!     .with_stdlib_stack()
 //!     .unwrap();
 //!
-//! // Available modules:
+//! // 可用模块：
 //! // - with_stdlib_string_utils()
 //! // - with_stdlib_array_utils()
 //! // - with_stdlib_validation()
@@ -158,13 +158,13 @@
 //! // - with_stdlib_regex_utils()
 //! ```
 //!
-//! ## As a Standalone Language (Command-Line Tool)
+//! ## 作为独立语言（命令行工具）
 //!
-//! The `aether` command-line tool automatically enables all IO permissions,
-//! allowing scripts to freely use file and network operations:
+//! `aether` 命令行工具自动启用所有 IO 权限，
+//! 允许脚本自由使用文件和网络操作：
 //!
 //! ```bash
-//! # All IO operations work in CLI mode
+//! # 在 CLI 模式下，所有 IO 操作都有效
 //! aether script.aether
 //! ```
 
@@ -184,13 +184,13 @@ pub mod stdlib;
 pub mod token;
 pub mod value;
 
-// FFI and language bindings
+// FFI 和语言绑定
 pub mod ffi;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-// Re-export commonly used types
+// 重新导出常用类型
 pub use ast::{Expr, Program, Stmt};
 pub use builtins::{BuiltInRegistry, IOPermissions};
 pub use cache::{ASTCache, CacheStats};
@@ -211,7 +211,7 @@ pub use sandbox::{
 pub use token::Token;
 pub use value::Value;
 
-/// Main Aether engine struct
+/// 主要的 Aether 引擎结构体
 pub struct Aether {
     evaluator: Evaluator,
     cache: ASTCache,
@@ -219,17 +219,17 @@ pub struct Aether {
 }
 
 impl Aether {
-    /// Create a new Aether engine instance
+    /// 创建新的 Aether 引擎实例
     ///
-    /// **For DSL embedding**: IO operations are disabled by default for security.
-    /// Use `with_permissions()` or `with_all_permissions()` to enable IO.
+    /// **用于 DSL 嵌入**：IO 操作默认禁用以确保安全性。
+    /// 使用 `with_permissions()` 或 `with_all_permissions()` 来启用 IO。
     ///
-    /// **For CLI usage**: The command-line tool uses `with_all_permissions()` by default.
+    /// **用于 CLI 使用**：命令行工具默认使用 `with_all_permissions()`。
     pub fn new() -> Self {
         Self::with_permissions(IOPermissions::default())
     }
 
-    /// Create a new Aether engine with custom IO permissions
+    /// 使用自定义 IO 权限创建新的 Aether 引擎
     pub fn with_permissions(permissions: IOPermissions) -> Self {
         Aether {
             evaluator: Evaluator::with_permissions(permissions),
@@ -238,24 +238,24 @@ impl Aether {
         }
     }
 
-    /// Create a new Aether engine with all IO permissions enabled
+    /// 创建启用所有 IO 权限的新 Aether 引擎
     pub fn with_all_permissions() -> Self {
         Self::with_permissions(IOPermissions::allow_all())
     }
 
-    /// Create a new Aether engine with standard library preloaded
+    /// 创建预加载标准库的新 Aether 引擎
     ///
-    /// This creates an engine with all permissions and automatically loads
-    /// all standard library modules (string_utils, array_utils, validation, datetime, testing).
+    /// 这将创建一个具有所有权限的引擎，并自动加载
+    /// 所有标准库模块（string_utils、array_utils、validation、datetime、testing）。
     pub fn with_stdlib() -> Result<Self, String> {
         let mut engine = Self::with_all_permissions();
         stdlib::preload_stdlib(&mut engine)?;
         Ok(engine)
     }
 
-    /// Load a specific standard library module
+    /// 加载特定的标准库模块
     ///
-    /// Available modules: "string_utils", "array_utils", "validation", "datetime", "testing"
+    /// 可用模块："string_utils"、"array_utils"、"validation"、"datetime"、"testing"
     pub fn load_stdlib_module(&mut self, module_name: &str) -> Result<(), String> {
         if let Some(code) = stdlib::get_module(module_name) {
             self.eval(code)?;
@@ -265,36 +265,36 @@ impl Aether {
         }
     }
 
-    /// Load all standard library modules
+    /// 加载所有标准库模块
     pub fn load_all_stdlib(&mut self) -> Result<(), String> {
         stdlib::preload_stdlib(self)
     }
 
     // ============================================================
-    // Execution Limits
+    // 执行限制
     // ============================================================
 
-    /// Create a new Aether engine with execution limits
+    /// 使用执行限制创建新的 Aether 引擎
     pub fn with_limits(mut self, limits: ExecutionLimits) -> Self {
         self.evaluator.set_limits(limits);
         self
     }
 
-    /// Set execution limits
+    /// 设置执行限制
     pub fn set_limits(&mut self, limits: ExecutionLimits) {
         self.evaluator.set_limits(limits);
     }
 
-    /// Get current execution limits
+    /// 获取当前执行限制
     pub fn limits(&self) -> &ExecutionLimits {
         self.evaluator.limits()
     }
 
     // ============================================================
-    // Chainable stdlib module loading methods
+    // 可链式调用的 stdlib 模块加载方法
     // ============================================================
 
-    /// Load string utilities module (chainable)
+    /// 加载字符串工具模块（可链式调用）
     pub fn with_stdlib_string_utils(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("string_utils") {
             self.eval(code)?;
@@ -302,7 +302,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load array utilities module (chainable)
+    /// 加载数组工具模块（可链式调用）
     pub fn with_stdlib_array_utils(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("array_utils") {
             self.eval(code)?;
@@ -310,7 +310,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load validation module (chainable)
+    /// 加载验证模块（可链式调用）
     pub fn with_stdlib_validation(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("validation") {
             self.eval(code)?;
@@ -318,7 +318,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load datetime module (chainable)
+    /// 加载日期时间模块（可链式调用）
     pub fn with_stdlib_datetime(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("datetime") {
             self.eval(code)?;
@@ -326,7 +326,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load testing framework module (chainable)
+    /// 加载测试框架模块（可链式调用）
     pub fn with_stdlib_testing(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("testing") {
             self.eval(code)?;
@@ -334,7 +334,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load set data structure module (chainable)
+    /// 加载集合数据结构模块（可链式调用）
     pub fn with_stdlib_set(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("set") {
             self.eval(code)?;
@@ -342,7 +342,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load queue data structure module (chainable)
+    /// 加载队列数据结构模块（可链式调用）
     pub fn with_stdlib_queue(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("queue") {
             self.eval(code)?;
@@ -350,7 +350,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load stack data structure module (chainable)
+    /// 加载栈数据结构模块（可链式调用）
     pub fn with_stdlib_stack(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("stack") {
             self.eval(code)?;
@@ -358,7 +358,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load heap data structure module (chainable)
+    /// 加载堆数据结构模块（可链式调用）
     pub fn with_stdlib_heap(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("heap") {
             self.eval(code)?;
@@ -366,7 +366,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load sorting algorithms module (chainable)
+    /// 加载排序算法模块（可链式调用）
     pub fn with_stdlib_sorting(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("sorting") {
             self.eval(code)?;
@@ -374,7 +374,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load JSON processing module (chainable)
+    /// 加载 JSON 处理模块（可链式调用）
     pub fn with_stdlib_json(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("json") {
             self.eval(code)?;
@@ -382,7 +382,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load CSV processing module (chainable)
+    /// 加载 CSV 处理模块（可链式调用）
     pub fn with_stdlib_csv(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("csv") {
             self.eval(code)?;
@@ -390,7 +390,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load functional programming utilities module (chainable)
+    /// 加载函数式编程工具模块（可链式调用）
     pub fn with_stdlib_functional(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("functional") {
             self.eval(code)?;
@@ -398,7 +398,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load CLI utilities module (chainable)
+    /// 加载 CLI 工具模块（可链式调用）
     pub fn with_stdlib_cli_utils(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("cli_utils") {
             self.eval(code)?;
@@ -406,7 +406,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load text template engine module (chainable)
+    /// 加载文本模板引擎模块（可链式调用）
     pub fn with_stdlib_text_template(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("text_template") {
             self.eval(code)?;
@@ -414,7 +414,7 @@ impl Aether {
         Ok(self)
     }
 
-    /// Load regex utilities module (chainable)
+    /// 加载正则表达式工具模块（可链式调用）
     pub fn with_stdlib_regex_utils(mut self) -> Result<Self, String> {
         if let Some(code) = stdlib::get_module("regex_utils") {
             self.eval(code)?;
@@ -422,16 +422,16 @@ impl Aether {
         Ok(self)
     }
 
-    /// Evaluate Aether code and return the result
+    /// 求值 Aether 代码并返回结果
     pub fn eval(&mut self, code: &str) -> Result<Value, String> {
-        // Clear any previous call stack frames before starting a new top-level evaluation.
+        // 在开始新的顶级求值之前清除任何之前的调用栈帧。
         self.evaluator.clear_call_stack();
 
         // 尝试从缓存获取AST
         let program = if let Some(cached_program) = self.cache.get(code) {
             cached_program
         } else {
-            // Parse the code
+            // 解析代码
             let mut parser = Parser::new(code);
             let program = parser
                 .parse_program()
@@ -445,20 +445,20 @@ impl Aether {
             optimized
         };
 
-        // Evaluate the program
+        // 求值程序
         self.evaluator
             .eval_program(&program)
             .map_err(|e| format!("Runtime error: {}", e))
     }
 
-    /// Evaluate Aether code and return a structured error report on failure.
+    /// 求值 Aether 代码并在失败时返回结构化的错误报告。
     ///
-    /// This is intended for integrations that need machine-readable diagnostics.
+    /// 这适用于需要机器可读诊断的集成。
     pub fn eval_report(&mut self, code: &str) -> Result<Value, ErrorReport> {
-        // Clear any previous call stack frames before starting a new top-level evaluation.
+        // 在开始新的顶级求值之前清除任何之前的调用栈帧。
         self.evaluator.clear_call_stack();
 
-        // Try AST cache first
+        // 首先尝试 AST 缓存
         let program = if let Some(cached_program) = self.cache.get(code) {
             cached_program
         } else {
@@ -477,29 +477,29 @@ impl Aether {
             .map_err(|e| e.to_error_report())
     }
 
-    /// Drain the in-memory TRACE buffer.
+    /// 清空内存中的 TRACE 缓冲区。
     ///
-    /// This is designed for DSL-safe debugging: scripts call `TRACE(...)` to record
-    /// values, and the host application reads them out-of-band via this method.
+    /// 这是为 DSL 安全调试设计的：脚本调用 `TRACE(...)` 来记录
+    /// 值，宿主应用程序通过此方法带外读取它们。
     pub fn take_trace(&mut self) -> Vec<String> {
         self.evaluator.take_trace()
     }
 
-    /// Clear the TRACE buffer without returning it.
+    /// 清除 TRACE 缓冲区而不返回它。
     pub fn clear_trace(&mut self) {
         self.evaluator.clear_trace();
     }
 
-    /// Get all structured trace entries (Stage 3.2)
+    /// 获取所有结构化的跟踪条目
     ///
-    /// Returns a vector of structured trace entries with levels, categories, timestamps, etc.
+    /// 返回带有级别、类别、时间戳等的结构化跟踪条目向量。
     pub fn trace_records(&self) -> Vec<crate::runtime::TraceEntry> {
         self.evaluator.trace_records()
     }
 
-    /// Filter trace entries by level (Stage 3.2)
+    /// 按级别过滤跟踪条目
     ///
-    /// # Example
+    /// # 示例
     /// ```ignore
     /// let error_traces = engine.trace_by_level(crate::runtime::TraceLevel::Error);
     /// ```
@@ -510,9 +510,9 @@ impl Aether {
         self.evaluator.trace_by_level(level)
     }
 
-    /// Filter trace entries by category (Stage 3.2)
+    /// 按类别过滤跟踪条目
     ///
-    /// # Example
+    /// # 示例
     /// ```ignore
     /// let api_traces = engine.trace_by_category("api_call");
     /// ```
@@ -520,9 +520,9 @@ impl Aether {
         self.evaluator.trace_by_category(category)
     }
 
-    /// Filter trace entries by label (Stage 3.2)
+    /// 按标签过滤跟踪条目
     ///
-    /// # Example
+    /// # 示例
     /// ```ignore
     /// let slow_traces = engine.trace_by_label("slow_request");
     /// ```
@@ -530,9 +530,9 @@ impl Aether {
         self.evaluator.trace_by_label(label)
     }
 
-    /// Apply complex filter to trace entries (Stage 3.2)
+    /// 对跟踪条目应用复杂过滤器
     ///
-    /// # Example
+    /// # 示例
     /// ```ignore
     /// use crate::runtime::{TraceFilter, TraceLevel};
     /// use std::time::Instant;
@@ -549,52 +549,51 @@ impl Aether {
         self.evaluator.trace_filter(filter)
     }
 
-    /// Get trace statistics (Stage 3.2)
+    /// 获取跟踪统计信息
     ///
-    /// Returns statistics about trace entries, including counts by level and category.
+    /// 返回关于跟踪条目的统计信息，包括按级别和类别的计数。
     pub fn trace_stats(&self) -> crate::runtime::TraceStats {
         self.evaluator.trace_stats()
     }
 
-    /// Set TRACE buffer size (Stage 3.2)
+    /// 设置 TRACE 缓冲区大小
     ///
-    /// Note: This method is a placeholder for future implementation.
-    /// Currently, the buffer size is fixed at 1024 entries.
+    /// 注意：此方法是为未来实现准备的占位符。
+    /// 目前，缓冲区大小固定为 1024 条目。
     #[allow(dead_code)]
     pub fn set_trace_buffer_size(&mut self, _size: usize) {
-        // TODO: Implement configurable buffer size
-        // For now, buffer size is fixed at TRACE_MAX_ENTRIES (1024)
+        // TODO: 实现可配置的缓冲区大小
+        // 目前，缓冲区大小固定为 TRACE_MAX_ENTRIES (1024)
     }
 
-    /// Configure the module resolver used for `Import/Export`.
+    /// 配置用于 `Import/Export` 的模块解析器。
     ///
-    /// By default (DSL embedding), the resolver is disabled for safety.
+    /// 默认情况下（DSL 嵌入），解析器出于安全考虑被禁用。
     pub fn set_module_resolver(&mut self, resolver: Box<dyn crate::module_system::ModuleResolver>) {
         self.evaluator.set_module_resolver(resolver);
     }
 
-    /// Push a base directory context for resolving relative imports.
+    /// 推送用于解析相对导入的基础目录上下文。
     ///
-    /// This is typically used by a file-based runner (CLI) before calling `eval()`.
+    /// 这通常由基于文件的运行器（CLI）在调用 `eval()` 之前使用。
     pub fn push_import_base(&mut self, module_id: String, base_dir: Option<std::path::PathBuf>) {
         self.evaluator.push_import_base(module_id, base_dir);
     }
 
-    /// Pop the most recent base directory context.
+    /// 弹出最近的基础目录上下文。
     pub fn pop_import_base(&mut self) {
         self.evaluator.pop_import_base();
     }
 
-    /// Evaluate an Aether script from a file path.
+    /// 从文件路径求值 Aether 脚本。
     ///
-    /// This is a convenience wrapper that:
-    /// - reads the file
-    /// - pushes an import base context (module_id = canonical path; base_dir = parent dir)
-    /// - evaluates the code
-    /// - pops the import base context
+    /// 这是一个便利包装器，它：
+    /// - 读取文件
+    /// - 推送导入基础上下文（module_id = 规范路径；base_dir = 父目录）
+    /// - 求值代码
+    /// - 弹出导入基础上下文
     ///
-    /// Note: this does **not** enable any module resolver. For DSL safety, module loading
-    /// remains disabled unless you explicitly call `set_module_resolver(...)`.
+    /// 注意：这**不会**启用任何模块解析器。为了 DSL 安全性，除非您明确调用 `set_module_resolver(...)`，否则模块加载保持禁用状态。
     pub fn eval_file(&mut self, path: impl AsRef<std::path::Path>) -> Result<Value, String> {
         let path = path.as_ref();
 
@@ -609,7 +608,7 @@ impl Aether {
         res
     }
 
-    /// Evaluate an Aether script from a file path, returning a structured error report on failure.
+    /// 从文件路径求值 Aether 脚本，在失败时返回结构化的错误报告。
     pub fn eval_file_report(
         &mut self,
         path: impl AsRef<std::path::Path>,
@@ -628,28 +627,26 @@ impl Aether {
         res
     }
 
-    /// Set a global variable from the host application without using `eval()`.
+    /// 从宿主应用程序设置全局变量，而不使用 `eval()`。
     ///
-    /// This is useful when you already have Rust-side data and want to inject it
-    /// as `Value` into the script environment.
+    /// 当您已经有 Rust 端数据并希望将其作为 `Value` 注入脚本环境时，这很有用。
     pub fn set_global(&mut self, name: &str, value: Value) {
         self.evaluator.set_global(name.to_string(), value);
     }
 
-    /// Reset the runtime environment (variables/functions) while keeping built-ins registered.
+    /// 重置运行时环境（变量/函数），同时保持内置函数注册。
     ///
-    /// Note: this clears anything that was introduced via `eval()` (including stdlib code).
+    /// 注意：这会清除通过 `eval()` 引入的任何内容（包括 stdlib 代码）。
     pub fn reset_env(&mut self) {
         self.evaluator.reset_env();
     }
 
-    /// Run a closure inside an isolated child scope.
+    /// 在隔离的子作用域内运行闭包。
     ///
-    /// All variables/functions you inject or define inside the closure will be dropped
-    /// when it returns, while the outer environment is preserved.
+    /// 在闭包内注入或定义的所有变量/函数将在返回时被丢弃，而外部环境被保留。
     ///
-    /// This is designed for the "DSL host" scenario: inject Rust data + load per-request
-    /// Aether functions (e.g. from DB) + run the script, without cross-request pollution.
+    /// 这是为 "DSL 宿主" 场景设计的：注入 Rust 数据 + 加载每请求的
+    /// Aether 函数（例如从 DB）+ 运行脚本，而不跨请求污染。
     pub fn with_isolated_scope<R>(
         &mut self,
         f: impl FnOnce(&mut Aether) -> Result<R, String>,
@@ -660,12 +657,12 @@ impl Aether {
         result
     }
 
-    /// Evaluate Aether code asynchronously (requires "async" feature)
+    /// 异步求值 Aether 代码（需要 "async" 特性）
     ///
-    /// This is a convenience wrapper around `eval()` that runs in a background task.
-    /// Useful for integrating Aether into async Rust applications.
+    /// 这是围绕 `eval()` 的便利包装器，在后台任务中运行。
+    /// 用于将 Aether 集成到异步 Rust 应用程序中。
     ///
-    /// # Example
+    /// # 示例
     ///
     /// ```no_run
     /// use aether::Aether;
