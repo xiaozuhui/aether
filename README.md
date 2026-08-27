@@ -21,20 +21,19 @@
 - [语言特性](#-语言特性)
 - [安全模型](#-安全模型)
 - [性能优化](#-性能优化)
-- [语言绑定](#-语言绑定)
 - [许可证](#-许可证)
 
 ---
 
 ## 🎯 概述
 
-Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rust、Go 和 TypeScript 应用程序中。
+Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rust 应用程序中。
 
 ### 核心特性
 
 - 🚀 **高性能**: 基于 Rust，带 AST 缓存和常量折叠优化
-- 🔌 **易于集成**: 简单的 API，支持 Rust/Go/TypeScript
-- 🌍 **跨平台**: x86_64、ARM64、WebAssembly
+- 🔌 **易于集成**: 简单的 Rust API
+- 🌍 **跨平台**: x86_64、ARM64
 - ✨ **现代特性**: 闭包、Lambda 表达式、模块系统 (Import/Export)
 - 📝 **简洁语法**: 易学易读，UPPER_SNAKE_CASE 命名
 - 🔒 **安全优先**: 库模式默认禁用 IO，CLI 模式自动启用
@@ -61,12 +60,6 @@ cargo add aether
 
 # 命令行工具
 cargo install aether
-
-# Go
-go get github.com/yourusername/aether-go
-
-# TypeScript/aether
-npm install @yourusername/aether
 ```
 
 ### Hello World
@@ -534,37 +527,6 @@ engine.set_optimization(
 
 ---
 
-## 🔗 语言绑定
-
-### Go
-
-Aether 提供完整的 Go 语言绑定,支持线程安全、变量操作、追踪调试等高级功能。
-
-**详情请见 [Aether-GO](https://github.com/xiaozuhui/aether-go/)**
-
-### TypeScript/aether
-
-```typescript
-import { Aether } from '@yourusername/aether';
-
-async function main() {
-    const engine = new Aether();
-    await engine.init();
-    
-    const result = engine.eval(`
-        Set X 10
-        Set Y 20
-        Return (X + Y)
-    `);
-    
-    console.log('Result:', result); // 30
-}
-
-main();
-```
-
----
-
 ## 📚 更多文档
 
 ### 用户指南
@@ -902,7 +864,6 @@ Aether 会在解析和运行时检测以下错误，并附带源码位置信息�
 - ✅ 严格的命名约定
 - ✅ AST 缓存和性能优化
 - ✅ 100+ 测试（持续维护）
-- ✅ python转译
 - ✅ 无IO Trace
 - ✅ 实现注入、Import和Export
 
@@ -910,9 +871,6 @@ Aether 会在解析和运行时检测以下错误，并附带源码位置信息�
 
 - 🔄 完整的尾递归优化
 - 🔄 JIT 编译器
-- 🔄 绑定golang环境
-- 🔄 绑定typescript环境
-- 🔄 Python 绑定
 - 🔄 试算 - 在内部变量不确定的情况下，通过自动赋值为0或""来让代码跑通，用于代码初期简单测试
 
 ---

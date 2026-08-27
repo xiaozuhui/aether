@@ -185,12 +185,6 @@ pub mod stdlib;
 pub mod token;
 pub mod value;
 
-// FFI 和语言绑定
-pub mod ffi;
-
-#[cfg(target_arch = "wasm32")]
-pub mod wasm;
-
 mod api;
 mod prelude;
 
