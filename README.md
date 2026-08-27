@@ -622,6 +622,85 @@ While False {
 - 环境对象池复用
 - **结果**: 变量访问快 10-15%
 
+### 5. 引擎模式（Rust 嵌入高频执行）
+
+在 Rust 应用中反复、大量执行 DSL 时，每次 `Aether::new()` 都要重建求值器、内置函数注册表和 AST 缓存。`aether::engine` 模块提供三种引擎模式应对高频调用：
+
+#### GlobalEngine —— 线程局部单例（推荐）
+
+```rust
+use aether::engine::GlobalEngine;
+
+// 隔离环境（推荐）：每次执行前清空变量，AST 缓存跨执行保留
+let result = GlobalEngine::eval_isolated("Set X 10\n(X + 20)")?; // 30
+
+// 非隔离：变量跨调用保留
+GlobalEngine::eval("Set Y 100")?;
+GlobalEngine::eval("(Y + 1)")?; // 101
+
+GlobalEngine::clear_env();   // 手动清空环境
+GlobalEngine::clear_cache(); // 手动清空 AST 缓存
+```
+
+每个线程持有独立实例（`thread_local`），线程间不共享状态。另有 `cache_stats()`、`set_optimization()` 可用。
+
+#### EnginePool —— 引擎池（RAII 自动归还）
+
+```rust
+use aether::engine::EnginePool;
+
+let mut pool = EnginePool::new(4);
+
+for i in 0..100 {
+    let mut engine = pool.acquire(); // 获取前自动清空环境
+    let code = format!("Set X {}\n(X * 2)", i);
+    engine.eval(&code)?;
+} // 离开作用域自动归还；池满时 acquire 会创建临时引擎
+```
+
+#### ScopedEngine —— 闭包模式（完全隔离）
+
+```rust
+use aether::engine::ScopedEngine;
+
+// 闭包风格：可执行多段代码并返回任意类型
+let (x, y) = ScopedEngine::with(|engine| {
+    engine.eval("Set X 10")?;
+    engine.eval("Set Y 20")?;
+    let x = engine.eval("X")?;
+    let y = engine.eval("Y")?;
+    Ok((x, y))
+})?;
+
+// 简化版：单次执行
+let result = ScopedEngine::eval("Set X 10\n(X + 20)")?; // 30
+
+// 信任来源的脚本可启用全部 IO 权限
+let result = ScopedEngine::eval_with_all_permissions(code)?;
+```
+
+#### 模式对比
+
+| 模式 | 环境隔离方式 | AST 缓存 | 适用场景 |
+|------|------------|---------|---------|
+| GlobalEngine | 执行前 `reset_env()` | ✅ 跨执行累积 | 单线程高频调用（配置解析、规则引擎） |
+| EnginePool | `acquire()` 时 `reset_env()` | ✅ 每引擎独立 | 单线程内需多个引擎实例 |
+| ScopedEngine | 每次新建引擎 | ❌ | 临时执行、偶尔使用、极简 API |
+
+三种模式均为线程局部设计（Aether 内部使用 `Rc`，非 `Send`），隔离性由 `engine` 模块的单元测试保证。启用 `async` 特性后三种模式均有对应的异步变体。
+
+#### 实测性能
+
+Apple M2、release 构建下重复执行 `"Set X 10\nSet Y 20\n(X + Y)"`，预热后每轮 10000 次迭代、共 5 轮取中位数：
+
+| 模式 | 单次执行耗时 | 相对性能 |
+|------|-----------|---------|
+| `GlobalEngine::eval_isolated` | ~22µs | 基准（AST 缓存稳态命中率 ~100%） |
+| `EnginePool` acquire+eval | ~22µs | 持平 |
+| `ScopedEngine::eval` | ~39µs | 1.8x 慢（每次新建引擎，无法复用缓存） |
+
+完整演示：`cargo run --example engine_modes`
+
 ### 自定义优化选项
 
 ```rust
@@ -642,7 +721,6 @@ engine.set_optimization(
 ### 用户指南
 
 - [调试指南](docs/DEBUG_GUIDE.md) - 调试工具、错误追踪和排错技巧
-- [引擎模式指南](docs/ENGINE_MODES_GUIDE.md) - GlobalEngine/EnginePool/ScopedEngine 使用说明
 - [安全沙箱指南](docs/SANDBOX_GUIDE.md) - 权限控制、IO限制和安全最佳实践
 
 ### 专题指南
