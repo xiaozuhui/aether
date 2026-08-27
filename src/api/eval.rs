@@ -15,7 +15,7 @@ impl Aether {
             cached_program
         } else {
             // 解析代码
-            let mut parser = Parser::new(code);
+            let mut parser = Parser::with_bigint_threshold(code, self.bigint_threshold);
             let program = parser
                 .parse_program()
                 .map_err(|e| format!("Parse error: {}", e))?;
@@ -46,7 +46,7 @@ impl Aether {
         let program = if let Some(cached_program) = self.cache.get(code) {
             cached_program
         } else {
-            let mut parser = Parser::new(code);
+            let mut parser = Parser::with_bigint_threshold(code, self.bigint_threshold);
             let program = parser
                 .parse_program()
                 .map_err(|e| ErrorReport::parse_error(e.to_string()))?;

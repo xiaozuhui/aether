@@ -8,6 +8,8 @@ use crate::module_system::{
     DisabledModuleResolver, ModuleContext, ModuleResolveError, ModuleResolver, ResolvedModule,
 };
 use crate::value::{GeneratorState, Value};
+use num_bigint::BigInt;
+use num_rational::Ratio;
 use serde_json::{Value as JsonValue, json};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -478,6 +480,8 @@ pub struct Evaluator {
     trace_entries: VecDeque<crate::runtime::TraceEntry>,
     /// Maximum number of trace entries to keep in buffer
     trace_buffer_size: usize,
+    /// 整数字面量超过该位数后切换为 BigInteger（Import 路径解析用）
+    bigint_threshold: usize,
 
     /// Module resolver (Import/Export). Defaults to disabled for DSL safety.
     module_resolver: Box<dyn ModuleResolver>,
@@ -683,6 +687,7 @@ impl Evaluator {
             trace_seq: 0,
             trace_entries: VecDeque::new(),
             trace_buffer_size,
+            bigint_threshold: crate::lexer::DEFAULT_BIGINT_THRESHOLD,
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -711,6 +716,7 @@ impl Evaluator {
             trace_seq: 0,
             trace_entries: VecDeque::new(),
             trace_buffer_size: Self::DEFAULT_TRACE_BUFFER_SIZE,
+            bigint_threshold: crate::lexer::DEFAULT_BIGINT_THRESHOLD,
 
             module_resolver: Box::new(DisabledModuleResolver),
             module_cache: HashMap::new(),
@@ -887,6 +893,11 @@ impl Evaluator {
         while self.trace_entries.len() > size {
             self.trace_entries.pop_front();
         }
+    }
+
+    /// Set the big-integer threshold used when parsing imported modules
+    pub fn set_bigint_threshold(&mut self, threshold: usize) {
+        self.bigint_threshold = threshold;
     }
 
     /// Reset the environment (clear all variables and re-register built-ins)
@@ -1239,18 +1250,12 @@ impl Evaluator {
         match expr {
             Expr::Number(n) => Ok(Value::Number(*n)),
 
-            Expr::BigInteger(s) => {
-                // 将大整数字符串转换为 Fraction (分母为1的分数)
+            Expr::BigInteger(big_int) => {
+                // 解析期已构造完成，直接包装为分母为 1 的分数
                 use num_bigint::BigInt;
                 use num_rational::Ratio;
 
-                match s.parse::<BigInt>() {
-                    Ok(big_int) => Ok(Value::Fraction(Ratio::new(big_int, BigInt::from(1)))),
-                    Err(_) => Err(RuntimeError::InvalidOperation(format!(
-                        "Invalid big integer: {}",
-                        s
-                    ))),
-                }
+                Ok(Value::Fraction(Ratio::new(big_int.clone(), BigInt::from(1))))
             }
 
             Expr::String(s) => Ok(Value::String(s.clone())),
@@ -1420,6 +1425,84 @@ impl Evaluator {
     }
 
     /// Evaluate binary operation
+    /// 将整数值的 f64 精确转换为 Ratio<BigInt>。
+    ///
+    /// 通过十进制字符串中转，避免 `as i64` 在超出 i64 范围时静默截断。
+    fn f64_to_ratio(a: &f64) -> Option<Ratio<BigInt>> {
+        let s = format!("{:.0}", a);
+        let big = BigInt::parse_bytes(s.as_bytes(), 10)?;
+        Some(Ratio::new(big, BigInt::from(1)))
+    }
+
+    /// 位运算求值：& | ^ << >>
+    ///
+    /// 操作数必须是整数值（Number 需 fract()==0，Fraction 需分母为 1）。
+    fn eval_bitwise_op(&self, left: &Value, op: &BinOp, right: &Value) -> EvalResult {
+        use num_traits::ToPrimitive;
+
+        // 将操作数规整为 BigInt（整数）
+        let to_bigint = |v: &Value| -> Result<BigInt, RuntimeError> {
+            match v {
+                Value::Number(n) => {
+                    if n.fract() != 0.0 {
+                        Err(RuntimeError::TypeError(
+                            "位运算要求整数操作数".to_string(),
+                        ))
+                    } else {
+                        let s = format!("{:.0}", n);
+                        BigInt::parse_bytes(s.as_bytes(), 10).ok_or_else(|| {
+                            RuntimeError::TypeError("无法转换的整数值".to_string())
+                        })
+                    }
+                }
+                Value::Fraction(f) => {
+                    if f.denom() != &BigInt::from(1) {
+                        Err(RuntimeError::TypeError(
+                            "位运算要求整数操作数（分数分母必须为 1）".to_string(),
+                        ))
+                    } else {
+                        Ok(f.numer().clone())
+                    }
+                }
+                _ => Err(RuntimeError::TypeError(format!(
+                    "位运算不支持 {} 类型",
+                    v.type_name()
+                ))),
+            }
+        };
+
+        let l = to_bigint(left)?;
+        let r = to_bigint(right)?;
+        let both_number = matches!((left, right), (Value::Number(_), Value::Number(_)));
+
+        let result: BigInt = match op {
+            BinOp::BitAnd => l & r,
+            BinOp::BitOr => l | r,
+            BinOp::BitXor => l ^ r,
+            BinOp::Shl | BinOp::Shr => {
+                // 移位量转 usize；负数移位量不支持
+                let shift = r
+                    .to_usize()
+                    .ok_or_else(|| RuntimeError::TypeError("移位量必须是非负整数".to_string()))?;
+                if op == &BinOp::Shl {
+                    l << shift
+                } else {
+                    l >> shift
+                }
+            }
+            _ => unreachable!("eval_bitwise_op 仅处理位运算符"),
+        };
+
+        // 两侧都是小数值 Number 时返回 Number，保持小整数运算的现有行为；
+        // 否则返回 Fraction（与 BigInt 求值约定一致）
+        if both_number {
+            if let Some(f) = result.to_f64() {
+                return Ok(Value::Number(f));
+            }
+        }
+        Ok(Value::Fraction(Ratio::new(result, BigInt::from(1))))
+    }
+
     fn eval_binary_op(&self, left: &Value, op: &BinOp, right: &Value) -> EvalResult {
         match op {
             BinOp::Add => match (left, right) {
@@ -1427,10 +1510,8 @@ impl Evaluator {
                 (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{}{}", a, b))),
                 (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a + b)),
                 (Value::Number(a), Value::Fraction(b)) | (Value::Fraction(b), Value::Number(a)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
                     if a.fract() == 0.0 {
-                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
                         Ok(Value::Fraction(a_frac + b))
                     } else {
                         // 浮点数和分数混合运算，转换为浮点数
@@ -1451,10 +1532,8 @@ impl Evaluator {
                 (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a - b)),
                 (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a - b)),
                 (Value::Number(a), Value::Fraction(b)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
                     if a.fract() == 0.0 {
-                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
                         Ok(Value::Fraction(a_frac - b))
                     } else {
                         use num_traits::ToPrimitive;
@@ -1464,10 +1543,8 @@ impl Evaluator {
                     }
                 }
                 (Value::Fraction(a), Value::Number(b)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
                     if b.fract() == 0.0 {
-                        let b_frac = Ratio::new(BigInt::from(*b as i64), BigInt::from(1));
+                        let b_frac = Self::f64_to_ratio(b).expect("整数值 f64 转换不会失败");
                         Ok(Value::Fraction(a - b_frac))
                     } else {
                         use num_traits::ToPrimitive;
@@ -1546,13 +1623,11 @@ impl Evaluator {
                     }
                 }
                 (Value::Number(a), Value::Fraction(b)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
                     use num_traits::Zero;
                     if b.is_zero() {
                         Err(RuntimeError::DivisionByZero)
                     } else if a.fract() == 0.0 {
-                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
+                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
                         Ok(Value::Fraction(a_frac / b))
                     } else {
                         use num_traits::ToPrimitive;
@@ -1562,12 +1637,10 @@ impl Evaluator {
                     }
                 }
                 (Value::Fraction(a), Value::Number(b)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
                     if *b == 0.0 {
                         Err(RuntimeError::DivisionByZero)
                     } else if b.fract() == 0.0 {
-                        let b_frac = Ratio::new(BigInt::from(*b as i64), BigInt::from(1));
+                        let b_frac = Self::f64_to_ratio(b).expect("整数值 f64 转换不会失败");
                         Ok(Value::Fraction(a / b_frac))
                     } else {
                         use num_traits::ToPrimitive;
@@ -1597,6 +1670,10 @@ impl Evaluator {
                     right.type_name()
                 ))),
             },
+
+            BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor | BinOp::Shl | BinOp::Shr => {
+                self.eval_bitwise_op(left, op, right)
+            }
 
             BinOp::Equal => Ok(Value::Boolean(left.equals(right))),
 
@@ -2119,7 +2196,8 @@ impl Evaluator {
         self.module_stack.push(resolved.module_id.clone());
 
         // Parse module
-        let mut parser = crate::parser::Parser::new(&resolved.source);
+        let mut parser =
+            crate::parser::Parser::with_bigint_threshold(&resolved.source, self.bigint_threshold);
         let program = match parser.parse_program() {
             Ok(p) => p,
             Err(e) => {

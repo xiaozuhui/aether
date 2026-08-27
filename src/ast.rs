@@ -24,6 +24,13 @@ pub enum BinOp {
     // Logical
     And, // &&
     Or,  // ||
+
+    // Bitwise
+    BitAnd, // &
+    BitOr,  // |
+    BitXor, // ^
+    Shl,    // <<
+    Shr,    // >>
 }
 
 /// Unary operators
@@ -38,7 +45,7 @@ pub enum UnaryOp {
 pub enum Expr {
     // Literals
     Number(f64),
-    BigInteger(String), // 大整数字面量
+    BigInteger(num_bigint::BigInt), // 大整数字面量（解析期一次性构造）
     String(String),
     Boolean(bool),
     Null,
@@ -235,6 +242,11 @@ impl std::fmt::Display for BinOp {
             BinOp::Multiply => write!(f, "*"),
             BinOp::Divide => write!(f, "/"),
             BinOp::Modulo => write!(f, "%"),
+            BinOp::BitAnd => write!(f, "&"),
+            BinOp::BitOr => write!(f, "|"),
+            BinOp::BitXor => write!(f, "^"),
+            BinOp::Shl => write!(f, "<<"),
+            BinOp::Shr => write!(f, ">>"),
             BinOp::Equal => write!(f, "=="),
             BinOp::NotEqual => write!(f, "!="),
             BinOp::Less => write!(f, "<"),

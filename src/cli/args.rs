@@ -10,6 +10,7 @@ pub struct RunOptions {
     pub show_trace: bool,
     pub show_trace_stats: bool,
     pub trace_buffer_size: Option<usize>,
+    pub bigint_threshold: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +43,7 @@ pub fn parse(args: &[String]) -> CliCommand {
     let show_trace = args.contains(&"--trace".to_string());
     let show_trace_stats = args.contains(&"--trace-stats".to_string());
     let trace_buffer_size = get_usize_flag_value(args, "--trace-buffer-size");
+    let bigint_threshold = get_usize_flag_value(args, "--bigint-threshold");
 
     let json_error = args.contains(&"--json-error".to_string());
     let show_help = args.contains(&"--help".to_string()) || args.contains(&"-h".to_string());
@@ -82,6 +84,7 @@ pub fn parse(args: &[String]) -> CliCommand {
             show_trace,
             show_trace_stats,
             trace_buffer_size,
+            bigint_threshold,
         },
     }
 }
@@ -100,7 +103,7 @@ fn find_script_file(args: &[String]) -> Option<&str> {
         let arg = &args[i];
 
         // Flags with a following value
-        if arg == "--trace-buffer-size" {
+        if arg == "--trace-buffer-size" || arg == "--bigint-threshold" {
             i += 2;
             continue;
         }

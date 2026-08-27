@@ -19,6 +19,7 @@ pub fn print_cli_help() {
     println!("  --trace                  执行后打印 TRACE 缓冲区内容");
     println!("  --trace-stats            执行后打印 TRACE 统计信息");
     println!("  --trace-buffer-size <N>  设置 TRACE 缓冲区容量（条目数）");
+    println!("  --bigint-threshold <N>   设置大整数切换阈值（整数字面量位数超过 N 时启用 BigInteger）");
     println!();
     println!("示例:");
     println!("  aether script.aether                                   # 运行脚本");

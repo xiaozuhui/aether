@@ -92,6 +92,13 @@ pub enum Token {
     Or,  // ||
     Not, // !
 
+    // Bitwise
+    BitAnd, // &
+    BitOr,  // |
+    BitXor, // ^
+    Shl,    // <<
+    Shr,    // >>
+
     // Assignment
     Assign, // = (但 Aether 中用 Set，这里可能不需要)
 
@@ -206,6 +213,11 @@ impl Token {
             Token::And => "&&",
             Token::Or => "||",
             Token::Not => "!",
+            Token::BitAnd => "&",
+            Token::BitOr => "|",
+            Token::BitXor => "^",
+            Token::Shl => "<<",
+            Token::Shr => ">>",
             Token::Assign => "=",
             Token::LeftParen => "(",
             Token::RightParen => ")",

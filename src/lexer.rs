@@ -14,11 +14,21 @@ pub struct Lexer {
     line: usize,          // current line number (for error reporting)
     column: usize,        // current column number (for error reporting)
     had_whitespace_before_token: bool, // whether whitespace was skipped before current token
+    /// 整数字面量超过该位数后切换为 BigInteger（默认 15，接近 f64 精度极限）
+    bigint_threshold: usize,
 }
+
+/// 默认的大整数切换阈值（f64 安全整数位数为 15-16 位）
+pub const DEFAULT_BIGINT_THRESHOLD: usize = 15;
 
 impl Lexer {
     /// Create a new lexer from input string
     pub fn new(input: &str) -> Self {
+        Self::with_bigint_threshold(input, DEFAULT_BIGINT_THRESHOLD)
+    }
+
+    /// Create a new lexer with a custom big-integer threshold
+    pub fn with_bigint_threshold(input: &str, bigint_threshold: usize) -> Self {
         let mut lexer = Lexer {
             input: input.chars().collect(),
             position: 0,
@@ -27,6 +37,7 @@ impl Lexer {
             line: 1,
             column: 0,
             had_whitespace_before_token: false,
+            bigint_threshold,
         };
         lexer.read_char(); // Initialize by reading the first character
         lexer
@@ -138,6 +149,9 @@ impl Lexer {
                 if self.peek_char() == '=' {
                     self.read_char();
                     Token::LessEqual
+                } else if self.peek_char() == '<' {
+                    self.read_char();
+                    Token::Shl
                 } else {
                     Token::Less
                 }
@@ -146,6 +160,9 @@ impl Lexer {
                 if self.peek_char() == '=' {
                     self.read_char();
                     Token::GreaterEqual
+                } else if self.peek_char() == '>' {
+                    self.read_char();
+                    Token::Shr
                 } else {
                     Token::Greater
                 }
@@ -155,7 +172,7 @@ impl Lexer {
                     self.read_char();
                     Token::And
                 } else {
-                    Token::Illegal('&')
+                    Token::BitAnd
                 }
             }
             '|' => {
@@ -163,9 +180,10 @@ impl Lexer {
                     self.read_char();
                     Token::Or
                 } else {
-                    Token::Illegal('|')
+                    Token::BitOr
                 }
             }
+            '^' => Token::BitXor,
 
             // Delimiters
             '(' => Token::LeftParen,
@@ -260,7 +278,7 @@ impl Lexer {
         Token::lookup_keyword(&ident)
     }
 
-    /// Read a number (integer or float)
+    /// Read a number (integer, float, or scientific notation)
     fn read_number(&mut self) -> Token {
         let start = self.position;
         let mut has_dot = false;
@@ -276,16 +294,76 @@ impl Lexer {
             self.read_char();
         }
 
+        // 科学计数法：e/E 后跟数字，或 +/- 后跟数字（如 1e30、1.5E-3）
+        if (self.ch == 'e' || self.ch == 'E')
+            && (self.peek_char().is_numeric()
+                || ((self.peek_char() == '+' || self.peek_char() == '-')
+                    && self.peek_char_n(2).is_numeric()))
+        {
+            self.read_char(); // skip e/E
+            if self.ch == '+' || self.ch == '-' {
+                self.read_char(); // skip sign
+            }
+            while self.ch.is_numeric() {
+                self.read_char();
+            }
+
+            let num_str: String = self.input[start..self.position].iter().collect();
+            return self.tokenize_scientific(&num_str);
+        }
+
         let num_str: String = self.input[start..self.position].iter().collect();
 
-        // 如果是整数且位数较多（超过15位，接近f64精度极限），作为大整数处理
-        if !has_dot && num_str.len() > 15 {
+        // 如果是整数且位数较多（超过阈值，接近f64精度极限），作为大整数处理
+        if !has_dot && num_str.len() > self.bigint_threshold {
             return Token::BigInteger(num_str);
         }
 
         match num_str.parse::<f64>() {
             Ok(num) => Token::Number(num),
             Err(_) => Token::Illegal('0'), // Invalid number
+        }
+    }
+
+    /// 将科学计数法字面量转换为 token。
+    ///
+    /// 正指数产生精确的整数字符串（按阈值决定 BigInteger 或 Number）；
+    /// 负指数降级为 f64（如需精确值请使用 TO_FRACTION）。
+    fn tokenize_scientific(&self, num_str: &str) -> Token {
+        let (mantissa, exponent) = match num_str.split_once(['e', 'E']) {
+            Some((m, e)) => (m, e.parse::<i64>().unwrap_or(0)),
+            None => match num_str.parse::<f64>() {
+                Ok(num) => return Token::Number(num),
+                Err(_) => return Token::Illegal('0'),
+            },
+        };
+
+        let (int_part, frac_part) = match mantissa.split_once('.') {
+            Some((i, f)) => (i, f),
+            None => (mantissa, ""),
+        };
+        let sign = if int_part.starts_with('-') { "-" } else { "" };
+        let digits = format!("{}{}", int_part.trim_start_matches(['-', '+']), frac_part);
+        let frac_len = frac_part.len() as i64;
+
+        if exponent >= frac_len {
+            // 全部数字都在整数部分：移动小数点构造精确整数字符串
+            let zeros = exponent - frac_len;
+            let exact = format!("{}{}{}", sign, digits, "0".repeat(zeros as usize));
+            if exact.len() - sign.len() > self.bigint_threshold {
+                Token::BigInteger(exact)
+            } else {
+                match exact.parse::<f64>() {
+                    Ok(num) => Token::Number(num),
+                    Err(_) => Token::Illegal('0'),
+                }
+            }
+        } else {
+            // 负指数或小数位多于指数：结果是小数，降级为 f64
+            match num_str.parse::<f64>() {
+                Ok(num) => Token::Number(num),
+                Err(_) => Token::Illegal('0'),
+            }
         }
     }
 

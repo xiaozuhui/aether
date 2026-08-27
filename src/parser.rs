@@ -108,13 +108,17 @@ enum Precedence {
     Lowest = 0,
     Or = 1,         // ||
     And = 2,        // &&
-    Equals = 3,     // ==, !=
-    Comparison = 4, // <, <=, >, >=
-    Sum = 5,        // +, -
-    Product = 6,    // *, /, %
-    Prefix = 7,     // -, !
-    Call = 8,       // func()
-    Index = 9,      // array[index]
+    BitOr = 3,      // |
+    BitXor = 4,     // ^
+    BitAnd = 5,     // &
+    Equals = 6,     // ==, !=
+    Comparison = 7, // <, <=, >, >=
+    Shift = 8,      // <<, >>
+    Sum = 9,        // +, -
+    Product = 10,   // *, /, %
+    Prefix = 11,    // -, !
+    Call = 12,      // func()
+    Index = 13,     // array[index]
 }
 
 /// Parser state
@@ -131,7 +135,12 @@ pub struct Parser {
 impl Parser {
     /// Create a new parser from source code
     pub fn new(input: &str) -> Self {
-        let mut lexer = Lexer::new(input);
+        Self::with_bigint_threshold(input, crate::lexer::DEFAULT_BIGINT_THRESHOLD)
+    }
+
+    /// Create a new parser with a custom big-integer threshold
+    pub fn with_bigint_threshold(input: &str, bigint_threshold: usize) -> Self {
+        let mut lexer = Lexer::with_bigint_threshold(input, bigint_threshold);
         let current = lexer.next_token();
         let current_ws = lexer.had_whitespace();
         let peek = lexer.next_token();
@@ -257,6 +266,10 @@ impl Parser {
             }
             Token::Plus | Token::Minus => Precedence::Sum,
             Token::Multiply | Token::Divide | Token::Modulo => Precedence::Product,
+            Token::BitAnd => Precedence::BitAnd,
+            Token::BitOr => Precedence::BitOr,
+            Token::BitXor => Precedence::BitXor,
+            Token::Shl | Token::Shr => Precedence::Shift,
             Token::LeftParen => Precedence::Call,
             Token::LeftBracket => Precedence::Index,
             _ => Precedence::Lowest,
@@ -929,9 +942,16 @@ impl Parser {
                 Ok(Expr::Number(num))
             }
             Token::BigInteger(s) => {
-                let big_int_str = s.clone();
+                // 解析期一次性构造 BigInt，避免每次求值重复解析字符串
+                let big_int = num_bigint::BigInt::parse_bytes(s.as_bytes(), 10).ok_or_else(
+                    || ParseError::InvalidExpression {
+                        message: format!("Invalid big integer literal: {}", s),
+                        line: self.current_line,
+                        column: self.current_column,
+                    },
+                )?;
                 self.next_token();
-                Ok(Expr::BigInteger(big_int_str))
+                Ok(Expr::BigInteger(big_int))
             }
             Token::String(s) => {
                 let string = s.clone();
@@ -983,7 +1003,12 @@ impl Parser {
             | Token::Greater
             | Token::GreaterEqual
             | Token::And
-            | Token::Or => self.parse_binary_expression(left),
+            | Token::Or
+            | Token::BitAnd
+            | Token::BitOr
+            | Token::BitXor
+            | Token::Shl
+            | Token::Shr => self.parse_binary_expression(left),
             Token::LeftParen => self.parse_call_expression(left),
             Token::LeftBracket => self.parse_index_expression(left),
             _ => Ok(left),
@@ -1105,6 +1130,11 @@ impl Parser {
             Token::GreaterEqual => BinOp::GreaterEqual,
             Token::And => BinOp::And,
             Token::Or => BinOp::Or,
+            Token::BitAnd => BinOp::BitAnd,
+            Token::BitOr => BinOp::BitOr,
+            Token::BitXor => BinOp::BitXor,
+            Token::Shl => BinOp::Shl,
+            Token::Shr => BinOp::Shr,
             _ => {
                 return Err(ParseError::InvalidExpression {
                     message: "Invalid binary operator".to_string(),

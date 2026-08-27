@@ -21,6 +21,7 @@ impl Aether {
             evaluator: Evaluator::with_permissions(permissions),
             cache: crate::cache::ASTCache::new(),
             optimizer: Optimizer::new(),
+            bigint_threshold: crate::lexer::DEFAULT_BIGINT_THRESHOLD,
         }
     }
 

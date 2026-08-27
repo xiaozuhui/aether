@@ -47,6 +47,14 @@ pub fn run_file(filename: &str, options: RunOptions) {
         }
     }
 
+    if let Some(threshold) = options.bigint_threshold {
+        engine.set_bigint_threshold(threshold);
+        if options.debug_mode {
+            println!("大整数阈值: {} 位", threshold);
+            println!();
+        }
+    }
+
     if options.json_error {
         let start = std::time::Instant::now();
         let cache_before = engine.cache_stats();

@@ -117,6 +117,13 @@ impl Optimizer {
                     return Expr::Number(result);
                 }
 
+                // 大整数常量折叠（Add/Subtract/Multiply；Divide 保持运行期 Fraction 语义）
+                if let (Expr::BigInteger(l), Expr::BigInteger(r)) = (&left, &right)
+                    && let Some(result) = Self::eval_const_bigint(l, &op, r)
+                {
+                    return Expr::BigInteger(result);
+                }
+
                 Expr::Binary {
                     left: Box::new(left),
                     op,
@@ -172,6 +179,20 @@ impl Optimizer {
             BinOp::Multiply => Some(left * right),
             BinOp::Divide if right != 0.0 => Some(left / right),
             BinOp::Modulo if right != 0.0 => Some(left % right),
+            _ => None,
+        }
+    }
+
+    /// 大整数常量折叠：只折叠保持整数语义的运算
+    fn eval_const_bigint(
+        left: &num_bigint::BigInt,
+        op: &BinOp,
+        right: &num_bigint::BigInt,
+    ) -> Option<num_bigint::BigInt> {
+        match op {
+            BinOp::Add => Some(left + right),
+            BinOp::Subtract => Some(left - right),
+            BinOp::Multiply => Some(left * right),
             _ => None,
         }
     }
