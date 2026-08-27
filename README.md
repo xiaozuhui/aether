@@ -20,6 +20,7 @@
 - [快速开始](#-快速开始)
 - [语言特性](#-语言特性)
 - [大整数支持](#-大整数支持)
+- [精确计算与精度计算](#-精确计算与精度计算)
 - [安全模型](#-安全模型)
 - [性能优化](#-性能优化)
 - [许可证](#-许可证)
@@ -356,8 +357,10 @@ Set TOTAL ADD_WITH_PRECISION(PRICE1, PRICE2, 2)
 PRINTLN(TOTAL)  // 显示: 49.98
 
 Set TAX MUL_WITH_PRECISION(TOTAL, 0.08, 2)
-PRINTLN(TAX)    // 显示: 4.00
+PRINTLN(TAX)    // 显示: 4
 ```
+
+完整函数清单与用法详见 [精确计算与精度计算](#-精确计算与精度计算)。
 
 ### 6. 文件系统操作
 
@@ -520,6 +523,106 @@ PRINTLN(A * B)
 ```
 
 Aether 提供了开箱即用的大整数支持。运行 `cargo test --test bigint_tests` 可验证大整数功能。
+
+---
+
+## 🧮 精确计算与精度计算
+
+Aether 提供两层机制规避浮点误差：**分数运算**（有理数，完全精确）与**精度计算**（固定小数位四舍五入）。
+
+### 分数运算
+
+```aether
+// 浮点数转换为分数（精确有理数）
+Set HALF TO_FRACTION(0.5)        // 1/2
+Set THIRD TO_FRACTION(0.333333)  // 333333/1000000
+
+// 转回浮点数 / 化为最简形式
+PRINTLN(TO_FLOAT(HALF))  // 0.5
+PRINTLN(SIMPLIFY(HALF))  // 1/2
+
+// 分数四则运算（结果保持精确）
+Set A TO_FRACTION(0.75)  // 3/4
+Set B TO_FRACTION(0.25)  // 1/4
+PRINTLN(FRAC_ADD(A, B))  // 1
+PRINTLN(FRAC_SUB(A, B))  // 1/2
+PRINTLN(FRAC_MUL(A, B))  // 3/16
+PRINTLN(FRAC_DIV(A, B))  // 3（整数结果不显示 /1）
+
+// 分子分母
+PRINTLN(NUMERATOR(A))    // 3
+PRINTLN(DENOMINATOR(A))  // 4
+
+// 数论
+PRINTLN(GCD(12, 18))     // 6
+PRINTLN(LCM(12, 18))     // 36
+```
+
+### 精度计算
+
+```aether
+// 四舍五入到指定小数位
+Set PI 3.14159265
+PRINTLN(ROUND_TO(PI, 2))  // 3.14
+PRINTLN(ROUND_TO(PI, 4))  // 3.1416
+
+// 带精度的四则运算：先对操作数取精度，运算后再对结果四舍五入
+PRINTLN(ADD_WITH_PRECISION(0.1, 0.2, 2))   // 0.3（而非 0.30000000000000004）
+PRINTLN(SUB_WITH_PRECISION(5.0, 3.333, 2)) // 1.67
+PRINTLN(MUL_WITH_PRECISION(3.456, 2.5, 2)) // 8.65（操作数先取精度：3.46 × 2.5）
+PRINTLN(DIV_WITH_PRECISION(10.0, 3.0, 2))  // 3.33
+```
+
+### 数组整体设置精度
+
+`SET_PRECISION` 作用于**数组**，对每个元素四舍五入；单个数字请使用 `ROUND_TO`：
+
+```aether
+Set NUMS [3.14159, 2.71828, 1.41421]
+PRINTLN(SET_PRECISION(NUMS, 2))  // [3.14, 2.72, 1.41]
+```
+
+### 应用示例
+
+金融计算（固定 2 位小数）：
+
+```aether
+Set PRICE1 19.99
+Set PRICE2 29.99
+Set PRICE3 9.99
+
+Set SUBTOTAL ADD_WITH_PRECISION(PRICE1, PRICE2, 2)
+Set SUBTOTAL ADD_WITH_PRECISION(SUBTOTAL, PRICE3, 2)
+PRINTLN(SUBTOTAL)  // 59.97
+
+Set TAX MUL_WITH_PRECISION(SUBTOTAL, 0.08, 2)
+PRINTLN(TAX)       // 4.8
+
+Set TOTAL ADD_WITH_PRECISION(SUBTOTAL, TAX, 2)
+PRINTLN(TOTAL)     // 64.77
+```
+
+精确求和（浮点陷阱的对照）：
+
+```aether
+Set F1 TO_FRACTION(0.66666)
+Set F2 TO_FRACTION(0.33333)
+PRINTLN(FRAC_ADD(F1, F2))  // 99999/100000（精确值，非近似）
+```
+
+### 选型建议
+
+| 需求 | 方案 |
+|------|------|
+| 完全精确（金融累计、有理数推导） | 分数运算（`TO_FRACTION` + `FRAC_*`） |
+| 固定小数位数的结果 | 精度计算（`*_WITH_PRECISION`、`ROUND_TO`） |
+| 常规科学计算 | 标准浮点数 |
+
+注意事项：
+
+- 分数在多次运算后分子分母可能变大，适合有限次运算，不适合在循环中大量累积
+- `PRINTLN` 不保留小数尾零（`4.80` 显示为 `4.8`），需要固定格式请在宿主侧格式化
+- 金融计算通常用 2 位小数，科学计算按需 4-6 位，过高精度有性能成本
 
 ---
 
@@ -726,7 +829,6 @@ engine.set_optimization(
 ### 专题指南
 
 - [薪酬计算指南](docs/PAYROLL_GUIDE.md) - 工资、加班费、个税、社保计算(78个函数)
-- [精确计算指南](docs/PRECISION_GUIDE.md) - 分数运算、固定精度金融计算
 
 ---
 
