@@ -30,7 +30,7 @@ use crate::{Aether, Value};
 /// use aether::engine::EnginePool;
 ///
 /// // 创建线程局部引擎池
-/// let pool = EnginePool::new(4);
+/// let mut pool = EnginePool::new(4);
 ///
 /// // 使用引擎
 /// {
@@ -54,8 +54,11 @@ use crate::{Aether, Value};
 ///
 /// 如果你只需要一个引擎实例，使用 `GlobalEngine` 更简单。
 pub struct EnginePool {
-    engines: Vec<Aether>,
-    available: Vec<bool>,
+    /// 槽位为 `None` 表示该引擎已被借出。
+    ///
+    /// 使用 `Option<Aether>` 而非 `Aether`，避免 `mem::take`
+    /// 需要构造默认引擎作占位（那会退化为每次 acquire 都新建引擎）。
+    engines: Vec<Option<Aether>>,
 }
 
 impl EnginePool {
@@ -74,15 +77,10 @@ impl EnginePool {
     /// let pool = EnginePool::new(4);
     /// ```
     pub fn new(capacity: usize) -> Self {
-        let mut engines = Vec::with_capacity(capacity);
-        let available = vec![true; capacity];
-
         // 预创建引擎实例
-        for _ in 0..capacity {
-            engines.push(Aether::new());
-        }
+        let engines = (0..capacity).map(|_| Some(Aether::new())).collect();
 
-        Self { engines, available }
+        Self { engines }
     }
 
     /// 从池中获取引擎（自动归还）
@@ -95,11 +93,8 @@ impl EnginePool {
     /// 每次获取前自动清空环境变量，保证隔离性。
     pub fn acquire(&mut self) -> PooledEngine {
         // 查找可用引擎
-        for (i, &is_available) in self.available.iter().enumerate() {
-            if is_available {
-                self.available[i] = false;
-                let mut engine = std::mem::take(&mut self.engines[i]);
-
+        for (i, slot) in self.engines.iter_mut().enumerate() {
+            if let Some(mut engine) = slot.take() {
                 // 重置环境（保证隔离性）
                 engine.evaluator.reset_env();
 
@@ -122,8 +117,7 @@ impl EnginePool {
 
     /// 归还引擎到池中
     fn return_engine(&mut self, index: usize, engine: Aether) {
-        self.engines[index] = engine;
-        self.available[index] = true;
+        self.engines[index] = Some(engine);
     }
 
     /// 获取池的容量
@@ -133,7 +127,7 @@ impl EnginePool {
 
     /// 获取池中当前可用的引擎数量
     pub fn available(&self) -> usize {
-        self.available.iter().filter(|&&x| x).count()
+        self.engines.iter().flatten().count()
     }
 }
 
