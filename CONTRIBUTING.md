@@ -1,5 +1,7 @@
 # Contributing to Aether
 
+English | [简体中文](CONTRIBUTING.zh-CN.md)
+
 Thank you for your interest in contributing to Aether! We welcome contributions from the community.
 
 ## How to Contribute
