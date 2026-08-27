@@ -16,7 +16,6 @@ pub mod math;
 pub mod network;
 pub mod payroll;
 pub mod precise;
-pub mod report;
 pub mod string;
 pub mod trace;
 pub mod types;
