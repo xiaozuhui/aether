@@ -54,8 +54,8 @@ use crate::{Aether, Value};
 /// // GlobalEngine - 性能最优，但单线程
 /// let result1 = GlobalEngine::eval_isolated("Set X 10\n(X + 20)").unwrap();
 ///
-/// // PooledEngine - 多线程，性能好
-/// let pool = EnginePool::new(4);
+/// // PooledEngine - 引擎池，单线程内多引擎实例复用
+/// let mut pool = EnginePool::new(4);
 /// let result2 = pool.acquire().eval("Set X 10\n(X + 20)").unwrap();
 ///
 /// // ScopedEngine - API最简洁，完全隔离

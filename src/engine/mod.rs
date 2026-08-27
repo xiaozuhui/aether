@@ -10,7 +10,7 @@
 //! use aether::engine::GlobalEngine;
 //!
 //! // 使用全局单例（隔离环境，但保留AST缓存）
-//! let result = GlobalEngine::eval_isolated("Set X 10\n(X + 20)")?;
+//! let result = GlobalEngine::eval_isolated("Set X 10\n(X + 20)").unwrap();
 //! println!("Result: {}", result);
 //! ```
 //!
@@ -18,7 +18,7 @@
 //! - ✅ 性能最优（只创建一次引擎）
 //! - ✅ AST缓存效果最佳（可达142x加速）
 //! - ✅ 环境隔离（每次eval前清空变量）
-//! - ⚠️ 需要线程同步（Mutex）
+//! - ⚠️ 线程局部（thread_local，每线程独立实例，线程间不共享状态）
 //!
 //! ## 2. PooledEngine - 引擎池模式
 //!
@@ -34,7 +34,7 @@
 //! for i in 0..100 {
 //!     let mut engine = pool.acquire(); // 自动获取
 //!     let code = format!("Set X {}\n(X * 2)", i);
-//!     engine.eval(&code)?;
+//!     engine.eval(&code).unwrap();
 //! } // 作用域结束自动归还
 //! ```
 //!
@@ -55,7 +55,7 @@
 //! let result = ScopedEngine::with(|engine| {
 //!     engine.eval("Set X 10")?;
 //!     engine.eval("(X + 20)")
-//! })?;
+//! }).unwrap();
 //! ```
 //!
 //! **特点**：

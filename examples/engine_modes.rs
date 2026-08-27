@@ -2,8 +2,8 @@
 //! Aether 引擎模式示例
 //!
 //! 演示三种高性能引擎模式的使用方法：
-//! 1. GlobalEngine - 全局单例（单线程最优）
-//! 2. EnginePool - 引擎池（多线程场景）
+//! 1. GlobalEngine - 线程局部单例（高频调用最优）
+//! 2. EnginePool - 引擎池（单线程内多引擎实例复用）
 //! 3. ScopedEngine - 闭包模式（简洁API）
 
 use aether::engine::{EnginePool, GlobalEngine, ScopedEngine};
@@ -151,11 +151,17 @@ fn performance_comparison() {
     let scoped_time = start.elapsed();
     println!("   ScopedEngine:  {:?}", scoped_time);
 
-    // 对比
+    // 对比（按实测耗时动态排名，避免硬编码结论与数据矛盾）
+    let mut ranking = [
+        ("GlobalEngine", global_time.as_nanos()),
+        ("EnginePool", pool_time.as_nanos()),
+        ("ScopedEngine", scoped_time.as_nanos()),
+    ];
+    ranking.sort_by_key(|&(_, t)| t);
     println!("\n   性能排名:");
-    println!("   1️⃣  GlobalEngine (最快，AST缓存效果最好)");
-    println!("   2️⃣  EnginePool   (略慢，但避免频繁创建)");
-    println!("   3️⃣  ScopedEngine (最慢，每次创建新引擎)");
+    for (i, (name, _)) in ranking.iter().enumerate() {
+        println!("   {}️⃣  {}", i + 1, name);
+    }
 
     // AST 缓存效果
     if let Some(stats) = GlobalEngine::cache_stats() {
