@@ -512,7 +512,7 @@ CALC_YEAR_END_BONUS(15000, 1.2)
 
 ## 相关文档
 
-- [用户指南](USER_GUIDE.md)
+- [README 语言参考](../README.md#-语言参考)
 - [错误报告指南](ERROR_REPORTING.md)
 - [开发指南](../DEVELOPMENT.md)
 - [变更日志](../CHANGELOG.md)

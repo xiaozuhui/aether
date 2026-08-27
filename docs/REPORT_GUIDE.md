@@ -326,5 +326,5 @@ PRINT("数据透视表已生成！")
 ## 下一步
 
 - 查看 [IO 指南](IO_GUIDE.md) 了解文件操作
-- 查看 [用户指南](USER_GUIDE.md) 了解语言基础
+- 查看 [README 语言参考](../README.md#-语言参考) 了解语言基础
 - 查看示例文件 `examples/report_demo.aether`

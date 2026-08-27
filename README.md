@@ -35,11 +35,11 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - 🚀 **高性能**: 基于 Rust，带 AST 缓存和常量折叠优化
 - 🔌 **易于集成**: 简单的 API，支持 Rust/Go/TypeScript
 - 🌍 **跨平台**: x86_64、ARM64、WebAssembly
-- ✨ **现代特性**: Generator、惰性求值、闭包
+- ✨ **现代特性**: 闭包、Lambda 表达式、模块系统 (Import/Export)
 - 📝 **简洁语法**: 易学易读，UPPER_SNAKE_CASE 命名
 - 🔒 **安全优先**: 库模式默认禁用 IO，CLI 模式自动启用
 
-### 标准库 (200+ 函数)
+### 内置函数库 (150 个内置函数)
 
 - **基础**: I/O、类型转换、字符串/数组/字典操作
 - **文件系统**: READ_FILE, WRITE_FILE, LIST_DIR, CREATE_DIR 等
@@ -310,43 +310,34 @@ While (I < 5) {
 }
 ```
 
-### 3. Generator (惰性序列)
+### 3. 闭包
+
+内层函数可以捕获外层作用域的变量（读取）：
 
 ```aether
-Generator FIBONACCI (LIMIT) {
-    Set A 0
-    Set B 1
-    Set COUNT 0
-    
-    While (COUNT < LIMIT) {
-        Yield A
-        Set NEXT (A + B)
-        Set A B
-        Set B NEXT
-        Set COUNT (COUNT + 1)
+Func MAKE_ADDER (BASE) {
+    Func ADD (X) {
+        Return (BASE + X)   // 捕获外层的 BASE
     }
+    Return ADD
 }
 
-// 使用
-For NUM In FIBONACCI(10) {
-    PRINTLN(NUM)
-}
+Set ADD5 MAKE_ADDER(5)
+PRINTLN(ADD5(10))   // 15
 ```
 
-### 4. 惰性求值
+> 注意：闭包目前只支持**读取**捕获的变量。在内层函数里对捕获变量重新 `Set` 不会影响外层作用域。
+
+### 4. Lambda 表达式
+
+`MAP`/`FILTER`/`REDUCE` 等高阶函数可以直接使用 `Func (参数) { ... }` 内联写法：
 
 ```aether
-// 延迟计算，仅在需要时执行
-Lazy EXPENSIVE_DATA (
-    PRINTLN("正在加载大数据集...")
-    Return READ_FILE("big_data.json")
-)
+Set DOUBLED MAP([1, 2, 3], Func (X) { Return (X * 2) })
+PRINTLN(DOUBLED)   // [2, 4, 6]
 
-// 数据仅在访问时加载
-If (NEEDS_ANALYSIS) {
-    Set DATA EXPENSIVE_DATA  // 此时才执行
-    PROCESS(DATA)
-}
+Set SUM REDUCE([1, 2, 3, 4], Func (ACC, X) { Return (ACC + X) }, 0)
+PRINTLN(SUM)       // 10
 ```
 
 ### 5. 精确和精度算术
@@ -578,7 +569,6 @@ main();
 
 ### 用户指南
 
-- [完整用户指南](docs/USER_GUIDE.md) - 所有语言特性和内置函数的完整参考手册
 - [调试指南](docs/DEBUG_GUIDE.md) - 调试工具、错误追踪和排错技巧
 - [引擎模式指南](docs/ENGINE_MODES_GUIDE.md) - GlobalEngine/EnginePool/ScopedEngine 使用说明
 - [安全沙箱指南](docs/SANDBOX_GUIDE.md) - 权限控制、IO限制和安全最佳实践
@@ -642,99 +632,272 @@ open target/criterion/report/index.html
 
 ---
 
-## 📖 内置函数速查
+## 📖 语言参考
 
-### I/O 操作
+### 语法要点
+
+- **块结构**：统一使用大括号 `{ }`，不支持 `EndIf`/`EndFunction` 等结束关键字
+- **注释**：`//` 单行注释、`/* ... */` 块注释（不支持 `#`）
+- **命名**：变量名和函数名必须使用 `UPPER_SNAKE_CASE`（函数**参数**允许小写）
+- **内置函数**：全部为 `UPPER_SNAKE_CASE`，如 `PRINTLN`、`TO_STRING`、`LINEAR_REGRESSION`
+- **条件表达式**：`If`/`While` 的条件需用括号包裹，如 `If (X > 10) { ... }`
+
+```aether
+// 数据类型
+Set NUM 42            // Number
+Set PI_TEXT "3.14"    // String
+Set FLAG True         // Boolean
+Set NOTHING Null      // Null
+Set LIST [1, 2, 3]    // Array
+Set USER {"name": "Alice", "age": 30}  // Dict
+
+// 函数定义与调用
+Func GREET (name) {
+    Return ("Hello, " + name + "!")
+}
+PRINTLN(GREET("Aether"))
+
+// 控制流
+If (NUM > 10) {
+    PRINTLN("大于10")
+} Elif (NUM == 10) {
+    PRINTLN("等于10")
+} Else {
+    PRINTLN("小于10")
+}
+
+For I In RANGE(1, 10) {
+    PRINTLN(I)
+}
+
+Set I 0
+While (I < 10) {
+    PRINTLN(I)
+    Set I (I + 1)
+}
+```
+
+### 命令行工具
+
+```bash
+aether my_script.aether        # 运行脚本
+aether                         # 无参数启动交互式 REPL
+```
+
+常用选项：
+
+| 选项 | 说明 |
+| ------ | ------ |
+| `--check` | 只检查语法，不执行 |
+| `--ast` | 显示抽象语法树 (AST) |
+| `--debug` | 调试模式（打印额外运行信息） |
+| `--debugger` | 启动交互式调试器（类似 GDB） |
+| `--metrics` / `--metrics-json[-pretty]` | 执行后输出性能指标 |
+| `--trace` / `--trace-stats` | 打印 TRACE 缓冲区内容/统计 |
+| `--trace-buffer-size <N>` | 设置 TRACE 缓冲区容量 |
+| `--json-error` | 出错时输出结构化 JSON 错误 |
+| `--no-stdlib` | 不自动加载标准库 |
+
+REPL 提示符为 `aether[N]>`，输入 `help` 查看帮助，`exit` 或 `quit` 退出：
+
+```text
+aether[1]> Set X 10
+aether[2]> Set Y 20
+aether[3]> (X + Y)
+30
+```
+
+### 内置函数一览（共 150 个）
+
+以下函数名均为实际注册名，可直接调用。
+
+#### I/O 与调试（8 个）
 
 ```aether
 PRINT, PRINTLN, INPUT
+TRACE, TRACE_DEBUG, TRACE_INFO, TRACE_WARN, TRACE_ERROR
 ```
 
-### 文件系统
+#### 类型（4 个）
+
+```aether
+LEN, TYPE, TO_STRING, TO_NUMBER
+```
+
+- `LEN(x)` - Array/String/Dict 的长度
+- `TYPE(x)` - 类型名称："Number"、"String"、"Boolean"、"Null"、"Array"、"Dict"、"Function" 等
+- `TO_NUMBER("123")` - 字符串转数字
+
+#### 数组（10 个）
+
+```aether
+RANGE, PUSH, POP, MAP, FILTER, REDUCE
+JOIN, REVERSE, SORT, SUM
+```
+
+- `RANGE(start, end, [step])` - 生成数字序列（不包含 end）
+- `PUSH(arr, v)` - 末尾添加元素（原地修改）
+- `MAP(arr, Func (X) { ... })` - 对每个元素应用函数
+- `FILTER(arr, Func (X) { ... })` - 保留使谓词为 True 的元素
+- `REDUCE(arr, Func (ACC, X) { ... }, init)` - 累积计算
+- `JOIN(arr, sep)` - 连接为字符串
+
+#### 字符串（13 个）
+
+```aether
+SPLIT, UPPER, LOWER, TRIM, CONTAINS
+STARTS_WITH, ENDS_WITH, REPLACE, REPEAT
+STRLEN, STRSLICE, INDEXOF, CHARAT
+```
+
+- `STRSLICE(s, start, end)` - 子串
+- `INDEXOF(s, sub)` - 子串位置
+- `CHARAT(s, i)` - 取指定位置字符
+
+#### 字典（4 个）
+
+```aether
+KEYS, VALUES, HAS, MERGE
+```
+
+#### 数学（57 个）
+
+```aether
+// 基础
+ABS, FLOOR, CEIL, ROUND, ROUND_TO, SIGN, CLAMP
+FACTORIAL, HYPOT
+
+// 三角函数（弧度制）
+SIN, COS, TAN, ASIN, ACOS, ATAN, ATAN2
+SINH, COSH, TANH
+
+// 指数与对数
+SQRT, POW, EXP, EXP2, EXPM1, LN, LOG, LOG2, LOG1P
+
+// 特殊函数
+ERF, GAMMA
+
+// 统计
+MEAN, MEDIAN, VARIANCE, STD, QUANTILE
+
+// 概率分布与回归（NORMAL_PDF / NORMAL_CDF 支持可选 mean、std 参数）
+LINEAR_REGRESSION, NORMAL_PDF, NORMAL_CDF, POISSON_PMF
+
+// 向量
+DOT, NORM, CROSS, DISTANCE, NORMALIZE
+
+// 矩阵
+MATMUL, TRANSPOSE, DETERMINANT, INVERSE
+
+// 常量（零参数函数）
+PI(), E(), TAU(), PHI()
+```
+
+#### 文件系统（7 个）
 
 ```aether
 READ_FILE, WRITE_FILE, APPEND_FILE
-DELETE_FILE, FILE_EXISTS, CREATE_DIR
-LIST_DIR, DELETE_DIR, FILE_SIZE
+DELETE_FILE, FILE_EXISTS, CREATE_DIR, LIST_DIR
 ```
 
-### 网络
+#### 网络（4 个）
 
 ```aether
 HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
 ```
 
-### 类型转换
+#### JSON（2 个）
 
 ```aether
-TO_STRING, TO_NUMBER, TYPE_OF
-TO_ARRAY, TO_DICT, IS_NULL
+JSON_PARSE, JSON_STRINGIFY
 ```
 
-### 数组操作
+#### 精确计算（14 个）
 
 ```aether
-PUSH, POP, SHIFT, UNSHIFT
-MAP, FILTER, REDUCE, SORT
-FIND, INCLUDES, JOIN, SLICE
-```
-
-### 字符串操作
-
-```aether
-LEN, SPLIT, TRIM, UPPER, LOWER
-REPLACE, SUBSTRING, STARTS_WITH, ENDS_WITH
-```
-
-### 数学函数
-
-```aether
-ABS, SQRT, POW, SIN, COS, TAN
-MIN, MAX, SUM, AVG, MEDIAN
-STDEV, VARIANCE, CORRELATION
-LINEAR_REGRESSION, MATRIX_INVERSE
-```
-
-### 精确计算
-
-```aether
-TO_FRACTION, FRAC_ADD, FRAC_SUB
-FRAC_MUL, FRAC_DIV, TO_FLOAT
+TO_FRACTION, TO_FLOAT, FRAC_ADD, FRAC_SUB, FRAC_MUL, FRAC_DIV
+NUMERATOR, DENOMINATOR, SIMPLIFY, GCD, LCM
 ADD_WITH_PRECISION, SUB_WITH_PRECISION
 MUL_WITH_PRECISION, DIV_WITH_PRECISION
 ```
 
-### 薪资计算 (78 个函数)
+#### 薪资计算（78 个）
+
+涵盖基本工资、加班费、个税、年终奖、社保、工作日/节假日计算等，详见 [薪酬计算指南](docs/PAYROLL_GUIDE.md)。
+
+#### 其他
 
 ```aether
-// 基本工资
-HOURLY_TO_DAILY, DAILY_TO_MONTHLY
-MONTHLY_TO_ANNUAL, ANNUAL_TO_MONTHLY
-
-// 加班费
-CALC_WEEKDAY_OVERTIME  // 1.5x
-CALC_WEEKEND_OVERTIME  // 2x
-CALC_HOLIDAY_OVERTIME  // 3x
-
-// 个税
-CALC_PERSONAL_TAX      // 7级累进
-CALC_BONUS_TAX         // 年终奖税
-
-// 社保
-CALC_SOCIAL_INSURANCE
-CALC_HOUSING_FUND
+HELP            // 查看内置函数帮助（REPL 中输入 help 同效）
+CLONE, SET_PRECISION
 ```
+
+### 示例：统计与预测
+
+```aether
+// 销售数据分析
+Set MONTHS [1, 2, 3, 4, 5, 6]
+Set SALES [120, 135, 158, 172, 195, 210]
+
+PRINTLN("平均销售额: " + TO_STRING(MEAN(SALES)))
+PRINTLN("标准差: " + TO_STRING(STD(SALES)))
+
+// 线性回归预测：返回 [斜率, 截距, R²]
+Set MODEL LINEAR_REGRESSION(MONTHS, SALES)
+Set SLOPE MODEL[0]
+Set INTERCEPT MODEL[1]
+
+// 预测第 7 个月
+Set MONTH7 (SLOPE * 7 + INTERCEPT)
+PRINTLN("预测第7个月销量: " + TO_STRING(MONTH7))
+```
+
+### 示例：质量控制（正态分布）
+
+```aether
+// 产品重量分布分析 (μ=500g, σ=5g)
+Set PASS_RATE (NORMAL_CDF(510, 500, 5) - NORMAL_CDF(490, 500, 5))
+PRINTLN("合格率: " + TO_STRING(PASS_RATE * 100) + "%")
+```
+
+### 示例：解线性方程组
+
+```aether
+// 2x + y = 5, x + 3y = 7  =>  x = 1.6, y = 1.8
+Set A [[2, 1], [1, 3]]
+Set B [[5], [7]]
+
+Set X MATMUL(INVERSE(A), B)
+PRINTLN("解: " + TO_STRING(X))
+```
+
+### 错误处理
+
+Aether 会在解析和运行时检测以下错误，并附带源码位置信息：
+
+- **命名错误**: 变量/函数名不符合 UPPER_SNAKE_CASE
+- **解析错误**: 语法不符合预期（含行列号与源码上下文）
+- **类型错误**: 操作不支持的类型
+- **除零错误**: 除法或模运算分母为零
+- **未定义变量**: 使用未声明的变量
+- **参数错误**: 内置函数参数数量不匹配
+
+### 性能提示
+
+1. **数组操作**: 优先使用内置函数（MAP、FILTER、REDUCE）而不是手写循环
+2. **字符串拼接**: 大量拼接时先用数组收集再 `JOIN`
+3. **矩阵运算**: 大矩阵的 `DETERMINANT`/`INVERSE` 计算较慢
 
 ---
 
 ## 🎯 开发状态
 
-### 当前版本: v0.4.3
+### 当前版本: v0.5.3
 
 **已完成：**
 
 - ✅ 完整的解释器 (Lexer, Parser, Evaluator)
-- ✅ 190+ 内置函数
+- ✅ 150 个内置函数
 - ✅ 增强的错误报告
 - ✅ 严格的命名约定
 - ✅ AST 缓存和性能优化
