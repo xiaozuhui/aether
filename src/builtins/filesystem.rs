@@ -2,10 +2,9 @@
 //! 文件系统IO操作函数
 
 use crate::evaluator::RuntimeError;
-use crate::sandbox::get_filesystem_validator;
 use crate::value::Value;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// 辅助函数：安全地获取字符串参数
 fn get_string(val: &Value) -> Result<String, RuntimeError> {
@@ -15,20 +14,6 @@ fn get_string(val: &Value) -> Result<String, RuntimeError> {
             expected: "String".to_string(),
             got: format!("{:?}", val),
         }),
-    }
-}
-
-/// 辅助函数：验证路径（如果配置了验证器）
-fn validate_path(path_str: &str) -> Result<std::path::PathBuf, RuntimeError> {
-    // 如果配置了路径验证器，使用它验证路径
-    if let Some(validator) = get_filesystem_validator() {
-        let path = Path::new(path_str);
-        validator
-            .validate_and_normalize(path)
-            .map_err(|e| RuntimeError::CustomError(format!("Path validation failed: {}", e)))
-    } else {
-        // 没有配置验证器，直接使用原始路径
-        Ok(std::path::PathBuf::from(path_str))
     }
 }
 
@@ -53,7 +38,7 @@ pub fn read_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
 
     // 验证路径（如果配置了验证器）
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::read_to_string(&validated_path) {
         Ok(content) => Ok(Value::String(content)),
@@ -88,7 +73,7 @@ pub fn write_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let content = get_string(&args[1])?;
 
     // 验证路径
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::write(&validated_path, content) {
         Ok(_) => Ok(Value::Boolean(true)),
@@ -123,7 +108,7 @@ pub fn append_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let content = get_string(&args[1])?;
 
     // 验证路径
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::OpenOptions::new()
         .create(true)
@@ -170,7 +155,7 @@ pub fn delete_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
 
     // 验证路径
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::remove_file(&validated_path) {
         Ok(_) => Ok(Value::Boolean(true)),
@@ -222,7 +207,7 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
 
     // 验证路径
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::read_dir(&validated_path) {
         Ok(entries) => {
@@ -273,7 +258,7 @@ pub fn create_dir(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
 
     // 验证路径
-    let validated_path = validate_path(&path_str)?;
+    let validated_path = PathBuf::from(&path_str);
 
     match fs::create_dir_all(&validated_path) {
         Ok(_) => Ok(Value::Boolean(true)),

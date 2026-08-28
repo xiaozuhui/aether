@@ -180,7 +180,6 @@ pub mod module_system;
 pub mod optimizer;
 pub mod parser;
 pub mod runtime;
-pub mod sandbox;
 pub mod stdlib;
 pub mod token;
 pub mod value;

@@ -13,10 +13,5 @@ pub use crate::parser::{ParseError, Parser};
 pub use crate::runtime::{
     ExecutionLimitError, ExecutionLimits, TraceEntry, TraceFilter, TraceLevel, TraceStats,
 };
-pub use crate::sandbox::{
-    ExecutionMetrics, MetricsCollector, MetricsSnapshot, ModuleCacheManager, ModuleCacheStats,
-    ModuleMetrics, PathRestriction, PathValidationError, PathValidator, SandboxConfig,
-    SandboxPolicy, ScopedValidator,
-};
 pub use crate::token::Token;
 pub use crate::value::Value;

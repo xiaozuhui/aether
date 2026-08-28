@@ -614,7 +614,7 @@ PRINTLN(FRAC_ADD(F1, F2))  // 99999/100000（精确值，非近似）
 ### 选型建议
 
 | 需求 | 方案 |
-|------|------|
+| ------ | ------ |
 | 完全精确（金融累计、有理数推导） | 分数运算（`TO_FRACTION` + `FRAC_*`） |
 | 固定小数位数的结果 | 精度计算（`*_WITH_PRECISION`、`ROUND_TO`） |
 | 常规科学计算 | 标准浮点数 |
@@ -654,6 +654,8 @@ let mut engine = Aether::with_permissions(permissions);
 // 3. 完全权限
 let mut engine = Aether::with_all_permissions();
 ```
+
+IO 权限是进程内的能力闸门：默认禁用全部 IO，防止脚本误访宿主资源。它不是对抗恶意代码的安全边界——运行来源不受信任的脚本时，请在容器等外部沙箱中执行 Aether 进程。资源耗尽类风险（死循环、深递归）由执行限额兜底（`ExecutionLimits`：步数 / 时限 / 递归深度，见 `src/runtime/limits.rs`）。
 
 ### 命名约定强制
 
@@ -786,7 +788,7 @@ let result = ScopedEngine::eval_with_all_permissions(code)?;
 #### 模式对比
 
 | 模式 | 环境隔离方式 | AST 缓存 | 适用场景 |
-|------|------------|---------|---------|
+| ------ | ------------ | --------- | --------- |
 | GlobalEngine | 执行前 `reset_env()` | ✅ 跨执行累积 | 单线程高频调用（配置解析、规则引擎） |
 | EnginePool | `acquire()` 时 `reset_env()` | ✅ 每引擎独立 | 单线程内需多个引擎实例 |
 | ScopedEngine | 每次新建引擎 | ❌ | 临时执行、偶尔使用、极简 API |
@@ -798,7 +800,7 @@ let result = ScopedEngine::eval_with_all_permissions(code)?;
 Apple M2、release 构建下重复执行 `"Set X 10\nSet Y 20\n(X + Y)"`，预热后每轮 10000 次迭代、共 5 轮取中位数：
 
 | 模式 | 单次执行耗时 | 相对性能 |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | `GlobalEngine::eval_isolated` | ~22µs | 基准（AST 缓存稳态命中率 ~100%） |
 | `EnginePool` acquire+eval | ~22µs | 持平 |
 | `ScopedEngine::eval` | ~39µs | 1.8x 慢（每次新建引擎，无法复用缓存） |
@@ -834,7 +836,7 @@ aether --check script.aether
 
 输出示例：
 
-```
+```shell
 正在检查 'script.aether'...
 ✓ 语法检查通过
   - 24 个词法单元
@@ -855,7 +857,7 @@ aether --ast script.aether
 
 输出示例（源码为 `Set X 10` / `Set DOUBLE(Lambda X -> X * 2)`）：
 
-```
+```shell
 === 抽象语法树 (AST) ===
 文件: script.aether
 
@@ -894,7 +896,7 @@ aether --debug script.aether
 
 输出示例：
 
-```
+```shell
 === 调试模式 ===
 文件: script.aether
 标准库: 已加载
@@ -919,7 +921,7 @@ aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区
 
 `--trace` 输出示例（结构化 TRACE 条目带 `[级别:类别]` 前缀；`TRACE(value)` 只记录裸值）：
 
-```
+```shell
 === TRACE ===
 #1 [DEBUG:demo] dbg
 #2 [INFO:api] 42
@@ -927,7 +929,7 @@ aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区
 
 `--trace-stats` 输出示例：
 
-```
+```shell
 === TRACE STATS ===
 buffer_size: 1024
 total_entries: 2
@@ -948,7 +950,7 @@ aether --metrics script.aether
 
 输出示例：
 
-```
+```shell
 === METRICS ===
 wall_time_ms: 12
 step_count: 42
@@ -975,7 +977,7 @@ aether --debugger script.aether
 
 启动后先进入**运行前提示符**，在程序开始执行前设置断点：
 
-```
+```shell
 Aether Debugger v1.0
 Debugging: script.aether
 Type 'help' for available commands
@@ -985,7 +987,7 @@ Type 'help' for available commands
 
 输入 `continue`（或 `step`）后程序开始执行；命中断点或单步条件时暂停，显示位置与源码上下文并进入**暂停提示符**：
 
-```
+```shell
 (aether-debug) continue
 Continuing...
 
@@ -1045,7 +1047,7 @@ Program finished.
 
 `Import` 的模块可以按 `文件名:行号` 设置断点。模块**顶层**语句在加载时触发；模块内**函数体**的行断点在函数被调用时按定义文件触发：
 
-```
+```shell
 (aether-debug) break math.aether:2
 Breakpoint 1 set at math.aether:2
 (aether-debug) continue
@@ -1075,7 +1077,7 @@ X = 4
 
 语法错误与运行时错误都会附带源码上下文与位置指示器：
 
-```
+```shell
 ✗ 语法错误:
 Parse error at line 13, column 2: Expected RightParen, found Newline
 
@@ -1086,7 +1088,7 @@ Parse error at line 13, column 2: Expected RightParen, found Newline
   14 |
 ```
 
-```
+```shell
 ✗ 运行时错误:
 Runtime error: Undefined variable: UNKNOWN_VAR
 
@@ -1099,7 +1101,7 @@ Runtime error: Undefined variable: UNKNOWN_VAR
 
 REPL 模式同样显示详细错误：
 
-```
+```shell
 aether[1]> Set X (10 +
 ✗ Parse error at line 1, column 14: Expected RightParen, found EOF
 
@@ -1112,7 +1114,7 @@ aether[1]> Set X (10 +
 
 `cargo build` 时会自动检查所有内置标准库文件的语法，确保标准库代码始终有效：
 
-```
+```shell
 warning: aether-azathoth@0.5.4: 检查所有内置标准库...
 warning: aether-azathoth@0.5.4: ✓ sorting.aether
 warning: aether-azathoth@0.5.4: ✓ cli_utils.aether
@@ -1131,12 +1133,6 @@ warning: aether-azathoth@0.5.4: 共 16 个标准库文件检查成功！
 ---
 
 ## 📚 更多文档
-
-### 用户指南
-
-- [安全沙箱指南](docs/SANDBOX_GUIDE.md) - 权限控制、IO限制和安全最佳实践
-
-### 专题指南
 
 - [薪酬计算指南](docs/PAYROLL_GUIDE.md) - 工资、加班费、个税、社保计算(78个函数)
 

@@ -20,6 +20,7 @@ Cargo.toml 版本号已升至 0.5.4，尚未打 tag 发布。
 ### 移除
 
 - **移除全部语言绑定**：删除 C FFI 层（`src/ffi.rs`、`aether.h`、cbindgen）、WASM 导出层与 TypeScript 绑定及全部相关依赖。项目定位收敛为纯 Rust 库 + CLI 两种形态，WASM 目标不再可用，跨平台仅支持 x86_64 与 ARM64
+- **移除沙箱模块**：删除 `src/sandbox/`（PathValidator / ScopedValidator / SandboxConfig / 指标收集 / 模块缓存，约 1200 行）与 `docs/SANDBOX_GUIDE.md`。不可信脚本的安全隔离交给容器等外部沙箱；进程内保留 IOPermissions（IO 默认禁用、按权限条件注册）与 ExecutionLimits（步数 / 时限 / 递归深度限额）。默认行为不变——路径验证从未被任何构造器激活；对手动使用 `ScopedValidator` 的宿主属破坏性 API 移除
 - 清理报表功能的最后残留（占位模块、过时文档与失效示例）
 
 ### 新增
@@ -46,7 +47,7 @@ Cargo.toml 版本号已升至 0.5.4，尚未打 tag 发布。
 
 ### 文档
 
-- USER_GUIDE、BIGINT_GUIDE、ENGINE_MODES_GUIDE、PRECISION_GUIDE 四份独立指南陆续并入 README，DEBUG_GUIDE 亦并入 README「调试与排错」章节后删除，`docs/` 收敛至 PAYROLL、SANDBOX 两份指南
+- USER_GUIDE、BIGINT_GUIDE、ENGINE_MODES_GUIDE、PRECISION_GUIDE 四份独立指南陆续并入 README，DEBUG_GUIDE 亦并入 README「调试与排错」章节后删除；SANDBOX_GUIDE 随沙箱模块一并删除，`docs/` 仅余 PAYROLL 一份指南
 - 调试指南重写调试器章节：删除文末粘贴的实现报告，修正编号顺序与 `--trace` 示例格式，补 `--debugger` / `--json-error` / `--bigint-threshold` 用法与已知限制
 - 新增「引擎模式」章节：GlobalEngine / EnginePool / ScopedEngine 用法、对比与实测性能
 - 修正引擎模块注释中的并发语义误导（三种模式均为线程局部，无需 Mutex），修复 5 处无法编译的文档示例
