@@ -4,6 +4,7 @@ use crate::optimizer::Optimizer;
 
 mod cache;
 mod constructors;
+mod debug;
 mod eval;
 mod limits;
 mod stdlib;

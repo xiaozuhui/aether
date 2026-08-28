@@ -3,6 +3,8 @@
 //!
 //! This module defines the structure of Aether programs as a tree of nodes.
 
+use std::collections::HashSet;
+
 /// Binary operators
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
@@ -87,15 +89,15 @@ pub enum Expr {
     // If expression (can return value)
     If {
         condition: Box<Expr>,
-        then_branch: Vec<Stmt>,
-        elif_branches: Vec<(Expr, Vec<Stmt>)>, // (condition, body) pairs
-        else_branch: Option<Vec<Stmt>>,
+        then_branch: Vec<Located>,
+        elif_branches: Vec<(Expr, Vec<Located>)>, // (condition, body) pairs
+        else_branch: Option<Vec<Located>>,
     },
 
     // Anonymous function
     Lambda {
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 }
 
@@ -119,14 +121,14 @@ pub enum Stmt {
     FuncDef {
         name: String,
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 
     // Generator definition: Generator NAME (params) { body }
     GeneratorDef {
         name: String,
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 
     // Lazy variable: Lazy NAME (expr)
@@ -150,14 +152,14 @@ pub enum Stmt {
     // While loop: While (condition) { body }
     While {
         condition: Expr,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 
     // For loop: For VAR In ITERABLE { body }
     For {
         var: String,
         iterable: Expr,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 
     // For loop with index: For INDEX, VAR In ITERABLE { body }
@@ -165,14 +167,14 @@ pub enum Stmt {
         index_var: String,
         value_var: String,
         iterable: Expr,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
     },
 
     // Switch statement: Switch (expr) { Case val: body ... Default: body }
     Switch {
         expr: Expr,
-        cases: Vec<(Expr, Vec<Stmt>)>,
-        default: Option<Vec<Stmt>>,
+        cases: Vec<(Expr, Vec<Located>)>,
+        default: Option<Vec<Located>>,
     },
 
     // Import statement:
@@ -196,8 +198,77 @@ pub enum Stmt {
     Expression(Expr),
 }
 
+/// 带源码行号的语句包装（行号为语句首 token 所在行，供调试器断点定位）
+#[derive(Debug, Clone)]
+pub struct Located {
+    pub line: usize,
+    pub stmt: Stmt,
+}
+
+// 手工实现并忽略 line：行号是位置元数据而非程序语义，
+// 优化器改写或测试构造的 AST 不应因行号差异而不相等
+impl PartialEq for Located {
+    fn eq(&self, other: &Self) -> bool {
+        self.stmt == other.stmt
+    }
+}
+impl Eq for Located {}
+
+/// 包装语句并标注行号的便捷构造
+pub fn located(line: usize, stmt: Stmt) -> Located {
+    Located { line, stmt }
+}
+
 /// A complete program is a list of statements
-pub type Program = Vec<Stmt>;
+pub type Program = Vec<Located>;
+
+/// 递归收集程序中所有语句起始行号（供调试器校验断点行是否可命中）
+pub fn collect_breakable_lines(program: &Program) -> HashSet<usize> {
+    let mut lines = HashSet::new();
+    for l in program {
+        lines.insert(l.line);
+        collect_stmt_lines(&l.stmt, &mut lines);
+    }
+    lines
+}
+
+fn collect_stmt_lines(stmt: &Stmt, lines: &mut HashSet<usize>) {
+    let body_of = |body: &Vec<Located>, lines: &mut HashSet<usize>| {
+        for l in body {
+            lines.insert(l.line);
+            collect_stmt_lines(&l.stmt, lines);
+        }
+    };
+    match stmt {
+        Stmt::FuncDef { body, .. } | Stmt::GeneratorDef { body, .. } => body_of(body, lines),
+        Stmt::While { body, .. } | Stmt::For { body, .. } | Stmt::ForIndexed { body, .. } => {
+            body_of(body, lines)
+        }
+        Stmt::Switch { cases, default, .. } => {
+            for (_, body) in cases {
+                body_of(body, lines);
+            }
+            if let Some(body) = default {
+                body_of(body, lines);
+            }
+        }
+        Stmt::Expression(Expr::If {
+            then_branch,
+            elif_branches,
+            else_branch,
+            ..
+        }) => {
+            body_of(then_branch, lines);
+            for (_, body) in elif_branches {
+                body_of(body, lines);
+            }
+            if let Some(body) = else_branch {
+                body_of(body, lines);
+            }
+        }
+        _ => {}
+    }
+}
 
 impl Expr {
     /// Helper to create a binary expression

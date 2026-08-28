@@ -1,7 +1,7 @@
 // src/evaluator.rs
 //! Evaluator for executing Aether AST
 
-use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
+use crate::ast::{BinOp, Expr, Located, Program, Stmt, UnaryOp};
 use crate::builtins::BuiltInRegistry;
 use crate::environment::Environment;
 use crate::module_system::{
@@ -509,6 +509,11 @@ pub struct Evaluator {
     call_stack_depth: std::cell::Cell<usize>,
     /// Execution start time (for timeout enforcement)
     start_time: std::cell::Cell<Option<std::time::Instant>>,
+
+    /// 调试器状态（与 DebuggerSession 共享同一实例；None 时暂停检查零开销）
+    debugger: Option<Rc<RefCell<crate::debugger::DebuggerState>>>,
+    /// 暂停时回调的调试钩子：在其中运行调试 REPL；返回 true 表示终止程序
+    debug_hook: Option<Box<dyn FnMut(&mut Evaluator) -> bool>>,
 }
 
 impl Evaluator {
@@ -580,6 +585,73 @@ impl Evaluator {
     /// Get call stack depth (for debugger)
     pub fn get_call_stack_depth(&self) -> usize {
         self.call_stack_depth.get()
+    }
+
+    /// 挂载调试器：`state` 与 DebuggerSession 共享，`hook` 在命中断点/步进时回调，
+    /// 返回 true 表示终止程序（以 DebugPause 错误向上传播）
+    pub fn attach_debugger(
+        &mut self,
+        state: Rc<RefCell<crate::debugger::DebuggerState>>,
+        hook: Box<dyn FnMut(&mut Evaluator) -> bool>,
+    ) {
+        state.borrow_mut().activate();
+        self.debugger = Some(state);
+        self.debug_hook = Some(hook);
+    }
+
+    /// 卸载调试器（若尚有未处理的暂停将直接继续执行）
+    pub fn detach_debugger(&mut self) {
+        if let Some(state) = self.debugger.take() {
+            state.borrow_mut().deactivate();
+        }
+        self.debug_hook = None;
+    }
+
+    /// 调试器是否已挂载
+    pub fn debugger_attached(&self) -> bool {
+        self.debugger.is_some()
+    }
+
+    /// 按作用域链查找变量（供调试器暂停时 `print`，可见函数内局部变量）
+    pub fn lookup_variable(&self, name: &str) -> Option<Value> {
+        self.env.borrow().get(name)
+    }
+
+    /// 调试器暂停检查：每条语句执行前调用。
+    ///
+    /// 命中断点或步进条件时回调调试钩子；解释器的 Rust 调用栈保持原样，
+    /// 钩子返回后从暂停语句自然继续。钩子返回 true 时以 DebugPause 终止程序
+    fn check_debug_pause(&mut self, line: usize) -> EvalResult {
+        let Some(state) = self.debugger.clone() else {
+            return Ok(Value::Null);
+        };
+
+        let file = self.current_source_file.clone().unwrap_or_default();
+        let depth = self.call_stack_depth.get();
+        if !state.borrow_mut().should_pause(&file, line, depth) {
+            return Ok(Value::Null);
+        }
+
+        self.current_line.set(line);
+        let quit = if let Some(mut hook) = self.debug_hook.take() {
+            let quit = hook(self);
+            self.debug_hook = Some(hook);
+            quit
+        } else {
+            // 挂载了状态但没有钩子（如库内测试直接构造）：退化为继续执行
+            false
+        };
+
+        if quit {
+            return Err(RuntimeError::DebugPause);
+        }
+        Ok(Value::Null)
+    }
+
+    /// 求值一条带行号的语句：先做调试器暂停检查，再执行语句
+    fn eval_located(&mut self, located: &Located) -> EvalResult {
+        self.check_debug_pause(located.line)?;
+        self.eval_statement(&located.stmt)
     }
 
     /// Check execution timeout
@@ -703,6 +775,9 @@ impl Evaluator {
             step_counter: std::cell::Cell::new(0),
             call_stack_depth: std::cell::Cell::new(0),
             start_time: std::cell::Cell::new(None),
+
+            debugger: None,
+            debug_hook: None,
         }
     }
 
@@ -732,6 +807,9 @@ impl Evaluator {
             step_counter: std::cell::Cell::new(0),
             call_stack_depth: std::cell::Cell::new(0),
             start_time: std::cell::Cell::new(None),
+
+            debugger: None,
+            debug_hook: None,
         }
     }
 
@@ -959,8 +1037,8 @@ impl Evaluator {
 
         let mut result = Value::Null;
 
-        for stmt in program {
-            result = self.eval_statement(stmt)?;
+        for located in program {
+            result = self.eval_located(located)?;
         }
 
         Ok(result)
@@ -1044,6 +1122,7 @@ impl Evaluator {
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
+                    file: self.current_source_file.clone(),
                 };
                 self.env.borrow_mut().set(name.clone(), func.clone());
                 Ok(func)
@@ -1094,8 +1173,8 @@ impl Evaluator {
                     }
 
                     let mut should_break = false;
-                    for stmt in body {
-                        match self.eval_statement(stmt) {
+                    for located in body {
+                        match self.eval_located(located) {
                             Ok(val) => result = val,
                             Err(RuntimeError::Break) => {
                                 should_break = true;
@@ -1127,8 +1206,8 @@ impl Evaluator {
                         let mut should_break = false;
                         for item in arr {
                             self.env.borrow_mut().set(var.clone(), item);
-                            for stmt in body {
-                                match self.eval_statement(stmt) {
+                            for located in body {
+                                match self.eval_located(located) {
                                     Ok(val) => result = val,
                                     Err(RuntimeError::Break) => {
                                         should_break = true;
@@ -1171,8 +1250,8 @@ impl Evaluator {
                                 .borrow_mut()
                                 .set(index_var.clone(), Value::Number(idx as f64));
                             self.env.borrow_mut().set(value_var.clone(), item.clone());
-                            for stmt in body {
-                                match self.eval_statement(stmt) {
+                            for located in body {
+                                match self.eval_located(located) {
                                     Ok(val) => result = val,
                                     Err(RuntimeError::Break) => {
                                         should_break = true;
@@ -1209,8 +1288,8 @@ impl Evaluator {
                     let case_val = self.eval_expression(case_expr)?;
                     if val.equals(&case_val) {
                         let mut result = Value::Null;
-                        for stmt in case_body {
-                            result = self.eval_statement(stmt)?;
+                        for located in case_body {
+                            result = self.eval_located(located)?;
                         }
                         return Ok(result);
                     }
@@ -1218,8 +1297,8 @@ impl Evaluator {
 
                 if let Some(default_body) = default {
                     let mut result = Value::Null;
-                    for stmt in default_body {
-                        result = self.eval_statement(stmt)?;
+                    for located in default_body {
+                        result = self.eval_located(located)?;
                     }
                     return Ok(result);
                 }
@@ -1384,8 +1463,8 @@ impl Evaluator {
 
                 if cond.is_truthy() {
                     let mut result = Value::Null;
-                    for stmt in then_branch {
-                        result = self.eval_statement(stmt)?;
+                    for located in then_branch {
+                        result = self.eval_located(located)?;
                     }
                     return Ok(result);
                 }
@@ -1394,8 +1473,8 @@ impl Evaluator {
                     let cond = self.eval_expression(elif_cond)?;
                     if cond.is_truthy() {
                         let mut result = Value::Null;
-                        for stmt in elif_body {
-                            result = self.eval_statement(stmt)?;
+                        for located in elif_body {
+                            result = self.eval_located(located)?;
                         }
                         return Ok(result);
                     }
@@ -1403,8 +1482,8 @@ impl Evaluator {
 
                 if let Some(else_body) = else_branch {
                     let mut result = Value::Null;
-                    for stmt in else_body {
-                        result = self.eval_statement(stmt)?;
+                    for located in else_body {
+                        result = self.eval_located(located)?;
                     }
                     return Ok(result);
                 }
@@ -1419,6 +1498,7 @@ impl Evaluator {
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
+                    file: self.current_source_file.clone(),
                 })
             }
         }
@@ -1797,7 +1877,11 @@ impl Evaluator {
 
         match func {
             Value::Function {
-                params, body, env, ..
+                name,
+                params,
+                body,
+                env,
+                file,
             } => {
                 if params.len() != args.len() {
                     let err = RuntimeError::WrongArity {
@@ -1822,9 +1906,39 @@ impl Evaluator {
                 let prev_env = Rc::clone(&self.env);
                 self.env = func_env;
 
+                // 函数体求值期间切换到定义文件：模块内函数体的行断点按定义文件命中
+                let prev_file = self.current_source_file.clone();
+                if let Some(f) = file {
+                    self.current_source_file = Some(f.clone());
+                }
+
+                // 具名用户函数入口的函数断点检查（lambda 无名，跳过）。
+                // 在参数绑定与作用域切换之后进行：暂停时 `print` 可见参数，
+                // 暂停位置同步指向函数体首条语句
+                if let Some(fname) = name
+                    && let Some(state) = self.debugger.clone()
+                    && state.borrow_mut().should_pause_at_function(fname)
+                {
+                    if let Some(first) = body.first() {
+                        let f = self.current_source_file.clone().unwrap_or_default();
+                        state.borrow_mut().update_location(f, first.line);
+                    }
+                    if let Some(mut hook) = self.debug_hook.take() {
+                        let quit = hook(self);
+                        self.debug_hook = Some(hook);
+                        if quit {
+                            self.env = prev_env;
+                            self.current_source_file = prev_file;
+                            let _ = self.call_stack.pop();
+                            self.exit_call();
+                            return Err(RuntimeError::DebugPause);
+                        }
+                    }
+                }
+
                 let mut result = Value::Null;
-                for stmt in body {
-                    match self.eval_statement(stmt) {
+                for located in body {
+                    match self.eval_located(located) {
                         Ok(val) => result = val,
                         Err(RuntimeError::Return(val)) => {
                             result = val;
@@ -1832,6 +1946,7 @@ impl Evaluator {
                         }
                         Err(e) => {
                             self.env = prev_env;
+                            self.current_source_file = prev_file;
                             let e = self.attach_call_stack_if_absent(e);
                             let _ = self.call_stack.pop();
                             self.exit_call();
@@ -1841,6 +1956,7 @@ impl Evaluator {
                 }
 
                 self.env = prev_env;
+                self.current_source_file = prev_file;
                 let _ = self.call_stack.pop();
                 self.exit_call();
                 Ok(result)
@@ -2223,11 +2339,16 @@ impl Evaluator {
         // Push export table
         self.export_stack.push(HashMap::new());
 
+        // 模块求值期间切换当前源文件，使调试器可按 模块:行号 设置断点
+        let prev_source_file = self.current_source_file.clone();
+        self.current_source_file = Some(resolved.module_id.clone());
+
         let eval_res = self.eval_program(&program);
 
         // Pop stacks and restore env (must happen even on error)
         let exports = self.export_stack.pop().unwrap_or_default();
         self.import_base_stack.pop();
+        self.current_source_file = prev_source_file;
         self.env = prev_env;
 
         // Pop module stack

@@ -1,7 +1,7 @@
 // src/value.rs
 //! Runtime value types for the Aether language
 
-use crate::ast::{Expr, Stmt};
+use crate::ast::{Expr, Located};
 use crate::environment::Environment;
 use num_bigint::BigInt;
 use num_rational::Ratio;
@@ -39,14 +39,16 @@ pub enum Value {
     Function {
         name: Option<String>,
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
         env: Rc<RefCell<Environment>>,
+        /// 定义时所在的源文件（供调试器在函数体求值期间按定义文件命中行断点）
+        file: Option<String>,
     },
 
     /// Generator (lazy iterator)
     Generator {
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Vec<Located>,
         env: Rc<RefCell<Environment>>,
         state: GeneratorState,
     },

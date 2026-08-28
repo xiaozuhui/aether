@@ -1,7 +1,7 @@
 // src/optimizer.rs
 //! 代码优化器 - 包含尾递归优化、常量折叠等
 
-use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
+use crate::ast::{located, BinOp, Expr, Located, Program, Stmt, UnaryOp};
 
 /// 代码优化器
 pub struct Optimizer {
@@ -49,7 +49,14 @@ impl Optimizer {
     fn fold_constants(&self, program: Program) -> Program {
         program
             .into_iter()
-            .map(|stmt| self.fold_stmt(stmt))
+            .map(|l| located(l.line, self.fold_stmt(l.stmt)))
+            .collect()
+    }
+
+    /// 折叠语句体中的常量，保留每条语句的行号
+    fn fold_body(&self, body: Vec<Located>) -> Vec<Located> {
+        body.into_iter()
+            .map(|l| located(l.line, self.fold_stmt(l.stmt)))
             .collect()
     }
 
@@ -63,18 +70,18 @@ impl Optimizer {
             Stmt::FuncDef { name, params, body } => Stmt::FuncDef {
                 name,
                 params,
-                body: body.into_iter().map(|s| self.fold_stmt(s)).collect(),
+                body: self.fold_body(body),
             },
             Stmt::GeneratorDef { name, params, body } => Stmt::GeneratorDef {
                 name,
                 params,
-                body: body.into_iter().map(|s| self.fold_stmt(s)).collect(),
+                body: self.fold_body(body),
             },
             Stmt::Return(expr) => Stmt::Return(self.fold_expr(expr)),
             Stmt::Yield(expr) => Stmt::Yield(self.fold_expr(expr)),
             Stmt::While { condition, body } => Stmt::While {
                 condition: self.fold_expr(condition),
-                body: body.into_iter().map(|s| self.fold_stmt(s)).collect(),
+                body: self.fold_body(body),
             },
             Stmt::For {
                 var,
@@ -83,7 +90,7 @@ impl Optimizer {
             } => Stmt::For {
                 var,
                 iterable: self.fold_expr(iterable),
-                body: body.into_iter().map(|s| self.fold_stmt(s)).collect(),
+                body: self.fold_body(body),
             },
             Stmt::ForIndexed {
                 index_var,
@@ -94,7 +101,7 @@ impl Optimizer {
                 index_var,
                 value_var,
                 iterable: self.fold_expr(iterable),
-                body: body.into_iter().map(|s| self.fold_stmt(s)).collect(),
+                body: self.fold_body(body),
             },
             Stmt::Expression(expr) => Stmt::Expression(self.fold_expr(expr)),
             other => other,
@@ -201,7 +208,20 @@ impl Optimizer {
     fn eliminate_dead_code(&self, program: Program) -> Program {
         program
             .into_iter()
-            .filter_map(|stmt| self.eliminate_dead_stmt(stmt))
+            .filter_map(|l| self.eliminate_dead_located(l))
+            .collect()
+    }
+
+    /// 消除死语句并保留行号
+    fn eliminate_dead_located(&self, l: Located) -> Option<Located> {
+        self.eliminate_dead_stmt(l.stmt)
+            .map(|stmt| located(l.line, stmt))
+    }
+
+    /// 消除语句体中的死代码并保留行号
+    fn eliminate_dead_body(&self, body: Vec<Located>) -> Vec<Located> {
+        body.into_iter()
+            .filter_map(|l| self.eliminate_dead_located(l))
             .collect()
     }
 
@@ -217,10 +237,7 @@ impl Optimizer {
 
                 Some(Stmt::While {
                     condition,
-                    body: body
-                        .into_iter()
-                        .filter_map(|s| self.eliminate_dead_stmt(s))
-                        .collect(),
+                    body: self.eliminate_dead_body(body),
                 })
             }
 
@@ -228,19 +245,13 @@ impl Optimizer {
             Stmt::FuncDef { name, params, body } => Some(Stmt::FuncDef {
                 name,
                 params,
-                body: body
-                    .into_iter()
-                    .filter_map(|s| self.eliminate_dead_stmt(s))
-                    .collect(),
+                body: self.eliminate_dead_body(body),
             }),
 
             Stmt::GeneratorDef { name, params, body } => Some(Stmt::GeneratorDef {
                 name,
                 params,
-                body: body
-                    .into_iter()
-                    .filter_map(|s| self.eliminate_dead_stmt(s))
-                    .collect(),
+                body: self.eliminate_dead_body(body),
             }),
 
             // 表达式语句中可能包含If表达式
@@ -287,26 +298,12 @@ impl Optimizer {
                 // 递归处理分支
                 Expr::If {
                     condition,
-                    then_branch: then_branch
-                        .into_iter()
-                        .filter_map(|s| self.eliminate_dead_stmt(s))
-                        .collect(),
+                    then_branch: self.eliminate_dead_body(then_branch),
                     elif_branches: elif_branches
                         .into_iter()
-                        .map(|(c, b)| {
-                            (
-                                self.eliminate_dead_expr(c),
-                                b.into_iter()
-                                    .filter_map(|s| self.eliminate_dead_stmt(s))
-                                    .collect(),
-                            )
-                        })
+                        .map(|(c, b)| (self.eliminate_dead_expr(c), self.eliminate_dead_body(b)))
                         .collect(),
-                    else_branch: else_branch.map(|b| {
-                        b.into_iter()
-                            .filter_map(|s| self.eliminate_dead_stmt(s))
-                            .collect()
-                    }),
+                    else_branch: else_branch.map(|b| self.eliminate_dead_body(b)),
                 }
             }
             other => other,
@@ -317,12 +314,15 @@ impl Optimizer {
     fn optimize_tail_recursion(&self, program: Program) -> Program {
         program
             .into_iter()
-            .map(|stmt| self.optimize_tail_recursive_stmt(stmt))
+            .map(|l| located(l.line, self.optimize_tail_recursive_stmt(l.stmt, l.line)))
             .collect()
     }
 
     /// 优化尾递归语句
-    fn optimize_tail_recursive_stmt(&self, stmt: Stmt) -> Stmt {
+    ///
+    /// `stmt_line` 为该语句的源码行号，仅在 FuncDef 被改写为循环时用于
+    /// 给合成语句（循环变量初始化、While 骨架）标注行号
+    fn optimize_tail_recursive_stmt(&self, stmt: Stmt, stmt_line: usize) -> Stmt {
         match stmt {
             Stmt::FuncDef { name, params, body } => {
                 // 检查函数体是否包含尾递归
@@ -331,7 +331,12 @@ impl Optimizer {
                     Stmt::FuncDef {
                         name: name.clone(),
                         params: params.clone(),
-                        body: self.convert_tail_recursion_to_loop(&name, &params, body),
+                        body: self.convert_tail_recursion_to_loop(
+                            &name,
+                            &params,
+                            body,
+                            stmt_line,
+                        ),
                     }
                 } else {
                     Stmt::FuncDef { name, params, body }
@@ -342,7 +347,7 @@ impl Optimizer {
     }
 
     /// 检查是否为尾递归
-    fn is_tail_recursive(&self, func_name: &str, body: &[Stmt]) -> bool {
+    fn is_tail_recursive(&self, func_name: &str, body: &[Located]) -> bool {
         if body.is_empty() {
             return false;
         }
@@ -352,10 +357,10 @@ impl Optimizer {
     }
 
     /// 检查函数体中是否包含尾递归
-    fn has_tail_recursion_in_body(&self, func_name: &str, body: &[Stmt]) -> bool {
+    fn has_tail_recursion_in_body(&self, func_name: &str, body: &[Located]) -> bool {
         // 至少需要有一条return语句包含尾递归调用
         body.iter()
-            .any(|stmt| self.stmt_has_tail_recursion(func_name, stmt))
+            .any(|l| self.stmt_has_tail_recursion(func_name, &l.stmt))
     }
 
     /// 检查语句是否包含尾递归
@@ -432,9 +437,9 @@ impl Optimizer {
     }
 
     /// 检查分支是否以尾调用结束
-    fn branch_ends_with_tail_call(&self, func_name: &str, branch: &[Stmt]) -> bool {
-        if let Some(last_stmt) = branch.last() {
-            match last_stmt {
+    fn branch_ends_with_tail_call(&self, func_name: &str, branch: &[Located]) -> bool {
+        if let Some(last) = branch.last() {
+            match &last.stmt {
                 Stmt::Return(expr) => self.is_tail_call(func_name, expr),
                 Stmt::Expression(expr) => {
                     // 表达式可能是If表达式
@@ -448,37 +453,49 @@ impl Optimizer {
     }
 
     /// 将尾递归转换为循环 (完整实现)
+    ///
+    /// `func_line` 为函数定义所在行，用于合成语句的行号标注
     fn convert_tail_recursion_to_loop(
         &self,
         func_name: &str,
         params: &[String],
-        body: Vec<Stmt>,
-    ) -> Vec<Stmt> {
+        body: Vec<Located>,
+        func_line: usize,
+    ) -> Vec<Located> {
         // 步骤1: 为每个参数创建临时变量
         let mut new_body = Vec::new();
 
         // 初始化临时变量
         for param in params {
-            new_body.push(Stmt::Set {
-                name: format!("_loop_{}", param),
-                value: Expr::Identifier(param.clone()),
-            });
+            new_body.push(located(
+                func_line,
+                Stmt::Set {
+                    name: format!("_loop_{}", param),
+                    value: Expr::Identifier(param.clone()),
+                },
+            ));
         }
 
         // 步骤2: 创建循环标志
-        new_body.push(Stmt::Set {
-            name: "_loop_continue".to_string(),
-            value: Expr::Boolean(true),
-        });
+        new_body.push(located(
+            func_line,
+            Stmt::Set {
+                name: "_loop_continue".to_string(),
+                value: Expr::Boolean(true),
+            },
+        ));
 
         // 步骤3: 转换函数体为while循环
         let loop_body = self.transform_body_to_loop(func_name, params, body);
 
         // 步骤4: 创建while循环
-        new_body.push(Stmt::While {
-            condition: Expr::Identifier("_loop_continue".to_string()),
-            body: loop_body,
-        });
+        new_body.push(located(
+            func_line,
+            Stmt::While {
+                condition: Expr::Identifier("_loop_continue".to_string()),
+                body: loop_body,
+            },
+        ));
 
         new_body
     }
@@ -488,46 +505,59 @@ impl Optimizer {
         &self,
         func_name: &str,
         params: &[String],
-        body: Vec<Stmt>,
-    ) -> Vec<Stmt> {
+        body: Vec<Located>,
+    ) -> Vec<Located> {
         let mut loop_body = Vec::new();
 
-        for stmt in body {
-            match stmt {
+        for l in body {
+            let line = l.line;
+            match l.stmt {
                 Stmt::Return(expr) => {
                     // 检查是否为尾递归调用
                     if let Some(new_args) = self.extract_tail_call_args(func_name, &expr) {
                         // 这是尾递归调用，转换为参数更新
                         for (i, param) in params.iter().enumerate() {
                             if let Some(arg) = new_args.get(i) {
-                                loop_body.push(Stmt::Set {
-                                    name: format!("_loop_{}", param),
-                                    value: arg.clone(),
-                                });
+                                loop_body.push(located(
+                                    line,
+                                    Stmt::Set {
+                                        name: format!("_loop_{}", param),
+                                        value: arg.clone(),
+                                    },
+                                ));
                             }
                         }
 
                         // 更新参数值
                         for param in params {
-                            loop_body.push(Stmt::Set {
-                                name: param.clone(),
-                                value: Expr::Identifier(format!("_loop_{}", param)),
-                            });
+                            loop_body.push(located(
+                                line,
+                                Stmt::Set {
+                                    name: param.clone(),
+                                    value: Expr::Identifier(format!("_loop_{}", param)),
+                                },
+                            ));
                         }
 
                         // 继续循环
                     } else {
                         // 这不是尾递归调用，正常返回
-                        loop_body.push(Stmt::Set {
-                            name: "_loop_continue".to_string(),
-                            value: Expr::Boolean(false),
-                        });
-                        loop_body.push(Stmt::Return(expr));
+                        loop_body.push(located(
+                            line,
+                            Stmt::Set {
+                                name: "_loop_continue".to_string(),
+                                value: Expr::Boolean(false),
+                            },
+                        ));
+                        loop_body.push(located(line, Stmt::Return(expr)));
                     }
                 }
-                _ => {
+                stmt => {
                     // 其他语句递归转换
-                    loop_body.push(self.transform_stmt_for_loop(func_name, params, stmt));
+                    loop_body.push(located(
+                        line,
+                        self.transform_stmt_for_loop(func_name, params, stmt),
+                    ));
                 }
             }
         }
@@ -643,10 +673,10 @@ mod tests {
         // While False 应该被删除
         let stmt = Stmt::While {
             condition: Expr::Boolean(false),
-            body: vec![Stmt::Set {
+            body: vec![located(1, Stmt::Set {
                 name: "x".to_string(),
                 value: Expr::Number(10.0),
-            }],
+            })],
         };
 
         let result = optimizer.eliminate_dead_stmt(stmt);
@@ -658,7 +688,7 @@ mod tests {
         let optimizer = Optimizer::new();
 
         // 测试简单的尾递归
-        let body = vec![Stmt::Return(Expr::Call {
+        let body = vec![located(1, Stmt::Return(Expr::Call {
             func: Box::new(Expr::Identifier("factorial".to_string())),
             args: vec![
                 Expr::Binary {
@@ -672,7 +702,7 @@ mod tests {
                     right: Box::new(Expr::Identifier("n".to_string())),
                 },
             ],
-        })];
+        }))];
 
         assert!(optimizer.is_tail_recursive("factorial", &body));
     }
@@ -682,7 +712,7 @@ mod tests {
         let optimizer = Optimizer::new();
 
         // 测试非尾递归（递归调用后还有操作）
-        let body = vec![Stmt::Return(Expr::Binary {
+        let body = vec![located(1, Stmt::Return(Expr::Binary {
             left: Box::new(Expr::Identifier("n".to_string())),
             op: BinOp::Multiply,
             right: Box::new(Expr::Call {
@@ -693,7 +723,7 @@ mod tests {
                     right: Box::new(Expr::Number(1.0)),
                 }],
             }),
-        })];
+        }))];
 
         assert!(!optimizer.is_tail_recursive("factorial", &body));
     }
@@ -705,15 +735,15 @@ mod tests {
         // 测试If表达式中的尾递归
         // 实际上Aether中Return语句后面跟的是表达式，而If是表达式
         // 所以我们需要Return一个If表达式
-        let body = vec![Stmt::Expression(Expr::If {
+        let body = vec![located(1, Stmt::Expression(Expr::If {
             condition: Box::new(Expr::Binary {
                 left: Box::new(Expr::Identifier("n".to_string())),
                 op: BinOp::LessEqual,
                 right: Box::new(Expr::Number(0.0)),
             }),
-            then_branch: vec![Stmt::Return(Expr::Identifier("acc".to_string()))],
+            then_branch: vec![located(1, Stmt::Return(Expr::Identifier("acc".to_string())))],
             elif_branches: vec![],
-            else_branch: Some(vec![Stmt::Return(Expr::Call {
+            else_branch: Some(vec![located(1, Stmt::Return(Expr::Call {
                 func: Box::new(Expr::Identifier("sum".to_string())),
                 args: vec![
                     Expr::Binary {
@@ -727,8 +757,8 @@ mod tests {
                         right: Box::new(Expr::Identifier("n".to_string())),
                     },
                 ],
-            })]),
-        })];
+            }))]),
+        }))];
 
         assert!(optimizer.is_tail_recursive("sum", &body));
     }
@@ -741,7 +771,7 @@ mod tests {
         let func_def = Stmt::FuncDef {
             name: "factorial".to_string(),
             params: vec!["n".to_string(), "acc".to_string()],
-            body: vec![Stmt::Return(Expr::Call {
+            body: vec![located(1, Stmt::Return(Expr::Call {
                 func: Box::new(Expr::Identifier("factorial".to_string())),
                 args: vec![
                     Expr::Binary {
@@ -755,10 +785,10 @@ mod tests {
                         right: Box::new(Expr::Identifier("n".to_string())),
                     },
                 ],
-            })],
+            }))],
         };
 
-        let optimized = optimizer.optimize_tail_recursive_stmt(func_def);
+        let optimized = optimizer.optimize_tail_recursive_stmt(func_def, 1);
 
         // 验证转换后包含While循环
         if let Stmt::FuncDef { body, .. } = optimized {
@@ -771,7 +801,7 @@ mod tests {
             );
 
             // 最后一个语句应该是While循环
-            if let Some(Stmt::While { .. }) = body.last() {
+            if let Some(Located { stmt: Stmt::While { .. }, .. }) = body.last() {
                 // 成功转换为循环
             } else {
                 panic!("Expected While loop at the end of optimized function body");

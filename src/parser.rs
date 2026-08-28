@@ -3,7 +3,7 @@
 //!
 //! Converts a stream of tokens into an Abstract Syntax Tree (AST)
 
-use crate::ast::{BinOp, Expr, Program, Stmt, UnaryOp};
+use crate::ast::{located, BinOp, Expr, Located, Program, Stmt, UnaryOp};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
@@ -130,6 +130,11 @@ pub struct Parser {
     current_column: usize,
     current_had_whitespace: bool, // whether whitespace preceded current_token
     peek_had_whitespace: bool,    // whether whitespace preceded peek_token
+    // current_token / peek_token 各自所在的行（token 产生时 lexer 所在行），
+    // 供语句包装 Located 行号使用；与 current_line（错误报告用，可能领先于
+    // current_token）语义不同，故单独追踪
+    current_token_line: usize,
+    peek_token_line: usize,
 }
 
 impl Parser {
@@ -143,6 +148,7 @@ impl Parser {
         let mut lexer = Lexer::with_bigint_threshold(input, bigint_threshold);
         let current = lexer.next_token();
         let current_ws = lexer.had_whitespace();
+        let current_tok_line = lexer.line();
         let peek = lexer.next_token();
         let peek_ws = lexer.had_whitespace();
         let line = lexer.line();
@@ -156,6 +162,8 @@ impl Parser {
             current_column: column,
             current_had_whitespace: current_ws,
             peek_had_whitespace: peek_ws,
+            current_token_line: current_tok_line,
+            peek_token_line: line,
         }
     }
 
@@ -163,10 +171,17 @@ impl Parser {
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.current_had_whitespace = self.peek_had_whitespace;
+        self.current_token_line = self.peek_token_line;
         self.peek_token = self.lexer.next_token();
         self.peek_had_whitespace = self.lexer.had_whitespace();
+        self.peek_token_line = self.lexer.line();
         self.current_line = self.lexer.line();
         self.current_column = self.lexer.column();
+    }
+
+    /// current_token 所在行，即以待解析语句首 token 所在行作为语句行号
+    fn stmt_start_line(&self) -> usize {
+        self.current_token_line
     }
 
     /// Skip newline tokens (they're optional in many places)
@@ -283,8 +298,9 @@ impl Parser {
         self.skip_newlines();
 
         while self.current_token != Token::EOF {
+            let line = self.stmt_start_line();
             let stmt = self.parse_statement()?;
-            statements.push(stmt);
+            statements.push(located(line, stmt));
             self.skip_newlines();
         }
 
@@ -674,7 +690,9 @@ impl Parser {
                     && self.current_token != Token::RightBrace
                     && self.current_token != Token::EOF
                 {
-                    case_body.push(self.parse_statement()?);
+                    let line = self.stmt_start_line();
+                    let stmt = self.parse_statement()?;
+                    case_body.push(located(line, stmt));
                     self.skip_newlines();
                 }
 
@@ -686,7 +704,9 @@ impl Parser {
 
                 let mut default_body = Vec::new();
                 while self.current_token != Token::RightBrace && self.current_token != Token::EOF {
-                    default_body.push(self.parse_statement()?);
+                    let line = self.stmt_start_line();
+                    let stmt = self.parse_statement()?;
+                    default_body.push(located(line, stmt));
                     self.skip_newlines();
                 }
 
@@ -899,13 +919,15 @@ impl Parser {
     }
 
     /// Parse a block of statements: { stmt1 stmt2 ... }
-    fn parse_block(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    fn parse_block(&mut self) -> Result<Vec<Located>, ParseError> {
         let mut statements = Vec::new();
 
         self.skip_newlines();
 
         while self.current_token != Token::RightBrace && self.current_token != Token::EOF {
-            statements.push(self.parse_statement()?);
+            let line = self.stmt_start_line();
+            let stmt = self.parse_statement()?;
+            statements.push(located(line, stmt));
             self.skip_newlines();
         }
 
@@ -1265,6 +1287,7 @@ impl Parser {
     /// Parse lambda arrow expression: Lambda X -> expr or Lambda (X, Y) -> expr
     fn parse_lambda_arrow_expression(&mut self) -> Result<Expr, ParseError> {
         self.next_token(); // skip 'Lambda'
+        let lambda_line = self.stmt_start_line();
 
         let params = if self.current_token == Token::LeftParen {
             // Multiple parameters: Lambda (X, Y) -> expr
@@ -1299,7 +1322,8 @@ impl Parser {
         let expr = self.parse_expression(Precedence::Lowest)?;
 
         // Wrap the expression in a Return statement
-        let body = vec![Stmt::Return(expr)];
+        // （行号取 Lambda 关键字所在行：表达式解析完后 peek 可能已扫到下一行）
+        let body = vec![located(lambda_line, Stmt::Return(expr))];
 
         Ok(Expr::Lambda { params, body })
     }

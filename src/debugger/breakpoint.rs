@@ -44,11 +44,23 @@ impl Breakpoint {
             return false;
         }
 
+        // 断点中的文件允许只写文件名，实际执行路径可能为相对/绝对路径，按文件名兜底匹配
+        fn files_match(a: &str, b: &str) -> bool {
+            if a == b {
+                return true;
+            }
+            fn file_name(p: &str) -> &str {
+                p.rsplit(['/', '\\']).next().unwrap_or(p)
+            }
+            let (na, nb) = (file_name(a), file_name(b));
+            !na.is_empty() && na == nb
+        }
+
         let matches = match &self.bp_type {
-            BreakpointType::Line { file: f, line: l } => f == file && *l == line,
+            BreakpointType::Line { file: f, line: l } => files_match(f, file) && *l == line,
             BreakpointType::Conditional {
                 file: f, line: l, ..
-            } => f == file && *l == line,
+            } => files_match(f, file) && *l == line,
             BreakpointType::Function { .. } => false, // Function breakpoints are checked separately
         };
 

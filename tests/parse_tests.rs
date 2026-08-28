@@ -7,7 +7,7 @@ fn test_parse_set_statement() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::Set { name, value } => {
             assert_eq!(name, "X");
             assert_eq!(*value, Expr::Number(10.0));
@@ -23,7 +23,7 @@ fn test_parse_arithmetic() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::Set { name, value } => {
             assert_eq!(name, "X");
             // Should be: 5 + (3 * 2) due to precedence
@@ -58,7 +58,7 @@ fn test_parse_function_definition() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::FuncDef { name, params, body } => {
             assert_eq!(name, "ADD");
             assert_eq!(params, &vec!["A".to_string(), "B".to_string()]);
@@ -75,7 +75,7 @@ fn test_parse_function_call() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::Expression(Expr::Call { func, args }) => {
             assert_eq!(**func, Expr::Identifier("ADD".to_string()));
             assert_eq!(args.len(), 2);
@@ -93,7 +93,7 @@ fn test_parse_array_literal() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::Set { name, value } => {
             assert_eq!(name, "ARR");
             match value {
@@ -123,7 +123,7 @@ fn test_parse_if_expression() {
     let program = parser.parse_program().unwrap();
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::Expression(Expr::If {
             condition,
             then_branch,
@@ -155,7 +155,7 @@ fn test_parse_for_loop() {
     }
 
     assert_eq!(program.len(), 1);
-    match &program[0] {
+    match &program[0].stmt {
         Stmt::For {
             var,
             iterable,
