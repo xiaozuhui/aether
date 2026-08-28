@@ -23,6 +23,7 @@
 - [精确计算与精度计算](#-精确计算与精度计算)
 - [安全模型](#-安全模型)
 - [性能优化](#-性能优化)
+- [调试与排错](#-调试与排错)
 - [许可证](#-许可证)
 
 ---
@@ -819,11 +820,320 @@ engine.set_optimization(
 
 ---
 
+## 🐛 调试与排错
+
+Aether 提供一组 CLI 调试工具（语法检查、AST 查看、TRACE、性能指标）和一个类 GDB 的交互式调试器。
+
+### 语法检查（`--check`）
+
+只检查代码的语法正确性，不执行代码：
+
+```bash
+aether --check script.aether
+```
+
+输出示例：
+
+```
+正在检查 'script.aether'...
+✓ 语法检查通过
+  - 24 个词法单元
+  - 3 条语句
+```
+
+如果有错误，会显示详细的错误信息和源代码上下文（见[错误信息显示](#错误信息显示)）。
+
+### AST 查看（`--ast`）
+
+显示代码的抽象语法树，帮助理解代码的结构：
+
+```bash
+aether --ast script.aether
+```
+
+说明：每条语句都由 `Located { line, stmt }` 包装，`line` 是语句首 token 所在行号（供交互式调试器定位断点）。
+
+输出示例（源码为 `Set X 10` / `Set DOUBLE(Lambda X -> X * 2)`）：
+
+```
+=== 抽象语法树 (AST) ===
+文件: script.aether
+
+[
+    Located {
+        line: 1,
+        stmt: Set {
+            name: "X",
+            value: Number(10.0),
+        },
+    },
+    Located {
+        line: 2,
+        stmt: Set {
+            name: "DOUBLE",
+            value: Lambda {
+                params: ["X"],
+                body: [
+                    Located { line: 2, stmt: Return(Binary { ... }) },
+                ],
+            },
+        },
+    },
+]
+
+=== 共 2 条语句 ===
+```
+
+### 调试模式（`--debug`）
+
+在调试模式下运行脚本，显示额外的运行元信息：
+
+```bash
+aether --debug script.aether
+```
+
+输出示例：
+
+```
+=== 调试模式 ===
+文件: script.aether
+标准库: 已加载
+
+=== 执行结果 ===
+60
+
+=== 执行完成 ===
+```
+
+说明：`--debug` 只打印运行元信息（文件名、是否加载标准库、结果分段等），不会逐步打印每条语句或变量变化——排查运行期问题请用[交互式调试器](#交互式调试器--debugger)。
+
+### TRACE 缓冲区（`--trace` / `--trace-stats` / `--trace-buffer-size`）
+
+脚本内 `TRACE(...)` 的用法见[快速开始](#-快速开始)一节，这里介绍执行结束后查看缓冲区的 CLI 参数：
+
+```bash
+aether --trace script.aether            # 打印 TRACE 缓冲区内容
+aether --trace-stats script.aether      # 打印统计（按级别/类别计数）
+aether --trace-buffer-size 4096 --trace script.aether  # 调大缓冲区
+```
+
+`--trace` 输出示例（结构化 TRACE 条目带 `[级别:类别]` 前缀；`TRACE(value)` 只记录裸值）：
+
+```
+=== TRACE ===
+#1 [DEBUG:demo] dbg
+#2 [INFO:api] 42
+```
+
+`--trace-stats` 输出示例：
+
+```
+=== TRACE STATS ===
+buffer_size: 1024
+total_entries: 2
+buffer_full: false
+by_level: {Debug: 1, Info: 1}
+by_category: {"demo": 1, "api": 1}
+```
+
+默认缓冲区容量 1024 条，满时自动丢弃最旧记录。`--trace-stats` 统计的是结构化 TRACE（`TRACE_DEBUG/TRACE_INFO/TRACE_WARN/TRACE_ERROR`）；`TRACE(...)` 记录会出现在 `--trace` 输出中，但不计入级别/类别统计。
+
+### 性能指标（`--metrics` / `--metrics-json` / `--metrics-json-pretty`）
+
+`--metrics` 在脚本执行结束后打印一次性性能指标，适合粗粒度性能对比：
+
+```bash
+aether --metrics script.aether
+```
+
+输出示例：
+
+```
+=== METRICS ===
+wall_time_ms: 12
+step_count: 42
+ast_cache: size 0/100 -> 1/100, hits 0 -> 0, misses 0 -> 1, hit_rate 0.00% -> 0.00%
+structured_trace: total_entries=0, buffer_size=1024, buffer_full=false
+```
+
+- `wall_time_ms`：本次脚本的"墙钟时间"（从开始 eval 到结束的耗时）
+- `step_count`：本次执行的"语句步数"（每求值一条语句 +1）
+- `ast_cache`：AST 缓存统计（命中/未命中/命中率）
+- `structured_trace`：结构化 TRACE 缓冲统计
+
+`--metrics-json` 输出单行 JSON（写到 stdout），包含 `ok` / `result` / `metrics.*`，适合喂给脚本/CI 做基准对比；`--metrics-json-pretty` 输出相同结构的 pretty 格式。失败时输出 `ok: false` 与 `error` 对象（配合 `--json-error` 走结构化错误报告，否则为运行时错误字符串）。
+
+### 交互式调试器（`--debugger`）
+
+启动一个类 GDB 的交互式调试会话：可以设置断点、单步执行、在暂停点检查变量和调用栈。
+
+```bash
+aether --debugger script.aether
+```
+
+#### 工作流程
+
+启动后先进入**运行前提示符**，在程序开始执行前设置断点：
+
+```
+Aether Debugger v1.0
+Debugging: script.aether
+Type 'help' for available commands
+
+(aether-debug) break 2
+```
+
+输入 `continue`（或 `step`）后程序开始执行；命中断点或单步条件时暂停，显示位置与源码上下文并进入**暂停提示符**：
+
+```
+(aether-debug) continue
+Continuing...
+
+Paused at script.aether:2
+
+      1: Set X 10
+=>    2: Set Y 20
+      3: PRINTLN(X + Y)
+(aether-debug) print X
+X = 10
+(aether-debug) continue
+30
+
+Program finished.
+```
+
+#### 命令一览
+
+执行控制：
+
+| 命令 | 说明 |
+| --- | --- |
+| `step` / `s` | 单步**步入**：下一条件语句暂停，会进入函数体 |
+| `next` / `n` | 单步**步过**：把函数调用整个执行完，回到同级下一条语句 |
+| `finish` / `f` | 步出：执行到当前函数返回 |
+| `continue` / `c` | 继续执行到下一个断点 |
+
+断点：
+
+| 命令 | 说明 |
+| --- | --- |
+| `break [file:]line` | 行断点（文件名可省略，缺省为当前文件） |
+| `break function_name` | 函数断点（具名 `Func` 入口触发，参数此时已可打印） |
+| `delete [N]` | 删除断点 N（不带参数删全部） |
+| `disable N` / `enable N` | 禁用/启用断点 |
+| `info breakpoints` | 列出断点（含命中次数） |
+
+状态检查：
+
+| 命令 | 说明 |
+| --- | --- |
+| `print VAR` | 按作用域链打印变量（函数内可见局部变量与参数） |
+| `backtrace` / `bt` [N] | 显示调用栈 |
+| `list [N]` | 显示 N 行源码，`=>` 标记当前行 |
+| `frame N` | 选择栈帧（尚未实现） |
+| `info locals` | 列出局部变量（尚未实现） |
+
+其他：`help`、`quit`（终止程序并退出）。
+
+#### 断点行说明
+
+断点只在**语句起始行**触发（`Set`/`Return`/`PRINTLN`、`Func` 定义行、`If`/`For`/`While` 语句行、循环体/函数体内的语句行等）。闭括号 `}` 或空行不会触发。若断点行没有语句起点，设置时会提示 `may never trigger`。
+
+循环体内的断点每轮迭代命中一次；`break 函数名` 在每次调用时触发。
+
+#### 跨文件断点（Import 模块）
+
+`Import` 的模块可以按 `文件名:行号` 设置断点。模块**顶层**语句在加载时触发；模块内**函数体**的行断点在函数被调用时按定义文件触发：
+
+```
+(aether-debug) break math.aether:2
+Breakpoint 1 set at math.aether:2
+(aether-debug) continue
+
+Paused at /path/to/math.aether:2
+
+No source available for /path/to/math.aether
+(aether-debug) print X
+X = 4
+```
+
+（`list` 只加载了入口文件，暂停在其他文件时显示上面的提示。）
+
+#### 暂停时输入 Ctrl+D
+
+- 运行前提示符：直接退出，不执行程序；
+- 暂停中：停用断点/单步，程序跑到结束（避免 EOF 死循环）。
+
+#### 已知限制
+
+- `frame N` 与 `info locals` 尚未实现；
+- `list` 只显示入口文件源码；
+- 生成器（`Generator`）体内的行断点不走暂停检查，不保证触发；
+- `--ast` 输出因语句携带行号而多出 `Located { line, stmt }` 包装层，属展示变化。
+
+### 错误信息显示
+
+语法错误与运行时错误都会附带源码上下文与位置指示器：
+
+```
+✗ 语法错误:
+Parse error at line 13, column 2: Expected RightParen, found Newline
+
+源代码位置:
+  12 | // 这里故意制造一个错误 - 缺少右括号
+  13 | Set RESULT (X + Y
+       | ^
+  14 |
+```
+
+```
+✗ 运行时错误:
+Runtime error: Undefined variable: UNKNOWN_VAR
+
+源代码位置:
+   5 | Set X 10
+   6 | Set Y (X + UNKNOWN_VAR)
+       |            ^
+   7 | PRINTLN(Y)
+```
+
+REPL 模式同样显示详细错误：
+
+```
+aether[1]> Set X (10 +
+✗ Parse error at line 1, column 14: Expected RightParen, found EOF
+
+源代码位置:
+   1 | Set X (10 +
+       |              ^
+```
+
+### 构建时验证标准库
+
+`cargo build` 时会自动检查所有内置标准库文件的语法，确保标准库代码始终有效：
+
+```
+warning: aether-azathoth@0.5.4: 检查所有内置标准库...
+warning: aether-azathoth@0.5.4: ✓ sorting.aether
+warning: aether-azathoth@0.5.4: ✓ cli_utils.aether
+...
+warning: aether-azathoth@0.5.4: 共 16 个标准库文件检查成功！
+```
+
+### 排错技巧
+
+1. **提交前检查**：`aether --check *.aether` 确保无语法错误
+2. **理解结构**：`aether --ast complex_script.aether` 查看嵌套表达式结构
+3. **排查运行期问题**：`aether --debugger my_script.aether` 设断点单步执行
+4. **阅读错误**：仔细阅读错误信息和源代码上下文
+5. **标准库开发**：修改标准库后运行 `cargo build` 自动验证
+
+---
+
 ## 📚 更多文档
 
 ### 用户指南
 
-- [调试指南](docs/DEBUG_GUIDE.md) - 调试工具、错误追踪和排错技巧
 - [安全沙箱指南](docs/SANDBOX_GUIDE.md) - 权限控制、IO限制和安全最佳实践
 
 ### 专题指南
@@ -943,6 +1253,7 @@ aether                         # 无参数启动交互式 REPL
 | `--ast` | 显示抽象语法树 (AST) |
 | `--debug` | 调试模式（打印额外运行信息） |
 | `--debugger` | 启动交互式调试器（类似 GDB） |
+| `--bigint-threshold <N>` | 整数字面量超过 N 位时切换 BigInteger |
 | `--metrics` / `--metrics-json[-pretty]` | 执行后输出性能指标 |
 | `--trace` / `--trace-stats` | 打印 TRACE 缓冲区内容/统计 |
 | `--trace-buffer-size <N>` | 设置 TRACE 缓冲区容量 |
