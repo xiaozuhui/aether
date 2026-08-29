@@ -134,7 +134,8 @@ impl Lexer {
                     self.read_char();
                     Token::Equal
                 } else {
-                    Token::Assign
+                    // Aether 用 Set 赋值，孤立 '=' 不是合法 token
+                    Token::Illegal('=')
                 }
             }
             '!' => {
@@ -327,43 +328,13 @@ impl Lexer {
 
     /// 将科学计数法字面量转换为 token。
     ///
-    /// 正指数产生精确的整数字符串（按阈值决定 BigInteger 或 Number）；
-    /// 负指数降级为 f64（如需精确值请使用 TO_FRACTION）。
+    /// 语义（0.6.0 冻结）：科学计数法一律是 f64（`1e15`、`1e-7` 均为
+    /// Number，与「小数保持 f64」一致）；需要精确大整数请书写完整数字
+    /// （超阈值自动 BigInteger）或显式 `TO_FRACTION`。
     fn tokenize_scientific(&self, num_str: &str) -> Token {
-        let (mantissa, exponent) = match num_str.split_once(['e', 'E']) {
-            Some((m, e)) => (m, e.parse::<i64>().unwrap_or(0)),
-            None => match num_str.parse::<f64>() {
-                Ok(num) => return Token::Number(num),
-                Err(_) => return Token::Illegal('0'),
-            },
-        };
-
-        let (int_part, frac_part) = match mantissa.split_once('.') {
-            Some((i, f)) => (i, f),
-            None => (mantissa, ""),
-        };
-        let sign = if int_part.starts_with('-') { "-" } else { "" };
-        let digits = format!("{}{}", int_part.trim_start_matches(['-', '+']), frac_part);
-        let frac_len = frac_part.len() as i64;
-
-        if exponent >= frac_len {
-            // 全部数字都在整数部分：移动小数点构造精确整数字符串
-            let zeros = exponent - frac_len;
-            let exact = format!("{}{}{}", sign, digits, "0".repeat(zeros as usize));
-            if exact.len() - sign.len() > self.bigint_threshold {
-                Token::BigInteger(exact)
-            } else {
-                match exact.parse::<f64>() {
-                    Ok(num) => Token::Number(num),
-                    Err(_) => Token::Illegal('0'),
-                }
-            }
-        } else {
-            // 负指数或小数位多于指数：结果是小数，降级为 f64
-            match num_str.parse::<f64>() {
-                Ok(num) => Token::Number(num),
-                Err(_) => Token::Illegal('0'),
-            }
+        match num_str.parse::<f64>() {
+            Ok(num) => Token::Number(num),
+            Err(_) => Token::Illegal('0'),
         }
     }
 

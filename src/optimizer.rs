@@ -1,7 +1,7 @@
 // src/optimizer.rs
 //! 代码优化器 - 包含尾递归优化、常量折叠等
 
-use crate::ast::{located, BinOp, Expr, Located, Program, Stmt, UnaryOp};
+use crate::ast::{BinOp, Expr, Located, Program, Stmt, UnaryOp, located};
 
 /// 代码优化器
 pub struct Optimizer {
@@ -219,10 +219,22 @@ impl Optimizer {
     }
 
     /// 消除语句体中的死代码并保留行号
+    ///
+    /// 额外规则：**无条件 `Return` 之后的语句一律删除**（本就不可达）。
+    /// 这同时是尾递归改写正确性的前提——改写后尾调用等价于循环继续，
+    /// 若不删掉其后的语句，它们会在每轮迭代中复活执行。
     fn eliminate_dead_body(&self, body: Vec<Located>) -> Vec<Located> {
-        body.into_iter()
-            .filter_map(|l| self.eliminate_dead_located(l))
-            .collect()
+        let mut out = Vec::new();
+        for l in body {
+            let is_return = matches!(l.stmt, Stmt::Return(_));
+            if let Some(processed) = self.eliminate_dead_located(l) {
+                out.push(processed);
+            }
+            if is_return {
+                break; // 之后全部不可达
+            }
+        }
+        out
     }
 
     /// 消除死语句
@@ -331,12 +343,7 @@ impl Optimizer {
                     Stmt::FuncDef {
                         name: name.clone(),
                         params: params.clone(),
-                        body: self.convert_tail_recursion_to_loop(
-                            &name,
-                            &params,
-                            body,
-                            stmt_line,
-                        ),
+                        body: self.convert_tail_recursion_to_loop(&name, &params, body, stmt_line),
                     }
                 } else {
                     Stmt::FuncDef { name, params, body }
@@ -364,13 +371,16 @@ impl Optimizer {
     }
 
     /// 检查语句是否包含尾递归
+    ///
+    /// 只检查**函数体顶层**的 Return / If 表达式，不下降进入
+    /// While/For 循环体——循环内的尾调用保持解释执行：
+    /// 改写为「参数更新 + 落空继续」会破坏循环的正常退出路径
+    /// （无法跳出内层循环、循环内后续语句被错误重复执行），
+    /// 正确性优先于优化覆盖率。
     fn stmt_has_tail_recursion(&self, func_name: &str, stmt: &Stmt) -> bool {
         match stmt {
             Stmt::Return(expr) => self.is_tail_call(func_name, expr),
             Stmt::Expression(expr) => self.expr_has_tail_recursion(func_name, expr),
-            Stmt::While { body, .. } => self.has_tail_recursion_in_body(func_name, body),
-            Stmt::For { body, .. } => self.has_tail_recursion_in_body(func_name, body),
-            Stmt::ForIndexed { body, .. } => self.has_tail_recursion_in_body(func_name, body),
             _ => false,
         }
     }
@@ -539,7 +549,10 @@ impl Optimizer {
                             ));
                         }
 
-                        // 继续循环
+                        // 继续循环：Continue 绑定到合成的 While，
+                        // 跳过本轮剩余语句（检测已保证此处不在嵌套循环内，
+                        // 且死代码消除已删去 Return 之后的不可达语句）
+                        loop_body.push(located(line, Stmt::Continue));
                     } else {
                         // 这不是尾递归调用，正常返回
                         loop_body.push(located(
@@ -581,36 +594,16 @@ impl Optimizer {
     }
 
     /// 转换语句以适应循环结构
+    ///
+    /// 只转换顶层的 If 表达式分支；**不下降进入 While/For 循环体**
+    /// （检测阶段已保证函数仅在顶层存在尾调用，循环体保持原样，
+    /// 其中的递归调用按普通调用解释执行）。
     fn transform_stmt_for_loop(&self, func_name: &str, params: &[String], stmt: Stmt) -> Stmt {
         match stmt {
             Stmt::Expression(expr) => {
                 // 处理If表达式
                 Stmt::Expression(self.transform_expr_for_loop(func_name, params, expr))
             }
-            Stmt::While { condition, body } => Stmt::While {
-                condition,
-                body: self.transform_body_to_loop(func_name, params, body),
-            },
-            Stmt::For {
-                var,
-                iterable,
-                body,
-            } => Stmt::For {
-                var,
-                iterable,
-                body: self.transform_body_to_loop(func_name, params, body),
-            },
-            Stmt::ForIndexed {
-                index_var,
-                value_var,
-                iterable,
-                body,
-            } => Stmt::ForIndexed {
-                index_var,
-                value_var,
-                iterable,
-                body: self.transform_body_to_loop(func_name, params, body),
-            },
             other => other,
         }
     }
@@ -673,10 +666,13 @@ mod tests {
         // While False 应该被删除
         let stmt = Stmt::While {
             condition: Expr::Boolean(false),
-            body: vec![located(1, Stmt::Set {
-                name: "x".to_string(),
-                value: Expr::Number(10.0),
-            })],
+            body: vec![located(
+                1,
+                Stmt::Set {
+                    name: "x".to_string(),
+                    value: Expr::Number(10.0),
+                },
+            )],
         };
 
         let result = optimizer.eliminate_dead_stmt(stmt);
@@ -688,90 +684,9 @@ mod tests {
         let optimizer = Optimizer::new();
 
         // 测试简单的尾递归
-        let body = vec![located(1, Stmt::Return(Expr::Call {
-            func: Box::new(Expr::Identifier("factorial".to_string())),
-            args: vec![
-                Expr::Binary {
-                    left: Box::new(Expr::Identifier("n".to_string())),
-                    op: BinOp::Subtract,
-                    right: Box::new(Expr::Number(1.0)),
-                },
-                Expr::Binary {
-                    left: Box::new(Expr::Identifier("acc".to_string())),
-                    op: BinOp::Multiply,
-                    right: Box::new(Expr::Identifier("n".to_string())),
-                },
-            ],
-        }))];
-
-        assert!(optimizer.is_tail_recursive("factorial", &body));
-    }
-
-    #[test]
-    fn test_non_tail_recursion_detection() {
-        let optimizer = Optimizer::new();
-
-        // 测试非尾递归（递归调用后还有操作）
-        let body = vec![located(1, Stmt::Return(Expr::Binary {
-            left: Box::new(Expr::Identifier("n".to_string())),
-            op: BinOp::Multiply,
-            right: Box::new(Expr::Call {
-                func: Box::new(Expr::Identifier("factorial".to_string())),
-                args: vec![Expr::Binary {
-                    left: Box::new(Expr::Identifier("n".to_string())),
-                    op: BinOp::Subtract,
-                    right: Box::new(Expr::Number(1.0)),
-                }],
-            }),
-        }))];
-
-        assert!(!optimizer.is_tail_recursive("factorial", &body));
-    }
-
-    #[test]
-    fn test_tail_recursion_in_if() {
-        let optimizer = Optimizer::new();
-
-        // 测试If表达式中的尾递归
-        // 实际上Aether中Return语句后面跟的是表达式，而If是表达式
-        // 所以我们需要Return一个If表达式
-        let body = vec![located(1, Stmt::Expression(Expr::If {
-            condition: Box::new(Expr::Binary {
-                left: Box::new(Expr::Identifier("n".to_string())),
-                op: BinOp::LessEqual,
-                right: Box::new(Expr::Number(0.0)),
-            }),
-            then_branch: vec![located(1, Stmt::Return(Expr::Identifier("acc".to_string())))],
-            elif_branches: vec![],
-            else_branch: Some(vec![located(1, Stmt::Return(Expr::Call {
-                func: Box::new(Expr::Identifier("sum".to_string())),
-                args: vec![
-                    Expr::Binary {
-                        left: Box::new(Expr::Identifier("n".to_string())),
-                        op: BinOp::Subtract,
-                        right: Box::new(Expr::Number(1.0)),
-                    },
-                    Expr::Binary {
-                        left: Box::new(Expr::Identifier("acc".to_string())),
-                        op: BinOp::Add,
-                        right: Box::new(Expr::Identifier("n".to_string())),
-                    },
-                ],
-            }))]),
-        }))];
-
-        assert!(optimizer.is_tail_recursive("sum", &body));
-    }
-
-    #[test]
-    fn test_tail_recursion_optimization_transform() {
-        let optimizer = Optimizer::new();
-
-        // 创建一个简单的尾递归函数
-        let func_def = Stmt::FuncDef {
-            name: "factorial".to_string(),
-            params: vec!["n".to_string(), "acc".to_string()],
-            body: vec![located(1, Stmt::Return(Expr::Call {
+        let body = vec![located(
+            1,
+            Stmt::Return(Expr::Call {
                 func: Box::new(Expr::Identifier("factorial".to_string())),
                 args: vec![
                     Expr::Binary {
@@ -785,7 +700,106 @@ mod tests {
                         right: Box::new(Expr::Identifier("n".to_string())),
                     },
                 ],
-            }))],
+            }),
+        )];
+
+        assert!(optimizer.is_tail_recursive("factorial", &body));
+    }
+
+    #[test]
+    fn test_non_tail_recursion_detection() {
+        let optimizer = Optimizer::new();
+
+        // 测试非尾递归（递归调用后还有操作）
+        let body = vec![located(
+            1,
+            Stmt::Return(Expr::Binary {
+                left: Box::new(Expr::Identifier("n".to_string())),
+                op: BinOp::Multiply,
+                right: Box::new(Expr::Call {
+                    func: Box::new(Expr::Identifier("factorial".to_string())),
+                    args: vec![Expr::Binary {
+                        left: Box::new(Expr::Identifier("n".to_string())),
+                        op: BinOp::Subtract,
+                        right: Box::new(Expr::Number(1.0)),
+                    }],
+                }),
+            }),
+        )];
+
+        assert!(!optimizer.is_tail_recursive("factorial", &body));
+    }
+
+    #[test]
+    fn test_tail_recursion_in_if() {
+        let optimizer = Optimizer::new();
+
+        // 测试If表达式中的尾递归
+        // 实际上Aether中Return语句后面跟的是表达式，而If是表达式
+        // 所以我们需要Return一个If表达式
+        let body = vec![located(
+            1,
+            Stmt::Expression(Expr::If {
+                condition: Box::new(Expr::Binary {
+                    left: Box::new(Expr::Identifier("n".to_string())),
+                    op: BinOp::LessEqual,
+                    right: Box::new(Expr::Number(0.0)),
+                }),
+                then_branch: vec![located(
+                    1,
+                    Stmt::Return(Expr::Identifier("acc".to_string())),
+                )],
+                elif_branches: vec![],
+                else_branch: Some(vec![located(
+                    1,
+                    Stmt::Return(Expr::Call {
+                        func: Box::new(Expr::Identifier("sum".to_string())),
+                        args: vec![
+                            Expr::Binary {
+                                left: Box::new(Expr::Identifier("n".to_string())),
+                                op: BinOp::Subtract,
+                                right: Box::new(Expr::Number(1.0)),
+                            },
+                            Expr::Binary {
+                                left: Box::new(Expr::Identifier("acc".to_string())),
+                                op: BinOp::Add,
+                                right: Box::new(Expr::Identifier("n".to_string())),
+                            },
+                        ],
+                    }),
+                )]),
+            }),
+        )];
+
+        assert!(optimizer.is_tail_recursive("sum", &body));
+    }
+
+    #[test]
+    fn test_tail_recursion_optimization_transform() {
+        let optimizer = Optimizer::new();
+
+        // 创建一个简单的尾递归函数
+        let func_def = Stmt::FuncDef {
+            name: "factorial".to_string(),
+            params: vec!["n".to_string(), "acc".to_string()],
+            body: vec![located(
+                1,
+                Stmt::Return(Expr::Call {
+                    func: Box::new(Expr::Identifier("factorial".to_string())),
+                    args: vec![
+                        Expr::Binary {
+                            left: Box::new(Expr::Identifier("n".to_string())),
+                            op: BinOp::Subtract,
+                            right: Box::new(Expr::Number(1.0)),
+                        },
+                        Expr::Binary {
+                            left: Box::new(Expr::Identifier("acc".to_string())),
+                            op: BinOp::Multiply,
+                            right: Box::new(Expr::Identifier("n".to_string())),
+                        },
+                    ],
+                }),
+            )],
         };
 
         let optimized = optimizer.optimize_tail_recursive_stmt(func_def, 1);
@@ -801,7 +815,11 @@ mod tests {
             );
 
             // 最后一个语句应该是While循环
-            if let Some(Located { stmt: Stmt::While { .. }, .. }) = body.last() {
+            if let Some(Located {
+                stmt: Stmt::While { .. },
+                ..
+            }) = body.last()
+            {
                 // 成功转换为循环
             } else {
                 panic!("Expected While loop at the end of optimized function body");

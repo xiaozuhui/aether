@@ -19,10 +19,10 @@ use crate::value::Value;
 ///
 /// # 示例
 /// ```aether
-/// Println(TypeOf(42))          # 输出: Number
-/// Println(TypeOf("hello"))     # 输出: String
-/// Println(TypeOf([1, 2, 3]))   # 输出: Array
-/// Println(TypeOf(True))        # 输出: Boolean
+/// PRINTLN(TYPE(42))          // 输出: Number
+/// PRINTLN(TYPE("hello"))     // 输出: String
+/// PRINTLN(TYPE([1, 2, 3]))   // 输出: Array
+/// PRINTLN(TYPE(True))        // 输出: Boolean
 /// ```
 pub fn type_of(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -63,10 +63,10 @@ pub fn type_of(args: &[Value]) -> Result<Value, RuntimeError> {
 /// # 示例
 /// ```aether
 /// Set NUM 42
-/// Set STR ToString(NUM)         # "42"
-/// Println(ToString(True))       # "true"
-/// Println(ToString([1, 2, 3]))  # "[1, 2, 3]"
-/// Println(ToString(Null))       # "null"
+/// Set STR TO_STRING(NUM)         // "42"
+/// PRINTLN(TO_STRING(True))       // "true"
+/// PRINTLN(TO_STRING([1, 2, 3]))  // "[1, 2, 3]"
+/// PRINTLN(TO_STRING(Null))       // "null"
 /// ```
 pub fn to_string(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -99,11 +99,11 @@ pub fn to_string(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set NUM ToNumber("123")       # 123.0
-/// Set VAL ToNumber("3.14")      # 3.14
-/// Set B1 ToNumber(True)         # 1.0
-/// Set B2 ToNumber(False)        # 0.0
-/// Set NULL_NUM ToNumber(Null)   # 0.0
+/// Set NUM TO_NUMBER("123")       // 123.0
+/// Set VAL TO_NUMBER("3.14")      // 3.14
+/// Set B1 TO_NUMBER(True)         // 1.0
+/// Set B2 TO_NUMBER(False)        // 0.0
+/// Set NULL_NUM TO_NUMBER(Null)   // 0.0
 /// ```
 pub fn to_number(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -141,15 +141,15 @@ pub fn to_number(args: &[Value]) -> Result<Value, RuntimeError> {
 /// - `collection`: 字符串、数组或字典
 ///
 /// # 返回值
-/// 长度（数字）
+/// 长度（数字；字符串按 **Unicode 字符** 计数）
 ///
 /// # 示例
 /// ```aether
-/// Println(Len("hello"))         # 5
-/// Println(Len([1, 2, 3]))       # 3
-/// Println(Len({"a": 1, "b": 2}))  # 2
-/// Println(Len(""))              # 0
-/// Println(Len([]))              # 0
+/// Set A LEN("hello")               // 5
+/// Set B LEN([1, 2, 3])             // 3
+/// Set C LEN({"a": 1, "b": 2})      // 2
+/// Set D LEN("你好")                // 2（字符语义，非 6 字节）
+/// Set E LEN("")                    // 0
 /// ```
 pub fn len(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -160,7 +160,7 @@ pub fn len(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     match &args[0] {
-        Value::String(s) => Ok(Value::Number(s.len() as f64)),
+        Value::String(s) => Ok(Value::Number(s.chars().count() as f64)),
         Value::Array(arr) => Ok(Value::Number(arr.len() as f64)),
         Value::Dict(dict) => Ok(Value::Number(dict.len() as f64)),
         other => Err(RuntimeError::TypeErrorDetailed {
@@ -168,33 +168,4 @@ pub fn len(args: &[Value]) -> Result<Value, RuntimeError> {
             got: format!("{:?}", other),
         }),
     }
-}
-
-/// 深拷贝一个值
-///
-/// # 功能
-/// 创建值的深拷贝副本。对于复杂类型（Array、Dict），会递归拷贝所有嵌套内容。
-///
-/// # 参数
-/// - `value`: 要拷贝的值（任意类型）
-///
-/// # 返回值
-/// 原值的深拷贝副本
-///
-/// # 示例
-/// ```aether
-/// Set ORIG [1, 2, [3, 4]]
-/// Set COPY CLONE(ORIG)
-/// # 修改拷贝不影响原值
-/// ```
-pub fn clone(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    // Rust 的 Clone trait 会自动进行深拷贝
-    Ok(args[0].clone())
 }

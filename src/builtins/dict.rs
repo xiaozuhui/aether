@@ -17,10 +17,10 @@ use crate::value::Value;
 ///
 /// # 示例
 /// ```aether
-/// Set person {"name": "Alice", "age": 30, "city": "Beijing"}
-/// Set allKeys Keys(person)     # ["name", "age", "city"]
-/// Set config {"host": "localhost", "port": 8080}
-/// Set settings Keys(config)    # ["host", "port"]
+/// Set PERSON {"name": "Alice", "age": 30, "city": "Beijing"}
+/// Set ALLKEYS KEYS(PERSON)     // ["name", "age", "city"]
+/// Set CONFIG {"host": "localhost", "port": 8080}
+/// Set SETTINGS KEYS(CONFIG)    // ["host", "port"]
 /// ```
 pub fn keys(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -55,10 +55,10 @@ pub fn keys(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set person {"name": "Alice", "age": 30, "city": "Beijing"}
-/// Set allValues Values(person)     # ["Alice", 30, "Beijing"]
-/// Set scores {"math": 95, "english": 88}
-/// Set grades Values(scores)        # [95, 88]
+/// Set PERSON {"name": "Alice", "age": 30, "city": "Beijing"}
+/// Set ALLVALUES VALUES(PERSON)     // ["Alice", 30, "Beijing"]
+/// Set SCORES {"math": 95, "english": 88}
+/// Set GRADES VALUES(SCORES)        // [95, 88]
 /// ```
 pub fn values(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -94,11 +94,11 @@ pub fn values(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set person {"name": "Alice", "age": 30}
-/// Set hasName Has(person, "name")      # True
-/// Set hasEmail Has(person, "email")    # False
-/// Set config {"debug": True}
-/// Set hasDebug Has(config, "debug")    # True
+/// Set PERSON {"name": "Alice", "age": 30}
+/// Set HASNAME HAS(PERSON, "name")      // True
+/// Set HASEMAIL HAS(PERSON, "email")    // False
+/// Set CONFIG {"debug": True}
+/// Set HASDEBUG HAS(CONFIG, "debug")    // True
 /// ```
 pub fn has(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -132,14 +132,14 @@ pub fn has(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set defaults {"host": "localhost", "port": 8080, "debug": False}
-/// Set custom {"port": 3000, "debug": True}
-/// Set config Merge(defaults, custom)
-/// # {"host": "localhost", "port": 3000, "debug": True}
+/// Set DEFAULTS {"host": "localhost", "port": 8080, "debug": False}
+/// Set CUSTOM {"port": 3000, "debug": True}
+/// Set CONFIG MERGE(DEFAULTS, CUSTOM)
+/// // {"host": "localhost", "port": 3000, "debug": True}
 ///
-/// Set base {"a": 1, "b": 2}
-/// Set extra {"c": 3, "d": 4}
-/// Set combined Merge(base, extra)      # {"a": 1, "b": 2, "c": 3, "d": 4}
+/// Set BASE {"a": 1, "b": 2}
+/// Set EXTRA {"c": 3, "d": 4}
+/// Set COMBINED MERGE(BASE, EXTRA)      // {"a": 1, "b": 2, "c": 3, "d": 4}
 /// ```
 pub fn merge(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {

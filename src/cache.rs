@@ -4,14 +4,22 @@
 use crate::ast::Program;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-/// AST缓存,用于存储已解析的程序
+/// AST 缓存，用于存储已解析的程序。
+///
+/// - **碰撞安全**：u64 哈希仅作加速索引，命中前必须比对源码
+///   完全一致，哈希碰撞不会返回错误的 AST。
+/// - **LRU 淘汰**：`VecDeque` 维护真实的使用顺序，get 命中会刷新
+///   新鲜度；容量满时淘汰最近最少使用的条目。
 #[derive(Debug)]
 pub struct ASTCache {
-    /// 缓存存储: hash -> 解析后的AST
-    cache: HashMap<u64, Program>,
+    /// 缓存存储: hash -> (源码, 解析后的 AST)
+    cache: HashMap<u64, (String, Program)>,
+    /// 按使用顺序排列的哈希键（队首 = 最近最少使用）
+    order: VecDeque<u64>,
     /// 缓存大小限制
     max_size: usize,
     /// 缓存命中统计
@@ -29,7 +37,8 @@ impl ASTCache {
     /// 创建指定容量的AST缓存
     pub fn with_capacity(max_size: usize) -> Self {
         ASTCache {
-            cache: HashMap::with_capacity(max_size.min(100)),
+            cache: HashMap::with_capacity(max_size),
+            order: VecDeque::with_capacity(max_size),
             max_size,
             hits: 0,
             misses: 0,
@@ -43,38 +52,57 @@ impl ASTCache {
         hasher.finish()
     }
 
-    /// 从缓存中获取AST
+    /// 把键移到 LRU 队尾（最近使用）
+    fn touch(&mut self, hash: u64) {
+        if let Some(pos) = self.order.iter().position(|&k| k == hash) {
+            self.order.remove(pos);
+        }
+        self.order.push_back(hash);
+    }
+
+    /// 从缓存中获取AST（命中要求源码完全一致）
     pub fn get(&mut self, code: &str) -> Option<Program> {
         let hash = Self::hash_code(code);
-        if let Some(program) = self.cache.get(&hash) {
+        // 先比对源码（碰撞安全），释放借用后再刷新 LRU 顺序
+        let hit = self
+            .cache
+            .get(&hash)
+            .is_some_and(|(cached_code, _)| cached_code == code);
+        if hit {
             self.hits += 1;
-            Some(program.clone())
+            self.touch(hash);
+            self.cache.get(&hash).map(|(_, program)| program.clone())
         } else {
             self.misses += 1;
             None
         }
     }
 
-    /// 将AST存入缓存
+    /// 将AST存入缓存（容量满时淘汰最近最少使用的条目）
     pub fn insert(&mut self, code: &str, program: Program) {
         let hash = Self::hash_code(code);
 
-        // 如果缓存已满,使用简单的FIFO策略清理
-        if self.cache.len() >= self.max_size {
-            // 清理最早的10%条目
-            let to_remove = (self.max_size / 10).max(1);
-            let keys_to_remove: Vec<u64> = self.cache.keys().take(to_remove).copied().collect();
-            for key in keys_to_remove {
-                self.cache.remove(&key);
+        if self.cache.contains_key(&hash) {
+            // 同键覆盖（源码可能不同）：保持容量不变，刷新新鲜度
+            self.touch(hash);
+        } else {
+            while self.cache.len() >= self.max_size {
+                if let Some(lru) = self.order.pop_front() {
+                    self.cache.remove(&lru);
+                } else {
+                    break;
+                }
             }
+            self.order.push_back(hash);
         }
 
-        self.cache.insert(hash, program);
+        self.cache.insert(hash, (code.to_string(), program));
     }
 
     /// 清空缓存
     pub fn clear(&mut self) {
         self.cache.clear();
+        self.order.clear();
         self.hits = 0;
         self.misses = 0;
     }

@@ -50,6 +50,8 @@ impl std::fmt::Display for TraceLevel {
 /// 结构化 TRACE 事件条目
 #[derive(Debug, Clone)]
 pub struct TraceEntry {
+    /// 序号（单缓冲中每条递增，take_trace 的 "#N" 前缀由此派生）
+    pub seq: u64,
     /// 时间戳
     pub timestamp: Instant,
     /// 事件级别
@@ -68,6 +70,7 @@ impl TraceEntry {
     /// 创建新的 TRACE 条目
     pub fn new(level: TraceLevel, category: String, values: Vec<Value>) -> Self {
         Self {
+            seq: 0,
             timestamp: Instant::now(),
             level,
             category,

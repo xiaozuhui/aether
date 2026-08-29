@@ -99,9 +99,6 @@ pub enum Token {
     Shl,    // <<
     Shr,    // >>
 
-    // Assignment
-    Assign, // = (但 Aether 中用 Set，这里可能不需要)
-
     // Delimiters
     LeftParen,    // (
     RightParen,   // )
@@ -218,7 +215,6 @@ impl Token {
             Token::BitXor => "^",
             Token::Shl => "<<",
             Token::Shr => ">>",
-            Token::Assign => "=",
             Token::LeftParen => "(",
             Token::RightParen => ")",
             Token::LeftBrace => "{",

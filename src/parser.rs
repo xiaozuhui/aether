@@ -3,7 +3,7 @@
 //!
 //! Converts a stream of tokens into an Abstract Syntax Tree (AST)
 
-use crate::ast::{located, BinOp, Expr, Located, Program, Stmt, UnaryOp};
+use crate::ast::{BinOp, Expr, Located, Program, Stmt, UnaryOp, located};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
@@ -167,6 +167,24 @@ impl Parser {
         }
     }
 
+    /// 解析独立表达式字符串（调试器条件断点使用）：
+    /// 解析单个表达式后要求输入恰好耗尽（允许首尾换行），
+    /// 有多余 token 视为非法条件。
+    pub fn parse_expression_source(input: &str) -> Result<Expr, ParseError> {
+        let mut parser = Parser::new(input);
+        parser.skip_newlines();
+        let expr = parser.parse_expression(Precedence::Lowest)?;
+        parser.skip_newlines();
+        if parser.current_token != Token::EOF {
+            return Err(ParseError::InvalidExpression {
+                message: "条件中存在多余内容".to_string(),
+                line: parser.current_line,
+                column: parser.current_column,
+            });
+        }
+        Ok(expr)
+    }
+
     /// Advance to the next token
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
@@ -266,10 +284,6 @@ impl Parser {
 
     /// Get precedence of peek token
     #[allow(dead_code)]
-    fn peek_precedence(&self) -> Precedence {
-        self.token_precedence(&self.peek_token)
-    }
-
     /// Get precedence of a token
     fn token_precedence(&self, token: &Token) -> Precedence {
         match token {
@@ -502,7 +516,10 @@ impl Parser {
         self.next_token();
         self.expect_token(Token::LeftParen)?;
 
+        // 括号内允许换行书写长表达式（与函数调用的多行参数一致）
+        self.skip_newlines();
         let expr = self.parse_expression(Precedence::Lowest)?;
+        self.skip_newlines();
 
         self.expect_token(Token::RightParen)?;
 
@@ -965,13 +982,14 @@ impl Parser {
             }
             Token::BigInteger(s) => {
                 // 解析期一次性构造 BigInt，避免每次求值重复解析字符串
-                let big_int = num_bigint::BigInt::parse_bytes(s.as_bytes(), 10).ok_or_else(
-                    || ParseError::InvalidExpression {
-                        message: format!("Invalid big integer literal: {}", s),
-                        line: self.current_line,
-                        column: self.current_column,
-                    },
-                )?;
+                let big_int =
+                    num_bigint::BigInt::parse_bytes(s.as_bytes(), 10).ok_or_else(|| {
+                        ParseError::InvalidExpression {
+                            message: format!("Invalid big integer literal: {}", s),
+                            line: self.current_line,
+                            column: self.current_column,
+                        }
+                    })?;
                 self.next_token();
                 Ok(Expr::BigInteger(big_int))
             }

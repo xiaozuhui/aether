@@ -45,12 +45,17 @@ pub enum Value {
         file: Option<String>,
     },
 
-    /// Generator (lazy iterator)
+    /// Generator（生成器实例）
+    ///
+    /// 语义（0.6.0 冻结，用户选择「首次触发急切收集」）：
+    /// 第一次 `NEXT(G)` 时完整执行函数体**一次**，所有 Yield 值
+    /// 按序收入内核缓冲；此后 NEXT 逐个弹出，耗尽返回 Null。
+    /// 函数体内的副作用因此**恰好发生一次**。无限生成器会在收集
+    /// 阶段触发步数上限报错，而不是挂起。
     Generator {
-        params: Vec<String>,
-        body: Vec<Located>,
-        env: Rc<RefCell<Environment>>,
-        state: GeneratorState,
+        /// 共享内核：克隆生成器值（如 `Set G2 G`）消费同一序列，
+        /// 类似 Python 迭代器语义
+        inner: Rc<RefCell<GeneratorInner>>,
     },
 
     /// Lazy value (computed on demand)
@@ -64,17 +69,33 @@ pub enum Value {
     BuiltIn { name: String, arity: usize },
 }
 
-/// Generator execution state
-#[derive(Debug, Clone)]
-pub enum GeneratorState {
-    /// Not started yet
-    NotStarted,
+/// 生成器内核：定义信息 + 已收集的值序列 + 消费位置。
+#[derive(Clone)]
+pub struct GeneratorInner {
+    /// 参数名列表（用于调用时的参数绑定与显示）
+    pub params: Vec<String>,
+    /// 生成器函数体
+    pub body: Vec<Located>,
+    /// 定义（或实例化）时捕获的环境
+    pub env: Rc<RefCell<Environment>>,
+    /// 已收集的 Yield 值；None 表示尚未执行过函数体
+    pub collected: Option<Vec<Value>>,
+    /// 下一个待弹出的位置
+    pub position: usize,
+}
 
-    /// Running with current position
-    Running { position: usize },
-
-    /// Completed
-    Done,
+/// 手写 Debug：内核持有环境引用（可能成环），不递归打印内容。
+impl fmt::Debug for GeneratorInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let state = match &self.collected {
+            None => "not-collected".to_string(),
+            Some(values) => format!("{}/{} consumed", self.position, values.len()),
+        };
+        f.debug_struct("GeneratorInner")
+            .field("params", &self.params)
+            .field("state", &state)
+            .finish()
+    }
 }
 
 impl Value {
@@ -164,8 +185,9 @@ impl Value {
                     format!("<Function ({})>", params.join(", "))
                 }
             }
-            Value::Generator { params, .. } => {
-                format!("<Generator ({})>", params.join(", "))
+            Value::Generator { inner } => {
+                let g = inner.borrow();
+                format!("<Generator ({})>", g.params.join(", "))
             }
             Value::Lazy { .. } => "<Lazy>".to_string(),
             Value::BuiltIn { name, arity } => {
@@ -175,15 +197,27 @@ impl Value {
     }
 
     /// Compare values for equality
+    ///
+    /// 语义（0.6.0 冻结）：
+    /// - Number 之间是**严格位相等**（不再使用绝对容差——那会让大数
+    ///   恒等、小数恒不等）。需要容差请显式写 `ABS(A - B) < 0.000001`。
+    /// - Dict 深相等：键数一致、逐键递归比较，键序无关。
+    /// - 跨类型恒为 false：`5 == TO_FRACTION(5)` 为 false，
+    ///   需显式转换为同一类型后再比较。
     pub fn equals(&self, other: &Value) -> bool {
         match (self, other) {
-            (Value::Number(a), Value::Number(b)) => (a - b).abs() < f64::EPSILON,
+            (Value::Number(a), Value::Number(b)) => a == b,
             (Value::Fraction(a), Value::Fraction(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Boolean(a), Value::Boolean(b)) => a == b,
             (Value::Null, Value::Null) => true,
             (Value::Array(a), Value::Array(b)) => {
                 a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x.equals(y))
+            }
+            (Value::Dict(a), Value::Dict(b)) => {
+                a.len() == b.len()
+                    && a.iter()
+                        .all(|(k, v)| b.get(k).is_some_and(|bv| v.equals(bv)))
             }
             _ => false,
         }

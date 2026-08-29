@@ -55,7 +55,7 @@ fn demo_engine_pool() {
     println!("   适用场景：单线程内需要多个引擎实例\n");
 
     // 创建引擎池
-    let mut pool = EnginePool::new(4);
+    let pool = EnginePool::new(4);
     println!("   引擎池大小: {}", pool.capacity());
     println!("   当前可用引擎: {}", pool.available());
 
@@ -134,7 +134,7 @@ fn performance_comparison() {
     println!("   GlobalEngine:  {:?}", global_time);
 
     // EnginePool 性能（单线程）
-    let mut pool = EnginePool::new(4);
+    let pool = EnginePool::new(4);
     let start = Instant::now();
     for _ in 0..iterations {
         let mut engine = pool.acquire();

@@ -1,4 +1,7 @@
-use aether::{Expr, Optimizer, Program, Stmt, ast::{BinOp, located}};
+use aether::{
+    Expr, Optimizer, Program, Stmt,
+    ast::{BinOp, located},
+};
 
 #[test]
 fn test_optimize_program() {

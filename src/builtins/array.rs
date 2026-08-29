@@ -27,10 +27,10 @@ use crate::value::Value;
 ///
 /// # 示例
 /// ```aether
-/// Set nums Range(5)           # [0, 1, 2, 3, 4]
-/// Set nums Range(2, 8)        # [2, 3, 4, 5, 6, 7]
-/// Set nums Range(0, 10, 2)    # [0, 2, 4, 6, 8]
-/// Set nums Range(10, 0, -2)   # [10, 8, 6, 4, 2]
+/// Set NUMS RANGE(5)           // [0, 1, 2, 3, 4]
+/// Set NUMS RANGE(2, 8)        // [2, 3, 4, 5, 6, 7]
+/// Set NUMS RANGE(0, 10, 2)    // [0, 2, 4, 6, 8]
+/// Set NUMS RANGE(10, 0, -2)   // [10, 8, 6, 4, 2]
 /// ```
 pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
     let (start, end, step) = match args.len() {
@@ -116,9 +116,9 @@ pub fn range(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set arr [1, 2, 3]
-/// Set newArr Push(arr, 4)     # [1, 2, 3, 4]
-/// Println(arr)                # [1, 2, 3] (原数组不变)
+/// Set ARR [1, 2, 3]
+/// Set NEWARR PUSH(ARR, 4)     // [1, 2, 3, 4]
+/// PRINTLN(ARR)                // [1, 2, 3] (原数组不变)
 /// ```
 pub fn push(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -159,10 +159,10 @@ pub fn push(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set arr [1, 2, 3, 4]
-/// Set result Pop(arr)          # [[1, 2, 3], 4]
-/// Set newArr result[0]         # [1, 2, 3]
-/// Set popped result[1]         # 4
+/// Set ARR [1, 2, 3, 4]
+/// Set RESULT POP(ARR)          // [[1, 2, 3], 4]
+/// Set NEWARR RESULT[0]         // [1, 2, 3]
+/// Set POPPED RESULT[1]         // 4
 /// ```
 pub fn pop(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -204,11 +204,11 @@ pub fn pop(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set arr [1, 2, 3, 4]
-/// Set str Join(arr, ", ")      # "1, 2, 3, 4"
-/// Set str Join(arr, "-")       # "1-2-3-4"
-/// Set words ["Hello", "World"]
-/// Set str Join(words, " ")     # "Hello World"
+/// Set ARR [1, 2, 3, 4]
+/// Set STR JOIN(ARR, ", ")      // "1, 2, 3, 4"
+/// Set STR JOIN(ARR, "-")       // "1-2-3-4"
+/// Set WORDS ["Hello", "World"]
+/// Set STR JOIN(WORDS, " ")     // "Hello World"
 /// ```
 pub fn join(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -243,9 +243,9 @@ pub fn join(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set arr [1, 2, 3, 4, 5]
-/// Set reversed Reverse(arr)    # [5, 4, 3, 2, 1]
-/// Println(arr)                 # [1, 2, 3, 4, 5] (原数组不变)
+/// Set ARR [1, 2, 3, 4, 5]
+/// Set REVERSED REVERSE(ARR)    // [5, 4, 3, 2, 1]
+/// PRINTLN(ARR)                 // [1, 2, 3, 4, 5] (原数组不变)
 /// ```
 pub fn reverse(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -284,9 +284,9 @@ pub fn reverse(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [3, 1, 4, 1, 5, 9, 2, 6]
-/// Set sorted Sort(nums)        # [1, 1, 2, 3, 4, 5, 6, 9]
-/// Println(nums)                # [3, 1, 4, 1, 5, 9, 2, 6] (原数组不变)
+/// Set NUMS [3, 1, 4, 1, 5, 9, 2, 6]
+/// Set SORTED SORT(NUMS)        // [1, 1, 2, 3, 4, 5, 6, 9]
+/// PRINTLN(NUMS)                // [3, 1, 4, 1, 5, 9, 2, 6] (原数组不变)
 /// ```
 pub fn sort(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -338,10 +338,10 @@ pub fn sort(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [1, 2, 3, 4, 5]
-/// Set total Sum(nums)          # 15
-/// Set prices [10.5, 20.0, 5.5]
-/// Set total Sum(prices)        # 36.0
+/// Set NUMS [1, 2, 3, 4, 5]
+/// Set TOTAL SUM(NUMS)          // 15
+/// Set PRICES [10.5, 20.0, 5.5]
+/// Set TOTAL SUM(PRICES)        // 36.0
 /// ```
 pub fn sum(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -391,10 +391,10 @@ pub fn sum(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [3, 7, 2, 9, 1]
-/// Set maximum Max(nums)        # 9
-/// Set scores [85.5, 92.0, 78.5, 95.5]
-/// Set highest Max(scores)      # 95.5
+/// Set NUMS [3, 7, 2, 9, 1]
+/// Set MAXIMUM MAX(NUMS)        // 9
+/// Set SCORES [85.5, 92.0, 78.5, 95.5]
+/// Set HIGHEST MAX(SCORES)      // 95.5
 /// ```
 pub fn max(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -454,10 +454,10 @@ pub fn max(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [3, 7, 2, 9, 1]
-/// Set minimum Min(nums)        # 1
-/// Set temps [18.5, 22.0, 15.5, 20.5]
-/// Set lowest Min(temps)        # 15.5
+/// Set NUMS [3, 7, 2, 9, 1]
+/// Set MINIMUM MIN(NUMS)        // 1
+/// Set TEMPS [18.5, 22.0, 15.5, 20.5]
+/// Set LOWEST MIN(TEMPS)        // 15.5
 /// ```
 pub fn min(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -518,7 +518,7 @@ pub fn min(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set doubled Map([1, 2, 3], Fun(x) { Return x * 2 })  # [2, 4, 6]
+/// Set DOUBLED MAP([1, 2, 3], Func(X) { Return X * 2 })  // [2, 4, 6]
 /// ```
 pub fn map(_args: &[Value]) -> Result<Value, RuntimeError> {
     // 注意：真正的 map 实现应该在求值器层面，因为需要调用用户定义的函数
@@ -546,7 +546,7 @@ pub fn map(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set evens Filter([1, 2, 3, 4], Fun(x) { Return x % 2 == 0 })  # [2, 4]
+/// Set EVENS FILTER([1, 2, 3, 4], Func(X) { Return X % 2 == 0 })  // [2, 4]
 /// ```
 pub fn filter(_args: &[Value]) -> Result<Value, RuntimeError> {
     // 注意：真正的 filter 实现应该在求值器层面，因为需要调用用户定义的函数
@@ -567,9 +567,9 @@ pub fn filter(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// # 实际使用（由求值器处理，参数顺序：array, func, initial）:
-/// # 回调可选第三参数索引 (acc, item, index)
-/// Set sum REDUCE([1, 2, 3, 4], Fun(acc, x, i) { Return acc + x + i }, 0)  # 16
+/// // 实际使用（由求值器处理，参数顺序：array, func, initial）:
+/// // 回调可选第三参数索引 (acc, item, index)
+/// Set SUM REDUCE([1, 2, 3, 4], Func(ACC, X, I) { Return ACC + X + I }, 0)  // 16
 /// ```
 pub fn reduce(_args: &[Value]) -> Result<Value, RuntimeError> {
     Err(RuntimeError::InvalidOperation(

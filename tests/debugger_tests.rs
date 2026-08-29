@@ -44,7 +44,10 @@ fn line_breakpoint_pauses_at_correct_line_and_resumes() {
     });
 
     let paused = Rc::new(RefCell::new(Vec::new()));
-    let mut engine = debug_engine(Rc::clone(&state), recording_hook(&state, &paused, ExecutionMode::Continue));
+    let mut engine = debug_engine(
+        Rc::clone(&state),
+        recording_hook(&state, &paused, ExecutionMode::Continue),
+    );
 
     let result = engine.eval("Set X 10\nSet Y (X + 5)\nY").unwrap();
 
@@ -87,10 +90,15 @@ fn breakpoint_file_matching_falls_back_to_file_name() {
 #[test]
 fn step_into_records_every_statement() {
     let state = Rc::new(RefCell::new(DebuggerState::new()));
-    state.borrow_mut().set_execution_mode(ExecutionMode::StepInto);
+    state
+        .borrow_mut()
+        .set_execution_mode(ExecutionMode::StepInto);
 
     let paused = Rc::new(RefCell::new(Vec::new()));
-    let mut engine = debug_engine(Rc::clone(&state), recording_hook(&state, &paused, ExecutionMode::StepInto));
+    let mut engine = debug_engine(
+        Rc::clone(&state),
+        recording_hook(&state, &paused, ExecutionMode::StepInto),
+    );
 
     let result = engine
         .eval("Set X 1\nIf (X > 0) {\n  Set Y 2\n}\nSet Z (X + Y)\nZ")
@@ -172,7 +180,10 @@ fn function_breakpoint_triggers_at_entry_with_params_bound() {
         .unwrap();
 
     assert_eq!(result, Value::Number(3.0));
-    let obs = observed.borrow().clone().expect("function breakpoint never triggered");
+    let obs = observed
+        .borrow()
+        .clone()
+        .expect("function breakpoint never triggered");
     assert_eq!(obs.top_frame, "ADD(A, B)");
     // 暂停发生在参数绑定之后：入口即可打印参数
     assert_eq!(obs.param_a, Some(Value::Number(1.0)));
@@ -181,7 +192,9 @@ fn function_breakpoint_triggers_at_entry_with_params_bound() {
 #[test]
 fn hook_quit_terminates_program_before_execution() {
     let state = Rc::new(RefCell::new(DebuggerState::new()));
-    state.borrow_mut().set_execution_mode(ExecutionMode::StepInto);
+    state
+        .borrow_mut()
+        .set_execution_mode(ExecutionMode::StepInto);
 
     let mut engine = debug_engine(state, Box::new(|_ev| true));
 
@@ -202,7 +215,10 @@ fn loop_breakpoint_hits_each_iteration() {
     });
 
     let paused = Rc::new(RefCell::new(Vec::new()));
-    let mut engine = debug_engine(Rc::clone(&state), recording_hook(&state, &paused, ExecutionMode::Continue));
+    let mut engine = debug_engine(
+        Rc::clone(&state),
+        recording_hook(&state, &paused, ExecutionMode::Continue),
+    );
 
     let result = engine
         .eval("Set S 0\nFor I In [1, 2, 3] {\n  Set S (S + I)\n}\nS")
@@ -315,7 +331,10 @@ fn line_breakpoint_inside_imported_function_body() {
         .unwrap();
 
     assert_eq!(result, Value::Number(12.0));
-    let obs = observed.borrow().clone().expect("module body breakpoint never triggered");
+    let obs = observed
+        .borrow()
+        .clone()
+        .expect("module body breakpoint never triggered");
     // 暂停文件是模块文件（按文件名兜底匹配断点），参数已绑定
     assert!(obs.file.ends_with("math.aether"), "was: {}", obs.file);
     assert_eq!(obs.param, Some(Value::Number(4.0)));

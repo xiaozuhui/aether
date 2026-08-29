@@ -181,15 +181,29 @@ fn test_trace_backward_compatibility() {
 
     engine.eval(code).unwrap();
 
-    // take_trace() 应该返回格式化的字符串
+    // 单缓冲（0.6.0）：脚本 TRACE 也产生结构化条目，
+    // trace_by_label / trace_by_category 对其生效
+    let structured = engine.trace_records();
+    assert_eq!(structured.len(), 2);
+    assert_eq!(structured[0].category, "TRACE");
+    let labeled = engine.trace_by_label("label");
+    assert_eq!(
+        labeled.len(),
+        1,
+        "TRACE(\"label\", ...) 的 label 应可按标签过滤"
+    );
+    assert_eq!(labeled[0].values.len(), 3);
+
+    // take_trace() 返回保持历史格式的字符串（并清空缓冲）
     let traces = engine.take_trace();
     assert_eq!(traces.len(), 2);
     assert!(traces[0].contains("simple_trace"));
     assert!(traces[1].contains("[label]"));
-
-    // trace_records() 应该返回空（旧 API 不生成结构化条目）
-    let structured = engine.trace_records();
-    assert_eq!(structured.len(), 0);
+    assert_eq!(
+        engine.trace_records().len(),
+        0,
+        "take_trace 后结构化缓冲同样清空"
+    );
 }
 
 #[test]

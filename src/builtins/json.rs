@@ -31,7 +31,7 @@ use std::collections::HashMap;
 /// ```aether
 /// Set JSON_STR "{\"name\":\"Alice\",\"age\":30}"
 /// Set OBJ JSON_PARSE(JSON_STR)
-/// Println(OBJ["name"])  # 输出: Alice
+/// PRINTLN(OBJ["name"])  // 输出: Alice
 /// ```
 pub fn json_parse(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -75,9 +75,9 @@ pub fn json_parse(args: &[Value]) -> Result<Value, RuntimeError> {
 /// ```aether
 /// Set OBJ {"name": "Alice", "age": 30}
 /// Set JSON_STR JSON_STRINGIFY(OBJ)
-/// Println(JSON_STR)  # 输出: {"name":"Alice","age":30}
+/// PRINTLN(JSON_STR)  // 输出: {"name":"Alice","age":30}
 ///
-/// # 格式化输出（2空格缩进）
+/// // 格式化输出（2空格缩进）
 /// Set PRETTY JSON_STRINGIFY(OBJ, 2)
 /// ```
 pub fn json_stringify(args: &[Value]) -> Result<Value, RuntimeError> {

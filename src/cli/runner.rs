@@ -55,67 +55,20 @@ pub fn run_file(filename: &str, options: RunOptions) {
         }
     }
 
-    if options.json_error {
-        let start = std::time::Instant::now();
-        let cache_before = engine.cache_stats();
-        match engine.eval_file_report(filename) {
-            Ok(result) => {
-                if options.metrics_json_mode {
-                    metrics::print_metrics_json(
-                        &engine,
-                        start.elapsed(),
-                        cache_before,
-                        result,
-                        options.metrics_json_pretty_mode,
-                    );
-                    return;
-                }
-
-                if options.debug_mode {
-                    println!("=== 执行结果 ===");
-                }
-                if result != aether::Value::Null {
-                    println!("{}", result);
-                }
-
-                if options.metrics_mode {
-                    let elapsed = start.elapsed();
-                    let cache_after = engine.cache_stats();
-                    let trace_stats = engine.trace_stats();
-                    let step_count = engine.step_count();
-                    metrics::print_metrics(
-                        elapsed,
-                        &cache_before,
-                        &cache_after,
-                        &trace_stats,
-                        step_count,
-                    );
-                }
-
-                if options.debug_mode {
-                    println!("\n=== 执行完成 ===");
-                }
-            }
-            Err(report) => {
-                if options.metrics_json_mode {
-                    let payload = json!({
-                        "ok": false,
-                        "error": report.to_json_value(),
-                    });
-                    metrics::print_json(payload, options.metrics_json_pretty_mode);
-                    std::process::exit(1);
-                }
-
-                eprintln!("{}", report.to_json_pretty());
-                std::process::exit(1);
-            }
-        }
-        return;
-    }
-
+    // json_error 走 eval_file_report 保留结构化错误报告（渲染为 JSON
+    // 文本），否则走 eval_file 用普通字符串错误——两条路径共用同一套
+    // 成功输出（结果/metrics/trace/trace-stats）
     let start = std::time::Instant::now();
     let cache_before = engine.cache_stats();
-    match engine.eval_file(filename) {
+    let result = if options.json_error {
+        engine
+            .eval_file_report(filename)
+            .map_err(|report| report.to_json_pretty())
+    } else {
+        engine.eval_file(filename)
+    };
+
+    match result {
         Ok(result) => {
             if options.metrics_json_mode {
                 metrics::print_metrics_json(
@@ -187,12 +140,16 @@ pub fn run_file(filename: &str, options: RunOptions) {
                 std::process::exit(1);
             }
 
-            eprintln!("✗ 运行时错误:");
-
-            if let Ok(code) = fs::read_to_string(filename) {
-                error_context::print_detailed_error(&code, &e);
-            } else {
+            if options.json_error {
+                // e 已是结构化报告的 JSON 文本
                 eprintln!("{}", e);
+            } else {
+                eprintln!("✗ 运行时错误:");
+                if let Ok(code) = fs::read_to_string(filename) {
+                    error_context::print_detailed_error(&code, &e);
+                } else {
+                    eprintln!("{}", e);
+                }
             }
 
             std::process::exit(1);

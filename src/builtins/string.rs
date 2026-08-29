@@ -18,12 +18,12 @@ use crate::value::Value;
 ///
 /// # 示例
 /// ```aether
-/// Set text "apple,banana,cherry"
-/// Set fruits Split(text, ",")      # ["apple", "banana", "cherry"]
-/// Set sentence "Hello World"
-/// Set words Split(sentence, " ")   # ["Hello", "World"]
-/// Set csv "a|b|c|d"
-/// Set parts Split(csv, "|")        # ["a", "b", "c", "d"]
+/// Set TEXT "apple,banana,cherry"
+/// Set FRUITS SPLIT(TEXT, ",")      // ["apple", "banana", "cherry"]
+/// Set SENTENCE "Hello World"
+/// Set WORDS SPLIT(SENTENCE, " ")   // ["Hello", "World"]
+/// Set CSV "a|b|c|d"
+/// Set PARTS SPLIT(CSV, "|")        // ["a", "b", "c", "d"]
 /// ```
 pub fn split(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -61,10 +61,10 @@ pub fn split(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "hello world"
-/// Set upper Upper(text)        # "HELLO WORLD"
-/// Set mixed "Hello123"
-/// Set upper Upper(mixed)       # "HELLO123"
+/// Set TEXT "hello world"
+/// Set UPPER UPPER(TEXT)        // "HELLO WORLD"
+/// Set MIXED "Hello123"
+/// Set UPPER UPPER(MIXED)       // "HELLO123"
 /// ```
 pub fn upper(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -96,10 +96,10 @@ pub fn upper(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "HELLO WORLD"
-/// Set lower Lower(text)        # "hello world"
-/// Set mixed "Hello123"
-/// Set lower Lower(mixed)       # "hello123"
+/// Set TEXT "HELLO WORLD"
+/// Set LOWER LOWER(TEXT)        // "hello world"
+/// Set MIXED "Hello123"
+/// Set LOWER LOWER(MIXED)       // "hello123"
 /// ```
 pub fn lower(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -131,10 +131,10 @@ pub fn lower(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "  hello world  "
-/// Set trimmed Trim(text)       # "hello world"
-/// Set text "\t\ntest\n\t"
-/// Set trimmed Trim(text)       # "test"
+/// Set TEXT "  hello world  "
+/// Set TRIMMED TRIM(TEXT)       // "hello world"
+/// Set TEXT "\t\ntest\n\t"
+/// Set TRIMMED TRIM(TEXT)       // "test"
 /// ```
 pub fn trim(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -167,11 +167,11 @@ pub fn trim(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello World"
-/// Set has Contains(text, "World")    # True
-/// Set has Contains(text, "Python")   # False
-/// Set email "user@example.com"
-/// Set has Contains(email, "@")       # True
+/// Set TEXT "Hello World"
+/// Set HAS CONTAINS(TEXT, "World")    // True
+/// Set HAS CONTAINS(TEXT, "Python")   // False
+/// Set EMAIL "user@example.com"
+/// Set HAS CONTAINS(EMAIL, "@")       // True
 /// ```
 pub fn contains(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -206,14 +206,7 @@ pub fn contains(args: &[Value]) -> Result<Value, RuntimeError> {
 
 // Helper function to compare values for equality
 fn values_equal(a: &Value, b: &Value) -> bool {
-    use Value::*;
-    match (a, b) {
-        (Number(a), Number(b)) => (a - b).abs() < f64::EPSILON,
-        (String(a), String(b)) => a == b,
-        (Boolean(a), Boolean(b)) => a == b,
-        (Null, Null) => true,
-        _ => false,
-    }
+    a.equals(b)
 }
 
 /// 检查是否以指定前缀开头
@@ -230,11 +223,11 @@ fn values_equal(a: &Value, b: &Value) -> bool {
 ///
 /// # 示例
 /// ```aether
-/// Set filename "test.txt"
-/// Set starts StartsWith(filename, "test")    # True
-/// Set starts StartsWith(filename, "data")    # False
-/// Set url "https://example.com"
-/// Set isHttps StartsWith(url, "https://")    # True
+/// Set FILENAME "test.txt"
+/// Set STARTS STARTS_WITH(FILENAME, "test")    // True
+/// Set STARTS STARTS_WITH(FILENAME, "data")    // False
+/// Set URL "https://example.com"
+/// Set ISHTTPS STARTS_WITH(URL, "https://")    // True
 /// ```
 pub fn starts_with(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -269,11 +262,11 @@ pub fn starts_with(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set filename "document.pdf"
-/// Set isPdf EndsWith(filename, ".pdf")       # True
-/// Set isTxt EndsWith(filename, ".txt")       # False
-/// Set email "user@gmail.com"
-/// Set isGmail EndsWith(email, "@gmail.com")  # True
+/// Set FILENAME "document.pdf"
+/// Set ISPDF ENDS_WITH(FILENAME, ".pdf")       // True
+/// Set ISTXT ENDS_WITH(FILENAME, ".txt")       // False
+/// Set EMAIL "user@gmail.com"
+/// Set ISGMAIL ENDS_WITH(EMAIL, "@gmail.com")  // True
 /// ```
 pub fn ends_with(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -309,12 +302,12 @@ pub fn ends_with(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello World"
-/// Set replaced Replace(text, "World", "Aether")  # "Hello Aether"
-/// Set text "foo bar foo"
-/// Set replaced Replace(text, "foo", "baz")       # "baz bar baz"
-/// Set path "C:\\Users\\Name"
-/// Set fixed Replace(path, "\\", "/")             # "C:/Users/Name"
+/// Set TEXT "Hello World"
+/// Set REPLACED REPLACE(TEXT, "World", "Aether")  // "Hello Aether"
+/// Set TEXT "foo bar foo"
+/// Set REPLACED REPLACE(TEXT, "foo", "baz")       // "baz bar baz"
+/// Set PATH "C:\\Users\\Name"
+/// Set FIXED REPLACE(PATH, "\\", "/")             // "C:/Users/Name"
 /// ```
 pub fn replace(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -352,12 +345,12 @@ pub fn replace(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set str "Ha"
-/// Set laugh Repeat(str, 3)         # "HaHaHa"
-/// Set dash "-"
-/// Set line Repeat(dash, 10)        # "----------"
-/// Set space " "
-/// Set indent Repeat(space, 4)      # "    "
+/// Set STR "Ha"
+/// Set LAUGH REPEAT(STR, 3)         // "HaHaHa"
+/// Set DASH "-"
+/// Set LINE REPEAT(DASH, 10)        // "----------"
+/// Set SPACE " "
+/// Set INDENT REPEAT(SPACE, 4)      // "    "
 /// ```
 pub fn repeat(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -388,22 +381,23 @@ pub fn repeat(args: &[Value]) -> Result<Value, RuntimeError> {
 /// 字符串切片
 ///
 /// # 功能
-/// 提取字符串的子串（基于字节索引）。
+/// 提取字符串的子串（基于 **Unicode 字符** 索引）。
 ///
 /// # 参数
 /// - `string`: String - 原始字符串
-/// - `start`: Number - 起始索引（包含，从0开始）
-/// - `end`: Number - 结束索引（不包含）
+/// - `start`: Number - 起始索引（包含，从 0 开始；负数从尾部数）
+/// - `end`: Number - 结束索引（不包含；负数从尾部数）
 ///
 /// # 返回值
-/// String - 提取的子串
+/// String - 提取的子串；越界端点钳制到范围内，start >= end 返回空串
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello World"
-/// Set sub StrSlice(text, 0, 5)     # "Hello"
-/// Set sub2 StrSlice(text, 6, 11)   # "World"
-/// Set sub3 StrSlice(text, 0, 1)    # "H"
+/// Set TEXT "Hello World"
+/// Set A STRSLICE(TEXT, 0, 5)      // "Hello"
+/// Set B STRSLICE(TEXT, 6, 11)     // "World"
+/// Set C STRSLICE("你好世界", 0, 2) // "你好"（字符语义，非字节）
+/// Set D STRSLICE("你好世界", -2, 4) // "世界"
 /// ```
 pub fn substr(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -421,30 +415,24 @@ pub fn substr(args: &[Value]) -> Result<Value, RuntimeError> {
                 ));
             }
 
-            let start_idx = *start as i64;
-            let end_idx = *end as i64;
-            let len = s.len() as i64;
+            let len = s.chars().count() as i64;
+            // 负索引从尾部数（按字符），越界钳制到 [0, len]
+            let clamp = |idx: i64| -> i64 {
+                let i = if idx < 0 { len + idx } else { idx };
+                i.clamp(0, len)
+            };
+            let start_idx = clamp(*start as i64);
+            let end_idx = clamp(*end as i64);
 
-            // 处理负数索引
-            let start_idx = if start_idx < 0 {
-                (len + start_idx).max(0)
-            } else {
-                start_idx.min(len)
-            } as usize;
-
-            let end_idx = if end_idx < 0 {
-                (len + end_idx).max(0)
-            } else {
-                end_idx.min(len)
-            } as usize;
-
-            if start_idx > end_idx {
+            if start_idx >= end_idx {
                 return Ok(Value::String(String::new()));
             }
 
-            // 使用字节切片
-            let result = s.get(start_idx..end_idx).unwrap_or("").to_string();
-
+            let result: String = s
+                .chars()
+                .skip(start_idx as usize)
+                .take((end_idx - start_idx) as usize)
+                .collect();
             Ok(Value::String(result))
         }
         _ => Err(RuntimeError::TypeErrorDetailed {
@@ -457,7 +445,7 @@ pub fn substr(args: &[Value]) -> Result<Value, RuntimeError> {
 /// 获取字符串长度
 ///
 /// # 功能
-/// 返回字符串的字符数（注意：多字节字符按字符数计算）。
+/// 返回字符串的**字符数**（多字节字符按 1 个字符计）。
 ///
 /// # 参数
 /// - `string`: String - 要测量的字符串
@@ -467,10 +455,9 @@ pub fn substr(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello"
-/// Set length StrLen(text)          # 5
-/// Set chinese "你好"
-/// Set length2 StrLen(chinese)      # 2
+/// Set TEXT "Hello"
+/// Set A STRLEN(TEXT)      // 5
+/// Set B STRLEN("你好")    // 2（字符语义，非 6 字节）
 /// ```
 pub fn strlen(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -481,7 +468,7 @@ pub fn strlen(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     match &args[0] {
-        Value::String(s) => Ok(Value::Number(s.len() as f64)),
+        Value::String(s) => Ok(Value::Number(s.chars().count() as f64)),
         _ => Err(RuntimeError::TypeErrorDetailed {
             expected: "String".to_string(),
             got: format!("{:?}", args[0]),
@@ -492,21 +479,22 @@ pub fn strlen(args: &[Value]) -> Result<Value, RuntimeError> {
 /// 查找子串位置
 ///
 /// # 功能
-/// 查找子串在字符串中首次出现的位置，未找到返回 -1。
+/// 查找子串在字符串中首次出现的**字符**位置，未找到返回 -1。
 ///
 /// # 参数
 /// - `string`: String - 原始字符串
 /// - `substring`: String - 要查找的子串
 ///
 /// # 返回值
-/// Number - 子串的起始位置（从0开始），未找到返回 -1
+/// Number - 子串起始字符位置（从 0 开始），未找到返回 -1
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello World"
-/// Set pos IndexOf(text, "World")   # 6
-/// Set pos2 IndexOf(text, "xyz")    # -1
-/// Set pos3 IndexOf(text, "l")      # 2 (第一个l)
+/// Set TEXT "Hello World"
+/// Set A INDEXOF(TEXT, "World")  // 6
+/// Set B INDEXOF(TEXT, "xyz")    // -1
+/// Set C INDEXOF(TEXT, "l")      // 2（第一个 l）
+/// Set D INDEXOF("héllo", "l")   // 2（字符位置）
 /// ```
 pub fn index_of(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -518,7 +506,8 @@ pub fn index_of(args: &[Value]) -> Result<Value, RuntimeError> {
 
     match (&args[0], &args[1]) {
         (Value::String(s), Value::String(substr)) => match s.find(substr.as_str()) {
-            Some(pos) => Ok(Value::Number(pos as f64)),
+            // find 返回字节偏移，换算为字符位置
+            Some(byte_pos) => Ok(Value::Number(s[..byte_pos].chars().count() as f64)),
             None => Ok(Value::Number(-1.0)),
         },
         _ => Err(RuntimeError::TypeErrorDetailed {
@@ -531,21 +520,24 @@ pub fn index_of(args: &[Value]) -> Result<Value, RuntimeError> {
 /// 获取指定位置的字符
 ///
 /// # 功能
-/// 获取字符串中指定索引位置的字符。
+/// 获取字符串中指定**字符**位置的字符。
+/// 负索引从尾部数（-1 是最后一个字符）；越界报错（与 `S[I]` 对齐）。
 ///
 /// # 参数
 /// - `string`: String - 原始字符串
-/// - `index`: Number - 字符位置（从0开始）
+/// - `index`: Number - 字符位置（从 0 开始）
 ///
 /// # 返回值
-/// String - 该位置的字符，索引越界返回空字符串
+/// String - 该位置的单个字符
+///
+/// # 错误
+/// - 索引越界（含负索引超出尾部范围）
 ///
 /// # 示例
 /// ```aether
-/// Set text "Hello"
-/// Set ch CharAt(text, 0)           # "H"
-/// Set ch2 CharAt(text, 4)          # "o"
-/// Set ch3 CharAt(text, 10)         # ""
+/// Set A CHARAT("Hello", 0)    // "H"
+/// Set B CHARAT("Hello", -1)   // "o"（从尾部数）
+/// Set C CHARAT("你好", -1)    // "好"
 /// ```
 pub fn char_at(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -563,22 +555,18 @@ pub fn char_at(args: &[Value]) -> Result<Value, RuntimeError> {
                 ));
             }
 
+            let len = s.chars().count() as i64;
             let index = *idx as i64;
-            let len = s.len() as i64;
+            // 负索引从尾部数（按字符）
+            let index = if index < 0 { len + index } else { index };
+            if index < 0 || index >= len {
+                return Err(RuntimeError::InvalidOperation(format!(
+                    "CharAt index {idx} out of range for string of {len} chars"
+                )));
+            }
 
-            // 处理负数索引
-            let index = if index < 0 {
-                (len + index).max(0)
-            } else {
-                index.min(len)
-            } as usize;
-
-            let ch = s
-                .chars()
-                .nth(index)
-                .map(|c| c.to_string())
-                .unwrap_or_default();
-            Ok(Value::String(ch))
+            let ch = s.chars().nth(index as usize).expect("已校验范围内");
+            Ok(Value::String(ch.to_string()))
         }
         _ => Err(RuntimeError::TypeErrorDetailed {
             expected: "String, Number".to_string(),

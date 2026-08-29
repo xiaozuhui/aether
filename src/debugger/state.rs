@@ -150,8 +150,17 @@ impl DebuggerState {
         false
     }
 
-    /// Check if execution should pause at the given location
-    pub fn should_pause(&mut self, file: &str, line: usize, call_stack_depth: usize) -> bool {
+    /// Check if execution should pause at the given location.
+    ///
+    /// `eval_cond` 在条件断点位置命中时被调用，用**当前求值环境**求值
+    /// 条件表达式并返回真值；条件为假或求值失败都不暂停。
+    pub fn should_pause(
+        &mut self,
+        file: &str,
+        line: usize,
+        call_stack_depth: usize,
+        eval_cond: &mut dyn FnMut(&str) -> bool,
+    ) -> bool {
         if !self.is_active {
             return false;
         }
@@ -162,12 +171,7 @@ impl DebuggerState {
         match self.execution_mode {
             ExecutionMode::Normal => {
                 // Check breakpoints only
-                for bp in self.breakpoints.values_mut() {
-                    if bp.should_trigger(file, line) {
-                        return true;
-                    }
-                }
-                false
+                self.any_breakpoint_triggers(file, line, eval_cond)
             }
             ExecutionMode::StepInto => {
                 // Pause at next statement
@@ -198,15 +202,38 @@ impl DebuggerState {
             }
             ExecutionMode::Continue => {
                 // Pause only at breakpoints
-                for bp in self.breakpoints.values_mut() {
-                    if bp.should_trigger(file, line) {
-                        self.execution_mode = ExecutionMode::Normal;
-                        return true;
-                    }
+                let paused = self.any_breakpoint_triggers(file, line, eval_cond);
+                if paused {
+                    self.execution_mode = ExecutionMode::Normal;
                 }
-                false
+                paused
             }
         }
+    }
+
+    /// 遍历断点判断是否应在当前位置暂停。
+    ///
+    /// 位置命中（含 hit_count/ignore_count 判定，见 [`Breakpoint::should_trigger`]）
+    /// 后，条件断点还要经 `eval_cond` 求值条件：为假或求值失败则该断点
+    /// 本次不暂停，继续检查其余断点。
+    fn any_breakpoint_triggers(
+        &mut self,
+        file: &str,
+        line: usize,
+        eval_cond: &mut dyn FnMut(&str) -> bool,
+    ) -> bool {
+        for bp in self.breakpoints.values_mut() {
+            if bp.should_trigger(file, line) {
+                let satisfied = match bp.get_condition() {
+                    Some(cond) => eval_cond(cond),
+                    None => true,
+                };
+                if satisfied {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
@@ -219,6 +246,11 @@ impl Default for DebuggerState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 恒真条件（行断点不受影响；条件断点在单元测试中恒触发）
+    fn cond_true(_: &str) -> bool {
+        true
+    }
 
     #[test]
     fn test_set_breakpoint() {
@@ -269,8 +301,8 @@ mod tests {
             line: 10,
         });
 
-        assert!(state.should_pause("test.aether", 10, 0));
-        assert!(!state.should_pause("test.aether", 11, 0));
+        assert!(state.should_pause("test.aether", 10, 0, &mut cond_true));
+        assert!(!state.should_pause("test.aether", 11, 0, &mut cond_true));
     }
 
     #[test]
@@ -280,7 +312,7 @@ mod tests {
         state.set_execution_mode(ExecutionMode::StepInto);
 
         // Should pause immediately
-        assert!(state.should_pause("test.aether", 10, 0));
+        assert!(state.should_pause("test.aether", 10, 0, &mut cond_true));
         // After stepping, mode returns to normal
         assert_eq!(state.execution_mode(), &ExecutionMode::Normal);
     }
@@ -293,9 +325,9 @@ mod tests {
         state.set_step_over_depth(2);
 
         // Should not pause while depth > 2
-        assert!(!state.should_pause("test.aether", 10, 3));
+        assert!(!state.should_pause("test.aether", 10, 3, &mut cond_true));
         // Should pause when depth returns to 2
-        assert!(state.should_pause("test.aether", 11, 2));
+        assert!(state.should_pause("test.aether", 11, 2, &mut cond_true));
     }
 
     #[test]
@@ -306,9 +338,9 @@ mod tests {
         state.set_step_over_depth(2);
 
         // Should not pause while depth >= 2
-        assert!(!state.should_pause("test.aether", 10, 2));
+        assert!(!state.should_pause("test.aether", 10, 2, &mut cond_true));
         // Should pause when depth < 2
-        assert!(state.should_pause("test.aether", 11, 1));
+        assert!(state.should_pause("test.aether", 11, 1, &mut cond_true));
     }
 
     #[test]

@@ -165,12 +165,19 @@ impl DebuggerSession {
     fn cmd_break(&mut self, ev: &mut Evaluator, args: &[&str]) -> (String, CommandAction) {
         if args.is_empty() {
             return (
-                "Usage: break [file:]line | break function_name".to_string(),
+                "Usage: break [file:]line [if condition] | break function_name".to_string(),
                 CommandAction::Stay,
             );
         }
 
         let loc = args[0];
+        // `break <line> if <cond>`：位置命中后用当前环境求值条件，
+        // 为真才暂停（条件以空格重组，含空格的表达式可直接书写）
+        let condition: Option<String> = if args.len() >= 3 && args[1] == "if" {
+            Some(args[2..].join(" "))
+        } else {
+            None
+        };
 
         // Try parsing as line number first
         if let Ok(line) = loc.parse::<usize>() {
@@ -187,9 +194,16 @@ impl DebuggerSession {
                 .or_else(|| self.source_file.clone())
                 .unwrap_or_else(|| "<unknown>".to_string());
 
-            let id = self.state.borrow_mut().set_breakpoint(BreakpointType::Line {
-                file: file.clone(),
-                line,
+            let id = self.state.borrow_mut().set_breakpoint(match &condition {
+                Some(cond) => BreakpointType::Conditional {
+                    file: file.clone(),
+                    line,
+                    condition: cond.clone(),
+                },
+                None => BreakpointType::Line {
+                    file: file.clone(),
+                    line,
+                },
             });
 
             // 校验该行是否存在语句起点（允许设置，仅提示可能永不命中）
@@ -198,6 +212,9 @@ impl DebuggerSession {
                 .as_ref()
                 .is_some_and(|lines| !lines.contains(&line));
             let mut msg = format!("Breakpoint {} set at {}:{}", id, file, line);
+            if let Some(cond) = &condition {
+                msg.push_str(&format!(" if {cond}"));
+            }
             if unbreakable {
                 msg.push_str(&format!(
                     "\nNote: line {} has no statement start; breakpoint may never trigger",
@@ -211,21 +228,40 @@ impl DebuggerSession {
         if let Some(pos) = loc.find(':') {
             let file = loc[..pos].to_string();
             if let Ok(line) = loc[pos + 1..].parse::<usize>() {
-                let id = self.state.borrow_mut().set_breakpoint(BreakpointType::Line {
-                    file: file.clone(),
-                    line,
+                let id = self.state.borrow_mut().set_breakpoint(match &condition {
+                    Some(cond) => BreakpointType::Conditional {
+                        file: file.clone(),
+                        line,
+                        condition: cond.clone(),
+                    },
+                    None => BreakpointType::Line {
+                        file: file.clone(),
+                        line,
+                    },
                 });
                 return (
-                    format!("Breakpoint {} set at {}:{}", id, file, line),
+                    format!(
+                        "Breakpoint {} set at {}:{}{}",
+                        id,
+                        file,
+                        line,
+                        condition
+                            .as_ref()
+                            .map(|c| format!(" if {c}"))
+                            .unwrap_or_default()
+                    ),
                     CommandAction::Stay,
                 );
             }
         }
 
         // Otherwise treat as function name
-        let id = self.state.borrow_mut().set_breakpoint(BreakpointType::Function {
-            name: loc.to_string(),
-        });
+        let id = self
+            .state
+            .borrow_mut()
+            .set_breakpoint(BreakpointType::Function {
+                name: loc.to_string(),
+            });
         (
             format!("Breakpoint {} set at function '{}'", id, loc),
             CommandAction::Stay,

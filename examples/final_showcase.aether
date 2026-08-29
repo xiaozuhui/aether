@@ -1,26 +1,26 @@
 PRINTLN("=== Math Library Showcase ===")
 
 Set DATA [1, 2, 3, 4, 5]
-Set MEAN_VAL Mean(DATA)
+Set MEAN_VAL MEAN(DATA)
 PRINTLN("Mean:")
 PRINTLN(MEAN_VAL)
 
-Set MEDIAN_VAL Median(DATA)
+Set MEDIAN_VAL MEDIAN(DATA)
 PRINTLN("Median:")
 PRINTLN(MEDIAN_VAL)
 
-Set STD_VAL Std(DATA)
+Set STD_VAL STD(DATA)
 PRINTLN("Standard Deviation:")
 PRINTLN(STD_VAL)
 
 Set V1 [1, 2, 3]
 Set V2 [4, 5, 6]
-Set DOT_PROD Dot(V1, V2)
+Set DOT_PROD DOT(V1, V2)
 PRINTLN("Dot product:")
 PRINTLN(DOT_PROD)
 
 Set M [[1, 2], [3, 4]]
-Set DET Determinant(M)
+Set DET DETERMINANT(M)
 PRINTLN("Determinant:")
 PRINTLN(DET)
 

@@ -13,6 +13,30 @@
 //! - Constants: PI, E, TAU, PHI
 
 use crate::evaluator::RuntimeError;
+
+/// 一元数值函数样板：参数恰 1 个、类型 Number，返回 `Value::Number(expr)`。
+/// 各函数只需给出 `|n| 表达式`，文档注释原样挂在生成的函数上。
+macro_rules! unary_math_fn {
+    ($(#[$doc:meta])* $name:ident, |$n:ident| $body:expr) => {
+        $(#[$doc])*
+        pub fn $name(args: &[Value]) -> Result<Value, RuntimeError> {
+            if args.len() != 1 {
+                return Err(RuntimeError::WrongArity {
+                    expected: 1,
+                    got: args.len(),
+                });
+            }
+            match &args[0] {
+                Value::Number($n) => Ok(Value::Number($body)),
+                _ => Err(RuntimeError::TypeErrorDetailed {
+                    expected: "Number".to_string(),
+                    got: format!("{:?}", args[0]),
+                }),
+            }
+        }
+    };
+}
+
 use crate::value::Value;
 use std::f64::consts;
 
@@ -20,149 +44,97 @@ use std::f64::consts;
 // 基础数学函数
 // ============================================================================
 
-/// 绝对值
-///
-/// # 功能
-/// 返回数字的绝对值（非负值）。
-///
-/// # 参数
-/// - `x`: Number - 输入数字
-///
-/// # 返回值
-/// Number - 输入数字的绝对值
-///
-/// # 公式
-/// ```
-/// |x| = { x  if x ≥ 0
-///       {-x  if x < 0
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set a Abs(-5)           # 5
-/// Set b Abs(3.14)         # 3.14
-/// Set c Abs(-42.7)        # 42.7
-/// ```
-pub fn abs(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.abs())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 绝对值
+    ///
+    /// # 功能
+    /// 返回数字的绝对值（非负值）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入数字
+    ///
+    /// # 返回值
+    /// Number - 输入数字的绝对值
+    ///
+    /// # 公式
+    /// ```text
+    /// |x| = { x  if x ≥ 0
+    ///       {-x  if x < 0
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A ABS(-5)           // 5
+    /// Set B ABS(3.14)         // 3.14
+    /// Set C ABS(-42.7)        // 42.7
+    /// ```
+    abs, |n| n.abs()
 }
 
-/// 向下取整
-///
-/// # 功能
-/// 返回不大于输入数字的最大整数（向负无穷方向取整）。
-///
-/// # 参数
-/// - `x`: Number - 输入数字
-///
-/// # 返回值
-/// Number - 向下取整后的整数值
-///
-/// # 示例
-/// ```aether
-/// Set a Floor(3.7)        # 3.0
-/// Set b Floor(-2.3)       # -3.0
-/// Set c Floor(5.0)        # 5.0
-/// ```
-pub fn floor(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.floor())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 向下取整
+    ///
+    /// # 功能
+    /// 返回不大于输入数字的最大整数（向负无穷方向取整）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入数字
+    ///
+    /// # 返回值
+    /// Number - 向下取整后的整数值
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A FLOOR(3.7)        // 3.0
+    /// Set B FLOOR(-2.3)       // -3.0
+    /// Set C FLOOR(5.0)        // 5.0
+    /// ```
+    floor, |n| n.floor()
 }
 
-/// 向上取整
-///
-/// # 功能
-/// 返回不小于输入数字的最小整数（向正无穷方向取整）。
-///
-/// # 参数
-/// - `x`: Number - 输入数字
-///
-/// # 返回值
-/// Number - 向上取整后的整数值
-///
-/// # 示例
-/// ```aether
-/// Set a Ceil(3.2)         # 4.0
-/// Set b Ceil(-2.7)        # -2.0
-/// Set c Ceil(5.0)         # 5.0
-/// ```
-pub fn ceil(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.ceil())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 向上取整
+    ///
+    /// # 功能
+    /// 返回不小于输入数字的最小整数（向正无穷方向取整）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入数字
+    ///
+    /// # 返回值
+    /// Number - 向上取整后的整数值
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A CEIL(3.2)         // 4.0
+    /// Set B CEIL(-2.7)        // -2.0
+    /// Set C CEIL(5.0)         // 5.0
+    /// ```
+    ceil, |n| n.ceil()
 }
 
-/// 四舍五入
-///
-/// # 功能
-/// 将数字四舍五入到最接近的整数。
-///
-/// # 参数
-/// - `x`: Number - 输入数字
-///
-/// # 返回值
-/// Number - 四舍五入后的整数值
-///
-/// # 规则
-/// - 0.5 向上取整（远离零）
-///
-/// # 示例
-/// ```aether
-/// Set a Round(3.4)        # 3.0
-/// Set b Round(3.5)        # 4.0
-/// Set c Round(-2.5)       # -3.0
-/// ```
-pub fn round(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.round())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 四舍五入
+    ///
+    /// # 功能
+    /// 将数字四舍五入到最接近的整数。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入数字
+    ///
+    /// # 返回值
+    /// Number - 四舍五入后的整数值
+    ///
+    /// # 规则
+    /// - 0.5 向上取整（远离零）
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A ROUND(3.4)        // 3.0
+    /// Set B ROUND(3.5)        // 4.0
+    /// Set C ROUND(-2.5)       // -3.0
+    /// ```
+    round, |n| n.round()
 }
 
 /// 平方根
@@ -177,7 +149,7 @@ pub fn round(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 平方根值
 ///
 /// # 公式
-/// ```
+/// ```text
 /// √x = y, where y² = x
 /// ```
 ///
@@ -186,9 +158,9 @@ pub fn round(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Sqrt(16)          # 4.0
-/// Set b Sqrt(2)           # 1.4142135623730951
-/// Set c Sqrt(0)           # 0.0
+/// Set A SQRT(16)          // 4.0
+/// Set B SQRT(2)           // 1.4142135623730951
+/// Set C SQRT(0)           // 0.0
 /// ```
 pub fn sqrt(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -228,16 +200,16 @@ pub fn sqrt(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - base^exponent 的结果
 ///
 /// # 公式
-/// ```
+/// ```text
 /// pow(base, exp) = base^exp
 /// ```
 ///
 /// # 示例
 /// ```aether
-/// Set a Pow(2, 3)         # 8.0 (2³)
-/// Set b Pow(10, 2)        # 100.0
-/// Set c Pow(4, 0.5)       # 2.0 (√4)
-/// Set d Pow(2, -1)        # 0.5 (1/2)
+/// Set A POW(2, 3)         // 8.0 (2³)
+/// Set B POW(10, 2)        // 100.0
+/// Set C POW(4, 0.5)       // 2.0 (√4)
+/// Set D POW(2, -1)        // 0.5 (1/2)
 /// ```
 pub fn pow(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -260,124 +232,85 @@ pub fn pow(args: &[Value]) -> Result<Value, RuntimeError> {
 // 三角函数
 // ============================================================================
 
-/// 正弦函数
-///
-/// # 功能
-/// 计算角度的正弦值（输入为弧度）。
-///
-/// # 参数
-/// - `x`: Number - 角度（弧度）
-///
-/// # 返回值
-/// Number - 正弦值，范围 [-1, 1]
-///
-/// # 公式
-/// ```
-/// sin(x): 直角三角形中，对边与斜边的比值
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set pi PI()
-/// Set a Sin(0)            # 0.0
-/// Set b Sin(pi / 2)       # 1.0
-/// Set c Sin(pi)           # 0.0 (约等于)
-/// ```
-pub fn sin(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.sin())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 正弦函数
+    ///
+    /// # 功能
+    /// 计算角度的正弦值（输入为弧度）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 角度（弧度）
+    ///
+    /// # 返回值
+    /// Number - 正弦值，范围 [-1, 1]
+    ///
+    /// # 公式
+    /// ```text
+    /// sin(x): 直角三角形中，对边与斜边的比值
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set PI PI()
+    /// Set A SIN(0)            // 0.0
+    /// Set B SIN(PI / 2)       // 1.0
+    /// Set C SIN(PI)           // 0.0 (约等于)
+    /// ```
+    sin, |n| n.sin()
 }
 
-/// 余弦函数
-///
-/// # 功能
-/// 计算角度的余弦值（输入为弧度）。
-///
-/// # 参数
-/// - `x`: Number - 角度（弧度）
-///
-/// # 返回值
-/// Number - 余弦值，范围 [-1, 1]
-///
-/// # 公式
-/// ```
-/// cos(x): 直角三角形中，邻边与斜边的比值
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set pi PI()
-/// Set a Cos(0)            # 1.0
-/// Set b Cos(pi / 2)       # 0.0 (约等于)
-/// Set c Cos(pi)           # -1.0
-/// ```
-pub fn cos(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.cos())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 余弦函数
+    ///
+    /// # 功能
+    /// 计算角度的余弦值（输入为弧度）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 角度（弧度）
+    ///
+    /// # 返回值
+    /// Number - 余弦值，范围 [-1, 1]
+    ///
+    /// # 公式
+    /// ```text
+    /// cos(x): 直角三角形中，邻边与斜边的比值
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set PI PI()
+    /// Set A COS(0)            // 1.0
+    /// Set B COS(PI / 2)       // 0.0 (约等于)
+    /// Set C COS(PI)           // -1.0
+    /// ```
+    cos, |n| n.cos()
 }
 
-/// 正切函数
-///
-/// # 功能
-/// 计算角度的正切值（输入为弧度）。
-///
-/// # 参数
-/// - `x`: Number - 角度（弧度）
-///
-/// # 返回值
-/// Number - 正切值
-///
-/// # 公式
-/// ```
-/// tan(x) = sin(x) / cos(x)
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set pi PI()
-/// Set a Tan(0)            # 0.0
-/// Set b Tan(pi / 4)       # 1.0 (约等于)
-/// Set c Tan(pi / 6)       # 0.577... (√3/3)
-/// ```
-pub fn tan(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.tan())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 正切函数
+    ///
+    /// # 功能
+    /// 计算角度的正切值（输入为弧度）。
+    ///
+    /// # 参数
+    /// - `x`: Number - 角度（弧度）
+    ///
+    /// # 返回值
+    /// Number - 正切值
+    ///
+    /// # 公式
+    /// ```text
+    /// tan(x) = sin(x) / cos(x)
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set PI PI()
+    /// Set A TAN(0)            // 0.0
+    /// Set B TAN(PI / 4)       // 1.0 (约等于)
+    /// Set C TAN(PI / 6)       // 0.577... (√3/3)
+    /// ```
+    tan, |n| n.tan()
 }
 
 // ============================================================================
@@ -396,7 +329,7 @@ pub fn tan(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - log₁₀(x)
 ///
 /// # 公式
-/// ```
+/// ```text
 /// log₁₀(x) = y  ⟺  10^y = x
 /// ```
 ///
@@ -405,9 +338,9 @@ pub fn tan(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Log(10)           # 1.0
-/// Set b Log(100)          # 2.0
-/// Set c Log(1000)         # 3.0
+/// Set A LOG(10)           // 1.0
+/// Set B LOG(100)          // 2.0
+/// Set C LOG(1000)         // 3.0
 /// ```
 pub fn log(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -446,7 +379,7 @@ pub fn log(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - ln(x) = logₑ(x)
 ///
 /// # 公式
-/// ```
+/// ```text
 /// ln(x) = y  ⟺  e^y = x
 /// ```
 ///
@@ -455,10 +388,10 @@ pub fn log(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set e E()
-/// Set a Ln(e)             # 1.0
-/// Set b Ln(1)             # 0.0
-/// Set c Ln(e * e)         # 2.0
+/// Set E E()
+/// Set A LN(E)             // 1.0
+/// Set B LN(1)             // 0.0
+/// Set C LN(E * E)         // 2.0
 /// ```
 pub fn ln(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -485,43 +418,30 @@ pub fn ln(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 }
 
-/// 自然指数函数
-///
-/// # 功能
-/// 计算 e 的 x 次幂。
-///
-/// # 参数
-/// - `x`: Number - 指数
-///
-/// # 返回值
-/// Number - e^x
-///
-/// # 公式
-/// ```
-/// exp(x) = e^x
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set a Exp(0)            # 1.0
-/// Set b Exp(1)            # 2.718281828... (e)
-/// Set c Exp(2)            # 7.389056... (e²)
-/// ```
-pub fn exp(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.exp())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 自然指数函数
+    ///
+    /// # 功能
+    /// 计算 e 的 x 次幂。
+    ///
+    /// # 参数
+    /// - `x`: Number - 指数
+    ///
+    /// # 返回值
+    /// Number - e^x
+    ///
+    /// # 公式
+    /// ```text
+    /// exp(x) = e^x
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A EXP(0)            // 1.0
+    /// Set B EXP(1)            // 2.718281828... (e)
+    /// Set C EXP(2)            // 7.389056... (e²)
+    /// ```
+    exp, |n| n.exp()
 }
 
 // ============================================================================
@@ -544,9 +464,9 @@ pub fn exp(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Asin(0)           # 0.0
-/// Set b Asin(1)           # π/2 ≈ 1.5708
-/// Set c Asin(-1)          # -π/2
+/// Set A ASIN(0)           // 0.0
+/// Set B ASIN(1)           // π/2 ≈ 1.5708
+/// Set C ASIN(-1)          // -π/2
 /// ```
 pub fn asin(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -589,9 +509,9 @@ pub fn asin(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Acos(1)           # 0.0
-/// Set b Acos(0)           # π/2 ≈ 1.5708
-/// Set c Acos(-1)          # π ≈ 3.1416
+/// Set A ACOS(1)           // 0.0
+/// Set B ACOS(0)           // π/2 ≈ 1.5708
+/// Set C ACOS(-1)          // π ≈ 3.1416
 /// ```
 pub fn acos(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -631,9 +551,9 @@ pub fn acos(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Atan(0)           # 0.0
-/// Set b Atan(1)           # π/4 ≈ 0.7854
-/// Set c Atan(-1)          # -π/4
+/// Set A ATAN(0)           // 0.0
+/// Set B ATAN(1)           // π/4 ≈ 0.7854
+/// Set C ATAN(-1)          // -π/4
 /// ```
 pub fn atan(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -669,10 +589,10 @@ pub fn atan(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Atan2(1, 1)       # π/4 (第一象限)
-/// Set b Atan2(1, -1)      # 3π/4 (第二象限)
-/// Set c Atan2(-1, -1)     # -3π/4 (第三象限)
-/// Set d Atan2(-1, 1)      # -π/4 (第四象限)
+/// Set A ATAN2(1, 1)       // π/4 (第一象限)
+/// Set B ATAN2(1, -1)      // 3π/4 (第二象限)
+/// Set C ATAN2(-1, -1)     // -3π/4 (第三象限)
+/// Set D ATAN2(-1, 1)      // -π/4 (第四象限)
 /// ```
 pub fn atan2(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -691,118 +611,79 @@ pub fn atan2(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 }
 
-/// 双曲正弦函数
-///
-/// # 功能
-/// 计算双曲正弦值。
-///
-/// # 参数
-/// - `x`: Number - 输入值
-///
-/// # 返回值
-/// Number - sinh(x)
-///
-/// # 公式
-/// ```
-/// sinh(x) = (e^x - e^(-x)) / 2
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set a Sinh(0)           # 0.0
-/// Set b Sinh(1)           # 1.1752...
-/// ```
-pub fn sinh(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.sinh())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 双曲正弦函数
+    ///
+    /// # 功能
+    /// 计算双曲正弦值。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入值
+    ///
+    /// # 返回值
+    /// Number - sinh(x)
+    ///
+    /// # 公式
+    /// ```text
+    /// sinh(x) = (e^x - e^(-x)) / 2
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A SINH(0)           // 0.0
+    /// Set B SINH(1)           // 1.1752...
+    /// ```
+    sinh, |n| n.sinh()
 }
 
-/// 双曲余弦函数
-///
-/// # 功能
-/// 计算双曲余弦值。
-///
-/// # 参数
-/// - `x`: Number - 输入值
-///
-/// # 返回值
-/// Number - cosh(x)
-///
-/// # 公式
-/// ```
-/// cosh(x) = (e^x + e^(-x)) / 2
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set a Cosh(0)           # 1.0
-/// Set b Cosh(1)           # 1.5431...
-/// ```
-pub fn cosh(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.cosh())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 双曲余弦函数
+    ///
+    /// # 功能
+    /// 计算双曲余弦值。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入值
+    ///
+    /// # 返回值
+    /// Number - cosh(x)
+    ///
+    /// # 公式
+    /// ```text
+    /// cosh(x) = (e^x + e^(-x)) / 2
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A COSH(0)           // 1.0
+    /// Set B COSH(1)           // 1.5431...
+    /// ```
+    cosh, |n| n.cosh()
 }
 
-/// 双曲正切函数
-///
-/// # 功能
-/// 计算双曲正切值。
-///
-/// # 参数
-/// - `x`: Number - 输入值
-///
-/// # 返回值
-/// Number - tanh(x)，范围 (-1, 1)
-///
-/// # 公式
-/// ```
-/// tanh(x) = sinh(x) / cosh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
-/// ```
-///
-/// # 示例
-/// ```aether
-/// Set a Tanh(0)           # 0.0
-/// Set b Tanh(1)           # 0.7616...
-/// ```
-pub fn tanh(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-
-    match &args[0] {
-        Value::Number(n) => Ok(Value::Number(n.tanh())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
+unary_math_fn! {
+    /// 双曲正切函数
+    ///
+    /// # 功能
+    /// 计算双曲正切值。
+    ///
+    /// # 参数
+    /// - `x`: Number - 输入值
+    ///
+    /// # 返回值
+    /// Number - tanh(x)，范围 (-1, 1)
+    ///
+    /// # 公式
+    /// ```text
+    /// tanh(x) = sinh(x) / cosh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+    /// ```
+    ///
+    /// # 示例
+    /// ```aether
+    /// Set A TANH(0)           // 0.0
+    /// Set B TANH(1)           // 0.7616...
+    /// ```
+    tanh, |n| n.tanh()
 }
 
 // ============================================================================
@@ -821,7 +702,7 @@ pub fn tanh(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - log₂(x)
 ///
 /// # 公式
-/// ```
+/// ```text
 /// log₂(x) = y  ⟺  2^y = x
 /// ```
 ///
@@ -830,9 +711,9 @@ pub fn tanh(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Log2(2)           # 1.0
-/// Set b Log2(8)           # 3.0
-/// Set c Log2(1024)        # 10.0
+/// Set A LOG2(2)           // 1.0
+/// Set B LOG2(8)           // 3.0
+/// Set C LOG2(1024)        // 10.0
 /// ```
 pub fn log2(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -871,15 +752,15 @@ pub fn log2(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 2^x
 ///
 /// # 公式
-/// ```
+/// ```text
 /// exp2(x) = 2^x
 /// ```
 ///
 /// # 示例
 /// ```aether
-/// Set a Exp2(3)           # 8.0
-/// Set b Exp2(10)          # 1024.0
-/// Set c Exp2(-1)          # 0.5
+/// Set A EXP2(3)           // 8.0
+/// Set B EXP2(10)          // 1024.0
+/// Set C EXP2(-1)          // 0.5
 /// ```
 pub fn exp2(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -914,8 +795,8 @@ pub fn exp2(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Expm1(0)          # 0.0
-/// Set b Expm1(0.001)      # 0.0010005...
+/// Set A EXPM1(0)          // 0.0
+/// Set B EXPM1(0.001)      // 0.0010005...
 /// ```
 pub fn expm1(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -953,8 +834,8 @@ pub fn expm1(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Log1p(0)          # 0.0
-/// Set b Log1p(0.001)      # 0.0009995...
+/// Set A LOG1P(0)          // 0.0
+/// Set B LOG1P(0.001)      // 0.0009995...
 /// ```
 pub fn log1p(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -997,7 +878,7 @@ pub fn log1p(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - n! = n × (n-1) × ... × 2 × 1
 ///
 /// # 公式
-/// ```
+/// ```text
 /// 0! = 1
 /// n! = n × (n-1)!  (n > 0)
 /// ```
@@ -1008,9 +889,9 @@ pub fn log1p(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Factorial(0)      # 1
-/// Set b Factorial(5)      # 120
-/// Set c Factorial(10)     # 3628800
+/// Set A FACTORIAL(0)      // 1
+/// Set B FACTORIAL(5)      // 120
+/// Set C FACTORIAL(10)     // 3628800
 /// ```
 pub fn factorial(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1062,7 +943,7 @@ pub fn factorial(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - Γ(x)
 ///
 /// # 公式
-/// ```
+/// ```text
 /// Γ(n) = (n-1)!  (n为正整数)
 /// Γ(x) ≈ √(2π/x) × (x/e)^x  (Stirling近似)
 /// ```
@@ -1072,9 +953,9 @@ pub fn factorial(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Gamma(1)          # 1 (0!)
-/// Set b Gamma(5)          # 24 (4!)
-/// Set c Gamma(0.5)        # √π ≈ 1.77245
+/// Set A GAMMA(1)          // 1 (0!)
+/// Set B GAMMA(5)          // 24 (4!)
+/// Set C GAMMA(0.5)        // √π ≈ 1.77245
 /// ```
 pub fn gamma(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1124,7 +1005,7 @@ pub fn gamma(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - erf(x)，范围 (-1, 1)
 ///
 /// # 公式
-/// ```
+/// ```text
 /// erf(x) = (2/√π) ∫₀ˣ e^(-t²) dt
 /// ```
 ///
@@ -1134,9 +1015,9 @@ pub fn gamma(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Erf(0)            # 0.0
-/// Set b Erf(1)            # 0.8427... (约84.27%概率)
-/// Set c Erf(-1)           # -0.8427...
+/// Set A ERF(0)            // 0.0
+/// Set B ERF(1)            // 0.8427... (约84.27%概率)
+/// Set C ERF(-1)           // -0.8427...
 /// ```
 pub fn erf(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1185,7 +1066,7 @@ pub fn erf(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 斜边长度
 ///
 /// # 公式
-/// ```
+/// ```text
 /// hypot(x, y) = √(x² + y²)
 /// ```
 ///
@@ -1194,9 +1075,9 @@ pub fn erf(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set c Hypot(3, 4)       # 5.0
-/// Set c Hypot(5, 12)      # 13.0
-/// Set dist Hypot(1, 1)    # √2 ≈ 1.414
+/// Set C HYPOT(3, 4)       // 5.0
+/// Set C HYPOT(5, 12)      // 13.0
+/// Set DIST HYPOT(1, 1)    // √2 ≈ 1.414
 /// ```
 pub fn hypot(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -1227,7 +1108,7 @@ pub fn hypot(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 1、0 或 -1
 ///
 /// # 公式
-/// ```
+/// ```text
 /// sign(x) = { -1  if x < 0
 ///           {  0  if x = 0
 ///           {  1  if x > 0
@@ -1235,9 +1116,9 @@ pub fn hypot(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Sign(5)           # 1
-/// Set b Sign(-3.14)       # -1
-/// Set c Sign(0)           # 0
+/// Set A SIGN(5)           // 1
+/// Set B SIGN(-3.14)       // -1
+/// Set C SIGN(0)           // 0
 /// ```
 pub fn sign(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1279,7 +1160,7 @@ pub fn sign(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 限制后的值
 ///
 /// # 公式
-/// ```
+/// ```text
 /// clamp(x, min, max) = { min  if x < min
 ///                      { x    if min ≤ x ≤ max
 ///                      { max  if x > max
@@ -1290,9 +1171,9 @@ pub fn sign(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a Clamp(5, 0, 10)       # 5 (在范围内)
-/// Set b Clamp(-5, 0, 10)      # 0 (小于min)
-/// Set c Clamp(15, 0, 10)      # 10 (大于max)
+/// Set A CLAMP(5, 0, 10)       // 5 (在范围内)
+/// Set B CLAMP(-5, 0, 10)      // 0 (小于min)
+/// Set C CLAMP(15, 0, 10)      // 10 (大于max)
 /// ```
 pub fn clamp(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -1335,7 +1216,7 @@ pub fn clamp(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 平均值
 ///
 /// # 公式
-/// ```
+/// ```text
 /// mean = (x₁ + x₂ + ... + xₙ) / n
 /// ```
 ///
@@ -1345,10 +1226,10 @@ pub fn clamp(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set scores [85, 90, 78, 92, 88]
-/// Set avg Mean(scores)        # 86.6
-/// Set temps [20.5, 22.0, 21.5, 19.5]
-/// Set avg Mean(temps)         # 20.875
+/// Set SCORES [85, 90, 78, 92, 88]
+/// Set AVG MEAN(SCORES)        // 86.6
+/// Set TEMPS [20.5, 22.0, 21.5, 19.5]
+/// Set AVG MEAN(TEMPS)         // 20.875
 /// ```
 pub fn mean(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1407,10 +1288,10 @@ pub fn mean(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [1, 3, 5, 7, 9]
-/// Set med Median(nums)        # 5 (中间值)
-/// Set nums [1, 2, 3, 4]
-/// Set med Median(nums)        # 2.5 ((2+3)/2)
+/// Set NUMS [1, 3, 5, 7, 9]
+/// Set MED MEDIAN(NUMS)        // 5 (中间值)
+/// Set NUMS [1, 2, 3, 4]
+/// Set MED MEDIAN(NUMS)        // 2.5 ((2+3)/2)
 /// ```
 pub fn median(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1471,7 +1352,7 @@ pub fn median(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 样本方差
 ///
 /// # 公式
-/// ```
+/// ```text
 /// variance = Σ(xᵢ - mean)² / (n - 1)
 /// ```
 ///
@@ -1480,10 +1361,10 @@ pub fn median(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set data [2, 4, 6, 8, 10]
-/// Set var Variance(data)      # 10.0
-/// Set scores [85, 90, 78]
-/// Set var Variance(scores)    # 36.0
+/// Set DATA [2, 4, 6, 8, 10]
+/// Set VAR VARIANCE(DATA)      // 10.0
+/// Set SCORES [85, 90, 78]
+/// Set VAR VARIANCE(SCORES)    // 36.0
 /// ```
 pub fn variance(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1546,7 +1427,7 @@ pub fn variance(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 样本标准差
 ///
 /// # 公式
-/// ```
+/// ```text
 /// std = √variance = √[Σ(xᵢ - mean)² / (n - 1)]
 /// ```
 ///
@@ -1555,10 +1436,10 @@ pub fn variance(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set data [2, 4, 6, 8, 10]
-/// Set sd Std(data)            # 3.162...
-/// Set scores [85, 90, 78]
-/// Set sd Std(scores)          # 6.0
+/// Set DATA [2, 4, 6, 8, 10]
+/// Set SD STD(DATA)            // 3.162...
+/// Set SCORES [85, 90, 78]
+/// Set SD STD(SCORES)          // 6.0
 /// ```
 pub fn std(args: &[Value]) -> Result<Value, RuntimeError> {
     let var = variance(args)?;
@@ -1591,10 +1472,10 @@ pub fn std(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set data [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-/// Set q25 Quantile(data, 0.25)    # 3.25 (第一四分位数)
-/// Set q50 Quantile(data, 0.5)     # 5.5 (中位数)
-/// Set q75 Quantile(data, 0.75)    # 7.75 (第三四分位数)
+/// Set DATA [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+/// Set Q25 QUANTILE(DATA, 0.25)    // 3.25 (第一四分位数)
+/// Set Q50 QUANTILE(DATA, 0.5)     // 5.5 (中位数)
+/// Set Q75 QUANTILE(DATA, 0.75)    // 7.75 (第三四分位数)
 /// ```
 pub fn quantile(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -1671,7 +1552,7 @@ pub fn quantile(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 点积结果
 ///
 /// # 公式
-/// ```
+/// ```text
 /// dot(a, b) = a₁b₁ + a₂b₂ + ... + aₙbₙ
 /// ```
 ///
@@ -1680,12 +1561,12 @@ pub fn quantile(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a [1, 2, 3]
-/// Set b [4, 5, 6]
-/// Set d Dot(a, b)             # 32 (1*4 + 2*5 + 3*6)
-/// Set v1 [1, 0, 0]
-/// Set v2 [0, 1, 0]
-/// Set d Dot(v1, v2)           # 0 (正交向量)
+/// Set A [1, 2, 3]
+/// Set B [4, 5, 6]
+/// Set D DOT(A, B)             // 32 (1*4 + 2*5 + 3*6)
+/// Set V1 [1, 0, 0]
+/// Set V2 [0, 1, 0]
+/// Set D DOT(V1, V2)           // 0 (正交向量)
 /// ```
 pub fn dot(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -1739,16 +1620,16 @@ pub fn dot(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 向量的模长
 ///
 /// # 公式
-/// ```
+/// ```text
 /// ||v|| = √(v₁² + v₂² + ... + vₙ²)
 /// ```
 ///
 /// # 示例
 /// ```aether
-/// Set v [3, 4]
-/// Set len Norm(v)             # 5.0 (√(3²+4²))
-/// Set v [1, 1, 1]
-/// Set len Norm(v)             # 1.732... (√3)
+/// Set V [3, 4]
+/// Set LEN NORM(V)             // 5.0 (√(3²+4²))
+/// Set V [1, 1, 1]
+/// Set LEN NORM(V)             // 1.732... (√3)
 /// ```
 pub fn norm(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -1794,7 +1675,7 @@ pub fn norm(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Array - 叉积向量，垂直于输入的两个向量
 ///
 /// # 公式
-/// ```
+/// ```text
 /// a × b = [a₂b₃ - a₃b₂, a₃b₁ - a₁b₃, a₁b₂ - a₂b₁]
 /// ```
 ///
@@ -1803,12 +1684,12 @@ pub fn norm(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a [1, 0, 0]
-/// Set b [0, 1, 0]
-/// Set c Cross(a, b)           # [0, 0, 1] (z轴方向)
-/// Set a [1, 2, 3]
-/// Set b [4, 5, 6]
-/// Set c Cross(a, b)           # [-3, 6, -3]
+/// Set A [1, 0, 0]
+/// Set B [0, 1, 0]
+/// Set C CROSS(A, B)           // [0, 0, 1] (z轴方向)
+/// Set A [1, 2, 3]
+/// Set B [4, 5, 6]
+/// Set C CROSS(A, B)           // [-3, 6, -3]
 /// ```
 pub fn cross(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -1872,7 +1753,7 @@ pub fn cross(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 欧几里得距离
 ///
 /// # 公式
-/// ```
+/// ```text
 /// distance(a, b) = ||a - b|| = √(Σ(aᵢ - bᵢ)²)
 /// ```
 ///
@@ -1881,12 +1762,12 @@ pub fn cross(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set p1 [0, 0]
-/// Set p2 [3, 4]
-/// Set d Distance(p1, p2)      # 5.0
-/// Set a [1, 2, 3]
-/// Set b [4, 5, 6]
-/// Set d Distance(a, b)        # 5.196... (√27)
+/// Set P1 [0, 0]
+/// Set P2 [3, 4]
+/// Set D DISTANCE(P1, P2)      // 5.0
+/// Set A [1, 2, 3]
+/// Set B [4, 5, 6]
+/// Set D DISTANCE(A, B)        // 5.196... (√27)
 /// ```
 pub fn distance(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -1943,7 +1824,7 @@ pub fn distance(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Array - 归一化后的单位向量
 ///
 /// # 公式
-/// ```
+/// ```text
 /// normalize(v) = v / ||v||
 /// ```
 ///
@@ -1952,10 +1833,10 @@ pub fn distance(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set v [3, 4]
-/// Set unit Normalize(v)       # [0.6, 0.8]
-/// Set v [1, 1, 1]
-/// Set unit Normalize(v)       # [0.577..., 0.577..., 0.577...]
+/// Set V [3, 4]
+/// Set UNIT NORMALIZE(V)       // [0.6, 0.8]
+/// Set V [1, 1, 1]
+/// Set UNIT NORMALIZE(V)       // [0.577..., 0.577..., 0.577...]
 /// ```
 pub fn normalize(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -2012,7 +1893,7 @@ pub fn normalize(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Array - 矩阵乘积 [m × p]
 ///
 /// # 公式
-/// ```
+/// ```text
 /// C[i][j] = Σ A[i][k] × B[k][j]  (k = 0 to n-1)
 /// ```
 ///
@@ -2023,9 +1904,9 @@ pub fn normalize(args: &[Value]) -> Result<Value, RuntimeError> {
 /// ```aether
 /// Set A [[1, 2], [3, 4]]
 /// Set B [[5, 6], [7, 8]]
-/// Set C Matmul(A, B)          # [[19, 22], [43, 50]]
+/// Set C MATMUL(A, B)          // [[19, 22], [43, 50]]
 /// Set I [[1, 0], [0, 1]]
-/// Set R Matmul(A, I)          # [[1, 2], [3, 4]] (单位矩阵)
+/// Set R MATMUL(A, I)          // [[1, 2], [3, 4]] (单位矩阵)
 /// ```
 pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -2155,16 +2036,16 @@ pub fn matmul(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Array - 转置后的矩阵 [n × m]
 ///
 /// # 公式
-/// ```
+/// ```text
 /// B[j][i] = A[i][j]
 /// ```
 ///
 /// # 示例
 /// ```aether
 /// Set A [[1, 2, 3], [4, 5, 6]]
-/// Set B Transpose(A)          # [[1, 4], [2, 5], [3, 6]]
+/// Set B TRANSPOSE(A)          // [[1, 4], [2, 5], [3, 6]]
 /// Set M [[1, 2], [3, 4]]
-/// Set MT Transpose(M)         # [[1, 3], [2, 4]]
+/// Set MT TRANSPOSE(M)         // [[1, 3], [2, 4]]
 /// ```
 pub fn transpose(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -2251,11 +2132,11 @@ pub fn transpose(args: &[Value]) -> Result<Value, RuntimeError> {
 /// # 示例
 /// ```aether
 /// Set A [[1, 2], [3, 4]]
-/// Set det Determinant(A)      # -2.0 (1*4 - 2*3)
+/// Set DET DETERMINANT(A)      // -2.0 (1*4 - 2*3)
 /// Set I [[1, 0], [0, 1]]
-/// Set det Determinant(I)      # 1.0 (单位矩阵)
+/// Set DET DETERMINANT(I)      // 1.0 (单位矩阵)
 /// Set B [[1, 2, 3], [0, 1, 4], [5, 6, 0]]
-/// Set det Determinant(B)      # 1.0
+/// Set DET DETERMINANT(B)      // 1.0
 /// ```
 pub fn determinant(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -2425,7 +2306,7 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
 /// Array - 逆矩阵
 ///
 /// # 公式
-/// ```
+/// ```text
 /// A * A⁻¹ = I (单位矩阵)
 /// ```
 ///
@@ -2435,10 +2316,10 @@ fn determinant_recursive(matrix: &[Value]) -> Result<Value, RuntimeError> {
 /// # 示例
 /// ```aether
 /// Set A [[4, 7], [2, 6]]
-/// Set invA Inverse(A)         # [[0.6, -0.7], [-0.2, 0.4]]
-/// Set I Matmul(A, invA)       # [[1, 0], [0, 1]]
+/// Set INVA INVERSE(A)         // [[0.6, -0.7], [-0.2, 0.4]]
+/// Set I MATMUL(A, INVA)       // [[1, 0], [0, 1]]
 /// Set A [[1, 2, 3], [0, 1, 4], [5, 6, 0]]
-/// Set invA Inverse(A)
+/// Set INVA INVERSE(A)
 /// ```
 pub fn matrix_inverse(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
@@ -2595,9 +2476,9 @@ fn get_matrix_element(matrix: &[Value], i: usize, j: usize) -> Result<f64, Runti
 ///
 /// # 示例
 /// ```aether
-/// Set pi PI()                 # 3.141592653589793
-/// Set circumference PI() * 2 * radius
-/// Set angle PI() / 4          # 45度 (弧度制)
+/// Set PI PI()                 // 3.141592653589793
+/// Set CIRCUMFERENCE PI() * 2 * RADIUS
+/// Set ANGLE PI() / 4          // 45度 (弧度制)
 /// ```
 pub fn pi(_args: &[Value]) -> Result<Value, RuntimeError> {
     Ok(Value::Number(consts::PI))
@@ -2616,9 +2497,9 @@ pub fn pi(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set e E()                   # 2.718281828459045
-/// Set y Exp(1)                # 也等于 e
-/// Set growth E() * rate       # 指数增长
+/// Set E E()                   // 2.718281828459045
+/// Set Y EXP(1)                // 也等于 e
+/// Set GROWTH E() * RATE       // 指数增长
 /// ```
 pub fn e(_args: &[Value]) -> Result<Value, RuntimeError> {
     Ok(Value::Number(consts::E))
@@ -2637,9 +2518,9 @@ pub fn e(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set tau TAU()               # 6.283185307179586
-/// Set fullCircle TAU()        # 完整圆周 (360度)
-/// Set angle TAU() / 8         # 1/8圆周 (45度)
+/// Set TAU TAU()               // 6.283185307179586
+/// Set FULLCIRCLE TAU()        // 完整圆周 (360度)
+/// Set ANGLE TAU() / 8         // 1/8圆周 (45度)
 /// ```
 pub fn tau(_args: &[Value]) -> Result<Value, RuntimeError> {
     Ok(Value::Number(consts::TAU))
@@ -2654,7 +2535,7 @@ pub fn tau(_args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - φ ≈ 1.618033988749895
 ///
 /// # 公式
-/// ```
+/// ```text
 /// φ = (1 + √5) / 2
 /// ```
 ///
@@ -2663,9 +2544,9 @@ pub fn tau(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set phi PHI()               # 1.618033988749895
-/// Set ratio PHI()             # 黄金分割比例
-/// Set fibonacci PHI() * PHI() # φ² ≈ 2.618
+/// Set PHI PHI()               // 1.618033988749895
+/// Set RATIO PHI()             // 黄金分割比例
+/// Set FIBONACCI PHI() * PHI() // φ² ≈ 2.618
 /// ```
 pub fn phi(_args: &[Value]) -> Result<Value, RuntimeError> {
     Ok(Value::Number((1.0 + 5.0_f64.sqrt()) / 2.0))
@@ -2691,7 +2572,7 @@ pub fn phi(_args: &[Value]) -> Result<Value, RuntimeError> {
 /// - r_squared: 决定系数 R²
 ///
 /// # 公式
-/// ```
+/// ```text
 /// y = slope * x + intercept
 /// slope = Σ[(xi - x̄)(yi - ȳ)] / Σ(xi - x̄)²
 /// intercept = ȳ - slope * x̄
@@ -2704,12 +2585,12 @@ pub fn phi(_args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set x [1, 2, 3, 4, 5]
-/// Set y [2, 4, 5, 4, 5]
-/// Set result LinearRegression(x, y)
-/// Set slope result[0]         # 0.6
-/// Set intercept result[1]     # 2.2
-/// Set r2 result[2]            # 0.4286
+/// Set X [1, 2, 3, 4, 5]
+/// Set Y [2, 4, 5, 4, 5]
+/// Set RESULT LINEAR_REGRESSION(X, Y)
+/// Set SLOPE RESULT[0]         // 0.6
+/// Set INTERCEPT RESULT[1]     // 2.2
+/// Set R2 RESULT[2]            // 0.4286
 /// ```
 pub fn linear_regression(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -2839,15 +2720,15 @@ pub fn linear_regression(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 概率密度值
 ///
 /// # 公式
-/// ```
+/// ```text
 /// PDF(x) = (1 / (σ√(2π))) * e^(-(x-μ)²/(2σ²))
 /// ```
 ///
 /// # 示例
 /// ```aether
-/// Set p NormalPDF(0, 0, 1)    # 标准正态分布在0点: 0.3989
-/// Set p NormalPDF(1.96, 0, 1) # 在1.96点: 0.0584
-/// Set p NormalPDF(10, 10, 2)  # μ=10, σ=2: 0.1995
+/// Set P NORMAL_PDF(0, 0, 1)    // 标准正态分布在0点: 0.3989
+/// Set P NORMAL_PDF(1.96, 0, 1) // 在1.96点: 0.0584
+/// Set P NORMAL_PDF(10, 10, 2)  // μ=10, σ=2: 0.1995
 /// ```
 pub fn normal_pdf(args: &[Value]) -> Result<Value, RuntimeError> {
     let (x, mean, std) = match args.len() {
@@ -2907,15 +2788,15 @@ pub fn normal_pdf(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 累积概率，范围 [0, 1]
 ///
 /// # 公式
-/// ```
+/// ```text
 /// CDF(x) = 0.5 * [1 + erf((x-μ)/(σ√2))]
 /// ```
 ///
 /// # 示例
 /// ```aether
-/// Set p NormalCDF(0, 0, 1)    # 50% (中位数)
-/// Set p NormalCDF(1.96, 0, 1) # 97.5% (95%置信区间上界)
-/// Set p NormalCDF(-1.96, 0, 1)# 2.5% (95%置信区间下界)
+/// Set P NORMAL_CDF(0, 0, 1)    // 50% (中位数)
+/// Set P NORMAL_CDF(1.96, 0, 1) // 97.5% (95%置信区间上界)
+/// Set P NORMAL_CDF(-1.96, 0, 1) // 2.5% (95%置信区间下界)
 /// ```
 pub fn normal_cdf(args: &[Value]) -> Result<Value, RuntimeError> {
     let (x, mean, std) = match args.len() {
@@ -2978,7 +2859,7 @@ pub fn normal_cdf(args: &[Value]) -> Result<Value, RuntimeError> {
 /// Number - 概率值
 ///
 /// # 公式
-/// ```
+/// ```text
 /// P(X = k) = (λ^k * e^(-λ)) / k!
 /// ```
 ///
@@ -2988,9 +2869,9 @@ pub fn normal_cdf(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set p PoissonPMF(3, 2.5)    # λ=2.5时，恰好3次的概率
-/// Set p PoissonPMF(0, 1)      # 平均1次，0次发生的概率: e^(-1)
-/// Set p PoissonPMF(5, 5)      # λ=k=5: 0.1755
+/// Set P POISSON_PMF(3, 2.5)    // λ=2.5时，恰好3次的概率
+/// Set P POISSON_PMF(0, 1)      // 平均1次，0次发生的概率: e^(-1)
+/// Set P POISSON_PMF(5, 5)      // λ=k=5: 0.1755
 /// ```
 pub fn poisson_pmf(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -3054,9 +2935,9 @@ pub fn poisson_pmf(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set a RoundTo(3.14159, 2)       # 3.14
-/// Set b RoundTo(123.456, 1)       # 123.5
-/// Set c RoundTo(0.666666, 4)      # 0.6667
+/// Set A ROUND_TO(3.14159, 2)       // 3.14
+/// Set B ROUND_TO(123.456, 1)       // 123.5
+/// Set C ROUND_TO(0.666666, 4)      // 0.6667
 /// ```
 pub fn round_to(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
@@ -3101,8 +2982,8 @@ pub fn round_to(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set result AddWithPrecision(0.1, 0.2, 2)    # 0.30
-/// Set result AddWithPrecision(1.235, 2.346, 2) # 3.58
+/// Set RESULT ADD_WITH_PRECISION(0.1, 0.2, 2)    // 0.30
+/// Set RESULT ADD_WITH_PRECISION(1.235, 2.346, 2) // 3.58
 /// ```
 pub fn add_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -3150,8 +3031,8 @@ pub fn add_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set result SubWithPrecision(1.5, 0.3, 1)    # 1.2
-/// Set result SubWithPrecision(5.678, 2.345, 2) # 3.33
+/// Set RESULT SUB_WITH_PRECISION(1.5, 0.3, 1)    // 1.2
+/// Set RESULT SUB_WITH_PRECISION(5.678, 2.345, 2) // 3.33
 /// ```
 pub fn sub_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -3199,8 +3080,8 @@ pub fn sub_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set result MulWithPrecision(0.1, 0.2, 3)    # 0.02
-/// Set result MulWithPrecision(3.456, 2.5, 2)  # 8.64
+/// Set RESULT MUL_WITH_PRECISION(0.1, 0.2, 3)    // 0.02
+/// Set RESULT MUL_WITH_PRECISION(3.456, 2.5, 2)  // 8.64
 /// ```
 pub fn mul_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -3248,8 +3129,8 @@ pub fn mul_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set result DivWithPrecision(1.0, 3.0, 2)    # 0.33
-/// Set result DivWithPrecision(10.0, 3.0, 4)   # 3.3333
+/// Set RESULT DIV_WITH_PRECISION(1.0, 3.0, 2)    // 0.33
+/// Set RESULT DIV_WITH_PRECISION(10.0, 3.0, 4)   // 3.3333
 /// ```
 pub fn div_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
@@ -3302,8 +3183,8 @@ pub fn div_with_precision(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set nums [3.14159, 2.71828, 1.41421]
-/// Set rounded SetPrecision(nums, 2)   # [3.14, 2.72, 1.41]
+/// Set NUMS [3.14159, 2.71828, 1.41421]
+/// Set ROUNDED SET_PRECISION(NUMS, 2)   // [3.14, 2.72, 1.41]
 /// ```
 pub fn set_precision(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() != 2 {

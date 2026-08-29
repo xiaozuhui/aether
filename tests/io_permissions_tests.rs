@@ -29,7 +29,6 @@ fn test_filesystem_permission_allows_read_file() {
 
     let perms = IOPermissions {
         filesystem_enabled: true,
-        ..Default::default()
     };
     let mut engine = Aether::with_permissions(perms);
 
@@ -47,7 +46,6 @@ fn test_filesystem_permission_write_read_roundtrip() {
 
     let perms = IOPermissions {
         filesystem_enabled: true,
-        ..Default::default()
     };
     let mut engine = Aether::with_permissions(perms);
 

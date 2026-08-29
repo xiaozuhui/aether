@@ -52,17 +52,6 @@ pub fn init_docs() -> HashMap<String, FunctionDocData> {
     );
 
     docs.insert(
-        "SIMPLIFY".to_string(),
-        FunctionDocData {
-            name: "SIMPLIFY".to_string(),
-            description: "化简分数（约分）为最简形式".to_string(),
-            params: vec![("fraction".to_string(), "要化简的分数".to_string())],
-            returns: "化简后的最简分数".to_string(),
-            example: Some("SIMPLIFY(TO_FRACTION(6/8))  => 3/4".to_string()),
-        },
-    );
-
-    docs.insert(
         "FRAC_ADD".to_string(),
         FunctionDocData {
             name: "FRAC_ADD".to_string(),
@@ -596,7 +585,6 @@ pub fn help(args: &[Value]) -> Result<Value, RuntimeError> {
                 vec![
                     "TO_FRACTION",
                     "TO_FLOAT",
-                    "SIMPLIFY",
                     "FRAC_ADD",
                     "FRAC_SUB",
                     "FRAC_MUL",
@@ -668,11 +656,181 @@ pub fn help(args: &[Value]) -> Result<Value, RuntimeError> {
             ("字典操作", vec!["KEYS", "VALUES", "HAS", "MERGE"]),
         ];
 
+        // 补齐分类清单之外的已注册函数（薪酬/工资折算/IO/结构化跟踪/
+        // 生成器/高级数学/字符串与数组补充等）——HELP() 必须覆盖全部
+        // 注册函数，防止「存在但不可发现」
+        let extra_categories: Vec<(&str, Vec<&str>)> = vec![
+            ("生成器", vec!["NEXT", "DONE"]),
+            (
+                "结构化跟踪",
+                vec!["TRACE_DEBUG", "TRACE_INFO", "TRACE_WARN", "TRACE_ERROR"],
+            ),
+            (
+                "字符串操作（补充）",
+                vec!["CHARAT", "STRLEN", "STRSLICE", "INDEXOF"],
+            ),
+            ("数组与函数式", vec!["FILTER", "MAP", "REDUCE"]),
+            ("JSON 处理", vec!["JSON_PARSE", "JSON_STRINGIFY"]),
+            (
+                "高级数学",
+                vec![
+                    "SIGN",
+                    "CLAMP",
+                    "FACTORIAL",
+                    "ERF",
+                    "GAMMA",
+                    "HYPOT",
+                    "SINH",
+                    "COSH",
+                    "TANH",
+                    "EXPM1",
+                    "LOG1P",
+                ],
+            ),
+            (
+                "精确计算（补充）",
+                vec![
+                    "SET_PRECISION",
+                    "ADD_WITH_PRECISION",
+                    "SUB_WITH_PRECISION",
+                    "MUL_WITH_PRECISION",
+                    "DIV_WITH_PRECISION",
+                ],
+            ),
+            (
+                "文件操作",
+                vec![
+                    "READ_FILE",
+                    "WRITE_FILE",
+                    "APPEND_FILE",
+                    "DELETE_FILE",
+                    "FILE_EXISTS",
+                    "LIST_DIR",
+                    "CREATE_DIR",
+                ],
+            ),
+            (
+                "工资折算",
+                vec![
+                    "ANNUAL_TO_MONTHLY",
+                    "MONTHLY_TO_ANNUAL",
+                    "DAILY_TO_MONTHLY",
+                    "MONTHLY_TO_DAILY",
+                    "HOURLY_TO_MONTHLY",
+                    "MONTHLY_TO_HOURLY",
+                ],
+            ),
+            (
+                "薪酬计算",
+                vec![
+                    "CALC_BASE_SALARY",
+                    "CALC_GROSS_SALARY",
+                    "CALC_NET_SALARY",
+                    "CALC_HOURLY_PAY",
+                    "CALC_DAILY_PAY",
+                    "CALC_MONTHLY_FROM_HOURLY",
+                    "CALC_ONBOARDING_SALARY",
+                    "CALC_RESIGNATION_SALARY",
+                    "CALC_13TH_SALARY",
+                    "CALC_14TH_SALARY",
+                    "CALC_PERFORMANCE_PAY",
+                    "CALC_SALES_COMMISSION",
+                    "CALC_PROJECT_BONUS",
+                    "CALC_ANNUAL_BONUS",
+                    "CALC_ANNUAL_SALARY",
+                    "CALC_ANNUAL_BONUS_TAX",
+                ],
+            ),
+            (
+                "个税与社保",
+                vec![
+                    "CALC_PERSONAL_TAX",
+                    "CALC_TAXABLE_INCOME",
+                    "CALC_EFFECTIVE_TAX_RATE",
+                    "CALC_TAX_REFUND",
+                    "CALC_GROSS_FROM_NET",
+                    "CALC_PENSION_INSURANCE",
+                    "CALC_MEDICAL_INSURANCE",
+                    "CALC_UNEMPLOYMENT_INSURANCE",
+                    "CALC_INJURY_INSURANCE",
+                    "CALC_MATERNITY_INSURANCE",
+                    "CALC_HOUSING_FUND",
+                    "CALC_SOCIAL_INSURANCE",
+                    "CALC_SOCIAL_BASE_LOWER",
+                    "CALC_SOCIAL_BASE_UPPER",
+                    "ADJUST_SOCIAL_BASE",
+                ],
+            ),
+            (
+                "加班与考勤",
+                vec![
+                    "CALC_OVERTIME_PAY",
+                    "CALC_WEEKDAY_OVERTIME",
+                    "CALC_WEEKEND_OVERTIME",
+                    "CALC_HOLIDAY_OVERTIME",
+                    "CALC_TOTAL_OVERTIME",
+                    "CALC_LATE_DEDUCTION",
+                    "CALC_EARLY_LEAVE_DEDUCTION",
+                    "CALC_ABSENT_DEDUCTION",
+                    "CALC_LEAVE_DEDUCTION",
+                    "CALC_UNPAID_LEAVE_DEDUCTION",
+                    "CALC_SICK_LEAVE_PAY",
+                    "CALC_ATTENDANCE_BONUS",
+                    "CALC_ATTENDANCE_RATE",
+                ],
+            ),
+            (
+                "津贴补贴",
+                vec![
+                    "CALC_MEAL_ALLOWANCE",
+                    "CALC_TRANSPORT_ALLOWANCE",
+                    "CALC_COMMUNICATION_ALLOWANCE",
+                    "CALC_POSITION_ALLOWANCE",
+                    "CALC_HOUSING_ALLOWANCE",
+                    "CALC_HIGH_TEMP_ALLOWANCE",
+                    "CALC_NIGHT_SHIFT_ALLOWANCE",
+                ],
+            ),
+            (
+                "薪酬统计",
+                vec![
+                    "CALC_SALARY_AVERAGE",
+                    "CALC_SALARY_MEDIAN",
+                    "CALC_SALARY_RANGE",
+                    "CALC_SALARY_STD_DEV",
+                    "CALC_SALARY_DISTRIBUTION",
+                    "CALC_PERCENTILE",
+                ],
+            ),
+            (
+                "日期与折算比例",
+                vec![
+                    "CALC_NATURAL_DAYS",
+                    "CALC_WEEKEND_DAYS",
+                    "CALC_WORK_HOURS",
+                    "CALC_MONTHLY_WORK_HOURS",
+                    "IS_WEEKEND",
+                    "IS_WORKDAY",
+                    "PRORATE_BY_NATURAL_DAYS",
+                    "PRORATE_BY_WORKDAYS",
+                    "PRORATE_BY_LEGAL_DAYS",
+                ],
+            ),
+            ("帮助", vec!["HELP"]),
+        ];
+        let mut categories = categories;
+        categories.extend(extra_categories);
+
         for (category, funcs) in categories {
             output.push_str(&format!("【{}】\n", category));
             for func_name in funcs {
-                if let Some(doc) = docs.get(func_name) {
-                    output.push_str(&format!("  {} - {}\n", doc.name, doc.description));
+                match docs.get(func_name) {
+                    Some(doc) => {
+                        output.push_str(&format!("  {} - {}\n", doc.name, doc.description))
+                    }
+                    // 无详细文档的函数也必须列出（可发现性优先），
+                    // 用 HELP("名字") 查询时同样会提示文档待补
+                    None => output.push_str(&format!("  {}\n", func_name)),
                 }
             }
             output.push('\n');

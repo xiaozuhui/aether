@@ -41,11 +41,10 @@ Aether 是一个现代化、轻量级的脚本语言，设计用于嵌入到 Rus
 - 📝 **简洁语法**: 易学易读，UPPER_SNAKE_CASE 命名
 - 🔒 **安全优先**: 库模式默认禁用 IO，CLI 模式自动启用
 
-### 内置函数库 (150 个内置函数)
+### 内置函数库 (192 个内置函数，文件系统类 7 个按 IO 权限注册)
 
 - **基础**: I/O、类型转换、字符串/数组/字典操作
 - **文件系统**: READ_FILE, WRITE_FILE, LIST_DIR, CREATE_DIR 等
-- **网络**: HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
 - **数学**: 线性代数、统计、概率分布、矩阵运算
 - **精确计算**: 分数运算、固定精度金融计算
 - **薪资计算**: 工资、加班费、个税、社保（78个函数）
@@ -106,7 +105,6 @@ let mut engine = Aether::with_all_permissions();
 // 或仅启用文件系统
 let permissions = IOPermissions {
     filesystem_enabled: true,
-    network_enabled: false,
 };
 let mut engine = Aether::with_permissions(permissions);
 
@@ -336,7 +334,60 @@ Set SUM REDUCE([1, 2, 3, 4], Func (ACC, X) { Return (ACC + X) }, 0)
 PRINTLN(SUM)       // 10
 ```
 
-### 5. 精确和精度算术
+### 5. Generator 与 Lazy（惰性结构）
+
+```aether
+// Generator：定义生成器函数
+Generator COUNT() {
+    Yield 10
+    Yield 20
+    Yield 30
+}
+
+Set G COUNT()
+PRINTLN(NEXT(G))   // 10
+PRINTLN(NEXT(G))   // 20
+PRINTLN(NEXT(G))   // 30
+PRINTLN(NEXT(G))   // null（耗尽后 NEXT 返回 Null）
+PRINTLN(DONE(G))   // true
+
+// For-In 直接迭代生成器
+For X In COUNT() {
+    PRINTLN(X)     // 依次输出 10、20、30
+}
+```
+
+语义（0.6.0 冻结）：
+
+- **首次触发急切收集**：第一次 `NEXT(G)` 完整执行函数体一次，所有 `Yield` 值按序收集；函数体内的副作用（`TRACE`/`PRINT` 等）恰好发生一次；
+- 之后的 `NEXT` 逐个弹出缓冲值；耗尽后返回 `Null`、`DONE(G)` 为 `True`；
+- 生成器**克隆共享消费状态**（`Set G2 G` 后两者消费同一序列，类似 Python 迭代器）；
+- 顶层（生成器外）的 `Yield` 是错误；无限生成器（`While True` 内 `Yield`）在首次 `NEXT` 时触发步数上限报错，不会挂死；
+- 尾递归优化：循环体内的尾调用不参与转换（保持解释执行，正确性优先）。
+
+```aether
+// Lazy：定义时不求值，首次读取时求值并记忆化
+Lazy HEAVY (
+    TRACE_INFO("HEAVY", 1)   // 只有首次读取时触发一次
+    100
+)
+
+PRINTLN(HEAVY)          // 100（此时才求值）
+PRINTLN(HEAVY + HEAVY)  // 200（复用记忆化结果，不再求值）
+```
+
+- 自引用（`Lazy Y (Y + 1)`）报「循环定义」错误，不会死循环；
+- `Lazy` 体必须是**表达式**（需要副作用时放在 `If (True) { ... }` 表达式块里）。
+
+### 6. 字符串与相等性语义
+
+- 字符串操作一律按 **Unicode 字符**计数与索引：`LEN("你好")` 是 2；`"你好"[1]` 是 `"好"`；
+- `CHARAT(S, I)` 负索引从尾部数（`CHARAT("你好", -1)` 是 `"好"`），越界**报错**（不是返回空串）；
+- `STRSLICE(S, START, END)` 字符切片，负索引从尾数、越界钳制；
+- 相等是**严格**的：跨类型永不相等（`5 == TO_FRACTION(5)` 为 `False`，需显式转换）；浮点比较是位相等——需要容差时写 `ABS(A - B) < 0.000001`；
+- 字典相等是深比较：键序无关、逐键递归（`{"x": 1} == {"x": 1}` 为 `True`）。
+
+### 7. 精确和精度算术
 
 ```aether
 // 问题：浮点精度
@@ -363,7 +414,7 @@ PRINTLN(TAX)    // 显示: 4
 
 完整函数清单与用法详见 [精确计算与精度计算](#-精确计算与精度计算)。
 
-### 6. 文件系统操作
+### 8. 文件系统操作
 
 ```aether
 // CLI 模式：自动工作
@@ -384,24 +435,7 @@ For FILE In FILES {
 }
 ```
 
-### 7. 网络操作
-
-```aether
-// HTTP GET
-Set RESPONSE HTTP_GET("https://api.github.com")
-PRINTLN(RESPONSE)
-
-// HTTP POST
-Set DATA '{"name": "test"}'
-Set RESULT HTTP_POST(
-    "https://api.example.com/data",
-    DATA,
-    "application/json"
-)
-PRINTLN(RESULT)
-```
-
-### 8. 错误处理
+### 9. 错误处理
 
 ```aether
 // 错误示例
@@ -531,6 +565,12 @@ Aether 提供了开箱即用的大整数支持。运行 `cargo test --test bigin
 
 Aether 提供两层机制规避浮点误差：**分数运算**（有理数，完全精确）与**精度计算**（固定小数位四舍五入）。
 
+### 除法与混合运算语义
+
+- **纯整数/小数**（只涉及 `Number`）：保持 f64 运算，`1 / 3` 是 `0.3333...`；
+- **一旦涉及分数**（任一操作数是 `Fraction`）：全部提升为分数精确计算，结果保持 `Fraction`；
+- 科学计数法字面量（`1e15`、`1.5e-3`）一律是 f64；需要精确大整数请写完整数字（超阈值自动 `BigInteger`）或显式 `TO_FRACTION`。
+
 ### 分数运算
 
 ```aether
@@ -538,9 +578,14 @@ Aether 提供两层机制规避浮点误差：**分数运算**（有理数，完
 Set HALF TO_FRACTION(0.5)        // 1/2
 Set THIRD TO_FRACTION(0.333333)  // 333333/1000000
 
-// 转回浮点数 / 化为最简形式
+// 转回浮点数
 PRINTLN(TO_FLOAT(HALF))  // 0.5
-PRINTLN(SIMPLIFY(HALF))  // 1/2
+
+// 连分数重建：0.333333 这样的截断值保持原样，
+// 但计算产生的 1/3 能被精确还原（这是本模块的核心保证）
+Set ONE_THIRD TO_FRACTION(1 / 3)
+PRINTLN(ONE_THIRD)              // 1/3
+PRINTLN(TO_FLOAT(ONE_THIRD))    // 0.3333333333333333（= 1/3 的 f64 最近值）
 
 // 分数四则运算（结果保持精确）
 Set A TO_FRACTION(0.75)  // 3/4
@@ -647,7 +692,6 @@ let mut engine = Aether::new();
 // 2. 仅文件系统
 let permissions = IOPermissions {
     filesystem_enabled: true,
-    network_enabled: false,
 };
 let mut engine = Aether::with_permissions(permissions);
 
@@ -1020,6 +1064,7 @@ Program finished.
 | 命令 | 说明 |
 | --- | --- |
 | `break [file:]line` | 行断点（文件名可省略，缺省为当前文件） |
+| `break line if condition` | 条件断点：位置命中后用**当前环境**求值条件，为真才暂停（如 `break 5 if X == 3`）。条件必须是合法 Aether 表达式，求值出错视为不暂停 |
 | `break function_name` | 函数断点（具名 `Func` 入口触发，参数此时已可打印） |
 | `delete [N]` | 删除断点 N（不带参数删全部） |
 | `disable N` / `enable N` | 禁用/启用断点 |
@@ -1358,28 +1403,22 @@ READ_FILE, WRITE_FILE, APPEND_FILE
 DELETE_FILE, FILE_EXISTS, CREATE_DIR, LIST_DIR
 ```
 
-#### 网络（4 个）
-
-```aether
-HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
-```
-
 #### JSON（2 个）
 
 ```aether
 JSON_PARSE, JSON_STRINGIFY
 ```
 
-#### 精确计算（14 个）
+#### 精确计算（13 个）
 
 ```aether
 TO_FRACTION, TO_FLOAT, FRAC_ADD, FRAC_SUB, FRAC_MUL, FRAC_DIV
-NUMERATOR, DENOMINATOR, SIMPLIFY, GCD, LCM
+NUMERATOR, DENOMINATOR, GCD, LCM
 ADD_WITH_PRECISION, SUB_WITH_PRECISION
 MUL_WITH_PRECISION, DIV_WITH_PRECISION
 ```
 
-#### 薪资计算（78 个）
+#### 薪资计算（72 个）
 
 涵盖基本工资、加班费、个税、年终奖、社保、工作日/节假日计算等，详见 [薪酬计算指南](docs/PAYROLL_GUIDE.md)。
 
@@ -1387,7 +1426,7 @@ MUL_WITH_PRECISION, DIV_WITH_PRECISION
 
 ```aether
 HELP            // 查看内置函数帮助（REPL 中输入 help 同效）
-CLONE, SET_PRECISION
+SET_PRECISION
 ```
 
 ### 示例：统计与预测

@@ -7,7 +7,7 @@ use aether::Aether;
 fn test_selective_string_utils() {
     // 只加载 string_utils 模块
     let mut engine = Aether::new()
-        .with_stdlib_string_utils()
+        .with_stdlib_module("string_utils")
         .expect("Failed to load string_utils");
 
     // 测试 string_utils 中的函数可用
@@ -25,7 +25,7 @@ fn test_selective_string_utils() {
 fn test_selective_array_utils() {
     // 只加载 array_utils 模块
     let mut engine = Aether::new()
-        .with_stdlib_array_utils()
+        .with_stdlib_module("array_utils")
         .expect("Failed to load array_utils");
 
     // 测试 array_utils 中的函数可用
@@ -45,11 +45,11 @@ fn test_selective_array_utils() {
 fn test_chained_loading() {
     // 链式加载多个模块
     let mut engine = Aether::new()
-        .with_stdlib_string_utils()
+        .with_stdlib_module("string_utils")
         .expect("Failed to load string_utils")
-        .with_stdlib_array_utils()
+        .with_stdlib_module("array_utils")
         .expect("Failed to load array_utils")
-        .with_stdlib_validation()
+        .with_stdlib_module("validation")
         .expect("Failed to load validation");
 
     // 测试多个模块的函数都可用
@@ -72,7 +72,7 @@ fn test_selective_vs_full() {
 
     // 选择性加载
     let mut engine_selective = Aether::new()
-        .with_stdlib_string_utils()
+        .with_stdlib_module("string_utils")
         .expect("Failed to load string_utils");
 
     let code = r#"
@@ -92,7 +92,7 @@ fn test_selective_vs_full() {
 fn test_json_module() {
     // 测试 JSON 模块加载
     let mut engine = Aether::new()
-        .with_stdlib_json()
+        .with_stdlib_module("json")
         .expect("Failed to load json module");
 
     let code = r#"
@@ -113,11 +113,11 @@ fn test_json_module() {
 fn test_data_structures() {
     // 测试数据结构模块
     let mut engine = Aether::new()
-        .with_stdlib_set()
+        .with_stdlib_module("set")
         .expect("Failed to load set")
-        .with_stdlib_queue()
+        .with_stdlib_module("queue")
         .expect("Failed to load queue")
-        .with_stdlib_stack()
+        .with_stdlib_module("stack")
         .expect("Failed to load stack");
 
     // 测试 Set
@@ -147,7 +147,7 @@ fn test_data_structures() {
 fn test_functional_module() {
     // 测试函数式编程模块
     let mut engine = Aether::new()
-        .with_stdlib_functional()
+        .with_stdlib_module("functional")
         .expect("Failed to load functional");
 
     let code = r#"
@@ -167,7 +167,7 @@ fn test_functional_module() {
 fn test_datetime_module() {
     // 测试日期时间模块
     let mut engine = Aether::new()
-        .with_stdlib_datetime()
+        .with_stdlib_module("datetime")
         .expect("Failed to load datetime");
 
     let code = r#"

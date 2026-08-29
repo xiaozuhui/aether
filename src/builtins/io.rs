@@ -21,10 +21,10 @@ use std::io::{self, Write};
 ///
 /// # 示例
 /// ```aether
-/// Print("Hello")                    # 输出: Hello
-/// Print("Result:", 42)              # 输出: Result: 42
-/// Print("Sum:", 10, "+", 20, "=", 30)  # 输出: Sum: 10 + 20 = 30
-/// Print([1, 2, 3])                  # 输出: [1, 2, 3]
+/// PRINT("Hello")                    // 输出: Hello
+/// PRINT("Result:", 42)              // 输出: Result: 42
+/// PRINT("Sum:", 10, "+", 20, "=", 30)  // 输出: Sum: 10 + 20 = 30
+/// PRINT([1, 2, 3])                  // 输出: [1, 2, 3]
 /// ```
 pub fn print(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.is_empty() {
@@ -57,10 +57,10 @@ pub fn print(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Println("Hello")                  # 输出: Hello\n
-/// Println("Result:", 42)            # 输出: Result: 42\n
-/// Println("x =", 10, "y =", 20)     # 输出: x = 10 y = 20\n
-/// Println([1, 2, 3])                # 输出: [1, 2, 3]\n
+/// PRINTLN("Hello")                  // 输出: Hello\n
+/// PRINTLN("Result:", 42)            // 输出: Result: 42\n
+/// PRINTLN("x =", 10, "y =", 20)     // 输出: x = 10 y = 20\n
+/// PRINTLN([1, 2, 3])                // 输出: [1, 2, 3]\n
 /// ```
 pub fn println(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.is_empty() {
@@ -93,8 +93,8 @@ pub fn println(args: &[Value]) -> Result<Value, RuntimeError> {
 ///
 /// # 示例
 /// ```aether
-/// Set NAME Input("请输入姓名: ")
-/// Println("你好, " + NAME)
+/// Set NAME INPUT("请输入姓名: ")
+/// PRINTLN("你好, " + NAME)
 /// ```
 pub fn input(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.is_empty() {

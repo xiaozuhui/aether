@@ -30,12 +30,13 @@ impl Aether {
         Self::with_permissions(IOPermissions::allow_all())
     }
 
-    /// 创建预加载标准库的新 Aether 引擎
+    /// 创建预加载标准库的新 Aether 引擎。
     ///
-    /// 这将创建一个具有所有权限的引擎，并自动加载
-    /// 所有标准库模块（string_utils、array_utils、validation、datetime、testing）。
+    /// 标准库模块为纯计算（内嵌源码），加载**不需要** IO 权限——
+    /// 因此这里基于 `Aether::new()` 构建，不会静默授予文件读写能力；
+    /// 需要 IO 的宿主请显式 `with_permissions(...)`。
     pub fn with_stdlib() -> Result<Self, String> {
-        let mut engine = Self::with_all_permissions();
+        let mut engine = Self::new();
         stdlib::preload_stdlib(&mut engine)?;
         Ok(engine)
     }

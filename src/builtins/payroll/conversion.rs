@@ -1,19 +1,9 @@
 // src/builtins/payroll/conversion.rs
 //! 薪资转换和折算函数
 
+use crate::builtins::util::get_number;
 use crate::evaluator::RuntimeError;
 use crate::value::Value;
-/// 辅助函数：安全地获取数字参数
-fn get_number(val: &Value) -> Result<f64, RuntimeError> {
-    match val {
-        Value::Number(n) => Ok(*n),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", val),
-        }),
-    }
-}
-
 /// 年薪转月薪
 pub fn annual_to_monthly(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.is_empty() {

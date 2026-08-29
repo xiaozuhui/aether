@@ -1,5 +1,9 @@
 // src/builtins/filesystem.rs
-//! 文件系统IO操作函数
+//! 文件系统 IO 操作函数。
+//!
+//! 信任模型：`IOPermissions.filesystem_enabled` 是唯一的开关——
+//! 启用即完全信任脚本，可访问宿主上当前用户可访问的**任意路径**，
+//! 没有也不应有路径沙箱（设计如此，由宿主自行决定是否授予）。
 
 use crate::evaluator::RuntimeError;
 use crate::value::Value;
@@ -37,7 +41,6 @@ pub fn read_file(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let path_str = get_string(&args[0])?;
 
-    // 验证路径（如果配置了验证器）
     let validated_path = PathBuf::from(&path_str);
 
     match fs::read_to_string(&validated_path) {
@@ -72,7 +75,6 @@ pub fn write_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
     let content = get_string(&args[1])?;
 
-    // 验证路径
     let validated_path = PathBuf::from(&path_str);
 
     match fs::write(&validated_path, content) {
@@ -107,7 +109,6 @@ pub fn append_file(args: &[Value]) -> Result<Value, RuntimeError> {
     let path_str = get_string(&args[0])?;
     let content = get_string(&args[1])?;
 
-    // 验证路径
     let validated_path = PathBuf::from(&path_str);
 
     match fs::OpenOptions::new()
@@ -154,7 +155,6 @@ pub fn delete_file(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let path_str = get_string(&args[0])?;
 
-    // 验证路径
     let validated_path = PathBuf::from(&path_str);
 
     match fs::remove_file(&validated_path) {
@@ -206,7 +206,6 @@ pub fn list_dir(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let path_str = get_string(&args[0])?;
 
-    // 验证路径
     let validated_path = PathBuf::from(&path_str);
 
     match fs::read_dir(&validated_path) {
@@ -257,7 +256,6 @@ pub fn create_dir(args: &[Value]) -> Result<Value, RuntimeError> {
 
     let path_str = get_string(&args[0])?;
 
-    // 验证路径
     let validated_path = PathBuf::from(&path_str);
 
     match fs::create_dir_all(&validated_path) {

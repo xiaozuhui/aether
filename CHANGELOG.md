@@ -4,9 +4,59 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [0.6.0] - 2026-08-29
 
-Cargo.toml 版本号已升至 0.5.4，尚未打 tag 发布。
+语义修复大版本：修复多项静默错误的数值/结构语义，把三个只有前端没有后端的"幽灵特性"补齐为真实实现，删除全部伪装成功能的假函数与失效文档。升级前请阅读下方**破坏性变更**。
+
+### 破坏性变更（升级必读）
+
+- **HTTP 内置函数整体删除**：`HTTP_GET/HTTP_POST/HTTP_PUT/HTTP_DELETE` 与 `IOPermissions.network_enabled`、`ureq` 依赖一并移除。网络访问请由宿主程序完成后再注入变量
+- **假日期函数删除**：`CALC_HOLIDAY_DAYS`、`IS_HOLIDAY`、`CALC_WORKDAYS`、`CALC_ANNUAL_WORKDAYS`、`CALC_ANNUAL_PAY_DAYS`、`GET_LEGAL_PAY_DAYS` 无法在无法定节假日数据源时真实计算，已删除；节假日判断由宿主给出布尔值后传给 `IS_WORKDAY`
+- **恒等/无意义函数删除**：`SIMPLIFY`（Ratio 恒约分）、`CLONE`（值语义克隆恒等）删除
+- **`with_stdlib()` 不再授予任何 IO 权限**：此前内部调用 `with_all_permissions()` 会静默开全部文件系统访问；现改为 `Aether::new()` 基线，需要 IO 请显式 `with_permissions`
+- **`CHARAT` 越界从返回空串改为报错**（与 `s[i]` 索引对齐）
+- **浮点相等从错误阈值改为严格位相等**：原先 `f64::EPSILON` 绝对阈值对大数恒等、对小数恒不等；现在 `==` 是位相等，容差需求显式写 `ABS(A - B) < 0.000001`
+- **Number×Fraction 混合运算一律提升为分数**：`0.5 + TO_FRACTION(1/3)` 得精确 `5/6`；纯 Number（整数/小数）保持 f64
+- **Generator 克隆共享消费状态**（类似 Python 迭代器语义）；**无限生成器触发步数上限报错**而非挂死
+- **尾递归优化不再转换循环体内的尾调用**（嵌套循环内改写会破坏语义），保持解释执行
+- **字符串操作统一为 Unicode 字符语义**（详见下"修复"）
+
+### 新增
+
+- **Generator / Yield 真实实现**（首次触发急切收集）：第一次 `NEXT(G)` 完整执行函数体一次，所有 `Yield` 值按序收集，副作用恰好发生一次；之后逐个弹出，耗尽返回 `Null`，`DONE(G)` 可查询；`For X In G` 直接迭代
+- **Lazy 强制求值**：`Lazy` 定义时不求值，首次读取时求值并记忆化；自引用（`Lazy Y (Y + 1)`）报「循环定义」错误而非死循环
+- **调试器条件断点**：`break <line> if <condition>`——位置命中后在当前环境求值条件表达式，为真才暂停；条件解析带缓存，求值出错视为不暂停
+- **`TO_FRACTION` 连分数重建**：`TO_FRACTION(1/3)` 精确还原 `1/3`、`TO_FRACTION(0.1)` 得 `1/10`、科学计数法（`TO_FRACTION(1e-7)` 得 `1/10000000`）全部正确；`TO_FLOAT(TO_FRACTION(x)) == x` 往返恒等
+- **Dict 深相等**：`{"x": 1} == {"x": 1}` 为真（键序无关、逐键递归）
+- **`EnginePool.acquire(&self)`**：借出状态记录在共享内核（`Rc<RefCell>`，无 unsafe），可同时持有多个句柄，池先 drop 也安全
+- **`with_stdlib_module(name)`**：通用单模块加载，未知模块名返回 `Err`（原 16 个 `with_stdlib_X` 构造器删除）
+- 新示例：`examples/generator_demo.aether`、`examples/lazy_demo.aether`
+
+### 修复
+
+- **大数乘法饱和 bug**：`Number × Fraction` 原先经 `BigInt::from(a as i64)` 提升，超出 i64 范围静默截断；改为十进制字符串精确提升
+- **大整数热循环 O(n²) 退化**：`Ratio` 算术运算符内置 gcd 规约，num-bigint 的二进制 gcd 对大整数逐位移位——阶乘累乘（2000 次乘法）修复前需 30 秒以上；分母为 1 的整数乘法现直接构造结果跳过规约，20000!（77338 位）0.65 秒内完成（新增 spec 性能回归用例守住该路径）
+- **字符串字节/字符混乱**：`LEN/STRLEN/CHARAT/STRSLICE/INDEXOF/s[i]` 全部统一 Unicode 字符语义——`LEN("你好")` 为 2、`CHARAT("你好", -1)` 为 `"好"`（原按字节换算会切进多字节中间）
+- **尾递归优化使死代码复活**：尾调用 `Return` 改写为参数更新后"自然落空"，同块后续语句每轮重复执行；现改写追加 `Continue` 并配合不可达代码消除，`Return` 之后的语句保证永不执行
+- **个税税率表错误**：`CALC_PERSONAL_TAX` 补全 7 档年度累进表；`CALC_GROSS_FROM_NET` 从迭代逼近改为单调二分，全档往返误差 < 0.01 元；年终奖单独计税按"除以 12 定档"
+- **AST 缓存哈希碰撞**：命中只比对 u64 哈希，碰撞时返回错误 AST；现命中先比对源码全文；LRU 用真实顺序队列替换随机淘汰
+- **trace 双缓冲合并**：字符串缓冲与结构化条目两套并存且不同步；现结构化条目为唯一事实来源，`--trace` 输出由其派生
+
+### 变更
+
+- **尾递归/常量折叠/死代码消除差分验证**：优化开启与关闭的执行结果与 TRACE 序列必须一致（新增 spec_tail_recursion 差分电池）
+- **跨类型相等保持严格**（有意设计）：`5 == TO_FRACTION(5)` 为 `False`，需显式转换后比较
+- `help()` 覆盖全部 192 个注册函数（含无文档函数列出名字）并新增生成器、结构化跟踪等 15 个分类
+- 文档全面对齐实现：README、PAYROLL_GUIDE（78→72 个函数、个税口径、`Let`→`Set` 语法修正）、rustdoc 示例块全部可解析、examples 全部可运行且不再引用未注册函数
+- 冗余清理：payroll/mod.rs 死代码（338 行）、`EnvironmentPool`、`FunctionDoc` 双文档系统、ureq/chrono/lazy_static/crossbeam/criterion 依赖、`build.rs`、math.rs 40 行×11 样板宏化、CLI runner JSON 分支合并
+
+### 测试
+
+- 新增 12 个 BDD spec 文件（57 个用例）：数值精度、值相等、字符串语义、Generator、Lazy、尾递归差分、条件断点、薪酬、安全 API、缓存与池、文档示例防漂移、stdlib 编译冒烟——全部先红后绿实现
+
+## [0.5.4 之前未发布内容]（并入 0.6.0 一起发布）
+
+以下条目原计划随 0.5.4 发布，因尚未打 tag 一并入 0.6.0。
 
 ### 新增
 

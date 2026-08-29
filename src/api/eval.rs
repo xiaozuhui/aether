@@ -1,32 +1,32 @@
 use super::Aether;
+use crate::ast::Program;
 use crate::evaluator::ErrorReport;
 use crate::parser::Parser;
 use crate::value::Value;
 
 impl Aether {
+    /// 解析（命中 AST 缓存则直接取），供 `eval` / `eval_report` 共用。
+    /// 错误信息为**原始解析错误**（不带前缀），由各入口自行包装。
+    fn parse_with_cache(&mut self, code: &str) -> Result<Program, String> {
+        if let Some(cached) = self.cache.get(code) {
+            return Ok(cached);
+        }
+        let mut parser = Parser::with_bigint_threshold(code, self.bigint_threshold);
+        let program = parser.parse_program().map_err(|e| e.to_string())?;
+        let optimized = self.optimizer.optimize_program(&program);
+        self.cache.insert(code, optimized.clone());
+        Ok(optimized)
+    }
+
     /// 求值 Aether 代码并返回结果
     pub fn eval(&mut self, code: &str) -> Result<Value, String> {
         // 在开始新的顶级求值之前清除任何之前的调用栈帧。
         self.evaluator.clear_call_stack();
         self.evaluator.reset_step_counter();
 
-        // 尝试从缓存获取AST
-        let program = if let Some(cached_program) = self.cache.get(code) {
-            cached_program
-        } else {
-            // 解析代码
-            let mut parser = Parser::with_bigint_threshold(code, self.bigint_threshold);
-            let program = parser
-                .parse_program()
-                .map_err(|e| format!("Parse error: {}", e))?;
-
-            // 优化AST
-            let optimized = self.optimizer.optimize_program(&program);
-
-            // 将优化后的结果存入缓存
-            self.cache.insert(code, optimized.clone());
-            optimized
-        };
+        let program = self
+            .parse_with_cache(code)
+            .map_err(|e| format!("Parse error: {}", e))?;
 
         // 求值程序
         self.evaluator
@@ -42,19 +42,9 @@ impl Aether {
         self.evaluator.clear_call_stack();
         self.evaluator.reset_step_counter();
 
-        // 首先尝试 AST 缓存
-        let program = if let Some(cached_program) = self.cache.get(code) {
-            cached_program
-        } else {
-            let mut parser = Parser::with_bigint_threshold(code, self.bigint_threshold);
-            let program = parser
-                .parse_program()
-                .map_err(|e| ErrorReport::parse_error(e.to_string()))?;
-
-            let optimized = self.optimizer.optimize_program(&program);
-            self.cache.insert(code, optimized.clone());
-            optimized
-        };
+        let program = self
+            .parse_with_cache(code)
+            .map_err(ErrorReport::parse_error)?;
 
         self.evaluator
             .eval_program(&program)
@@ -80,6 +70,16 @@ impl Aether {
         self.evaluator.pop_import_base();
     }
 
+    /// 读取脚本文件并压入 Import 基目录上下文
+    /// （module_id = 规范路径；base_dir = 父目录），供文件求值入口共用。
+    fn read_and_push_base(&mut self, path: &std::path::Path) -> Result<String, String> {
+        let code = std::fs::read_to_string(path).map_err(|e| format!("IO error: {e}"))?;
+        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let base_dir = canon.parent().map(|p| p.to_path_buf());
+        self.push_import_base(canon.display().to_string(), base_dir);
+        Ok(code)
+    }
+
     /// 从文件路径求值 Aether 脚本。
     ///
     /// 这是一个便利包装器，它：
@@ -92,12 +92,7 @@ impl Aether {
     pub fn eval_file(&mut self, path: impl AsRef<std::path::Path>) -> Result<Value, String> {
         let path = path.as_ref();
 
-        let code = std::fs::read_to_string(path).map_err(|e| format!("IO error: {}", e))?;
-
-        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-        let base_dir = canon.parent().map(|p| p.to_path_buf());
-
-        self.push_import_base(canon.display().to_string(), base_dir);
+        let code = self.read_and_push_base(path)?;
         let res = self.eval(&code);
         self.pop_import_base();
         res
@@ -110,13 +105,9 @@ impl Aether {
     ) -> Result<Value, ErrorReport> {
         let path = path.as_ref();
 
-        let code = std::fs::read_to_string(path)
-            .map_err(|e| ErrorReport::io_error(format!("IO error: {e}")))?;
-
-        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-        let base_dir = canon.parent().map(|p| p.to_path_buf());
-
-        self.push_import_base(canon.display().to_string(), base_dir);
+        let code = self
+            .read_and_push_base(path)
+            .map_err(ErrorReport::io_error)?;
         let res = self.eval_report(&code);
         self.pop_import_base();
         res

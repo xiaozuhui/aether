@@ -71,27 +71,12 @@ pub const ALL_MODULES: &[(&str, &str)] = &[
     ("regex_utils", REGEX_UTILS),
 ];
 
-/// 获取指定模块的代码
+/// 获取指定模块的代码（单一数据源：`ALL_MODULES` 查表）
 pub fn get_module(name: &str) -> Option<&'static str> {
-    match name {
-        "string_utils" => Some(STRING_UTILS),
-        "array_utils" => Some(ARRAY_UTILS),
-        "validation" => Some(VALIDATION),
-        "datetime" => Some(DATETIME),
-        "testing" => Some(TESTING),
-        "set" => Some(SET),
-        "queue" => Some(QUEUE),
-        "stack" => Some(STACK),
-        "heap" => Some(HEAP),
-        "sorting" => Some(SORTING),
-        "json" => Some(JSON),
-        "csv" => Some(CSV),
-        "functional" => Some(FUNCTIONAL),
-        "cli_utils" => Some(CLI_UTILS),
-        "text_template" => Some(TEXT_TEMPLATE),
-        "regex_utils" => Some(REGEX_UTILS),
-        _ => None,
-    }
+    ALL_MODULES
+        .iter()
+        .find(|(module_name, _)| *module_name == name)
+        .map(|(_, code)| *code)
 }
 
 /// 获取所有标准库代码（合并为一个字符串）

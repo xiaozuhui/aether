@@ -1,0 +1,50 @@
+// examples/generator_demo.aether
+// Generator / Yield 演示
+//
+// 语义（0.6.0 起）：第一次 NEXT(G) 时完整执行函数体一次，
+// 所有 Yield 值按序收集；副作用恰好发生一次；耗尽后 NEXT
+// 返回 Null、DONE(G) 返回 True。
+
+// 1. 最简单的生成器：三个 Yield 值按序产出
+Generator COUNT() {
+    Yield 10
+    Yield 20
+    Yield 30
+}
+
+Set G COUNT()
+PRINTLN(NEXT(G))   // 10
+PRINTLN(NEXT(G))   // 20
+PRINTLN(NEXT(G))   // 30
+PRINTLN(NEXT(G))   // null（耗尽）
+PRINTLN(DONE(G))   // true
+
+// 2. 带参数的生成器：从 START 到 END 逐个产出
+Generator RANGE_GEN(START, END) {
+    Set CUR START
+    While (CUR <= END) {
+        Yield CUR
+        Set CUR CUR + 1
+    }
+}
+
+// For-In 直接迭代生成器（内部同样先收集再迭代）
+Func DEMO_ITERATE() {
+    Set TOTAL 0
+    For X In RANGE_GEN(1, 5) {
+        Set TOTAL TOTAL + X
+    }
+    Return TOTAL     // 1+2+3+4+5 = 15
+}
+
+PRINTLN(DEMO_ITERATE())
+
+// 3. 生成器可以产出任意值（这里产出数组）
+Generator MATRIX_ROWS() {
+    Yield [1, 2, 3]
+    Yield [4, 5, 6]
+}
+
+Set ROWS MATRIX_ROWS()
+Set FIRST NEXT(ROWS)
+PRINTLN(SUM(FIRST))   // 6

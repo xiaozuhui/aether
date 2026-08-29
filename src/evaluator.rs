@@ -7,7 +7,7 @@ use crate::environment::Environment;
 use crate::module_system::{
     DisabledModuleResolver, ModuleContext, ModuleResolveError, ModuleResolver, ResolvedModule,
 };
-use crate::value::{GeneratorState, Value};
+use crate::value::{GeneratorInner, Value};
 use num_bigint::BigInt;
 use num_rational::Ratio;
 use serde_json::{Value as JsonValue, json};
@@ -473,7 +473,6 @@ pub struct Evaluator {
     /// Built-in function registry
     registry: BuiltInRegistry,
     /// In-memory trace buffer (for DSL-safe debugging; no stdout/files/network)
-    trace: VecDeque<String>,
     /// Monotonic sequence for trace entries (starts at 1)
     trace_seq: u64,
     /// Structured trace entries (new in Stage 3.2)
@@ -513,7 +512,21 @@ pub struct Evaluator {
     /// 调试器状态（与 DebuggerSession 共享同一实例；None 时暂停检查零开销）
     debugger: Option<Rc<RefCell<crate::debugger::DebuggerState>>>,
     /// 暂停时回调的调试钩子：在其中运行调试 REPL；返回 true 表示终止程序
+    #[allow(clippy::type_complexity)]
     debug_hook: Option<Box<dyn FnMut(&mut Evaluator) -> bool>>,
+
+    /// Yield 收集槽：Some 时 Stmt::Yield 把值收入其中并继续执行
+    /// （生成器急切收集期间由 collect_generator 挂载），
+    /// None 时 Yield 保持 RuntimeError::Yield 传播（顶层 Yield 报错）。
+    yield_sink: Option<Rc<RefCell<Vec<Value>>>>,
+
+    /// 正在强制求值的 Lazy 变量名（循环定义检测：
+    /// `Lazy Y (Y + 1)` 在求值期间再次读取自身时直接报错）
+    forcing_lazy: Vec<String>,
+
+    /// 条件断点条件字符串 → 解析结果（None = 解析失败，永不满足）。
+    /// 懒解析首次命中时进行，避免每条语句都尝试解析
+    debug_cond_cache: HashMap<String, Option<Expr>>,
 }
 
 impl Evaluator {
@@ -617,6 +630,21 @@ impl Evaluator {
         self.env.borrow().get(name)
     }
 
+    /// 条件断点条件求值：
+    /// - 条件字符串懒解析并缓存（解析失败缓存 None → 永不满足）；
+    /// - 用**当前环境**求值（可见循环变量等局部状态），只有
+    ///   `Boolean(true)` 视为满足，其余取值与求值错误一律不暂停。
+    fn eval_debug_condition(&mut self, cond: &str) -> bool {
+        if !self.debug_cond_cache.contains_key(cond) {
+            let parsed = crate::parser::Parser::parse_expression_source(cond).ok();
+            self.debug_cond_cache.insert(cond.to_string(), parsed);
+        }
+        let Some(Some(expr)) = self.debug_cond_cache.get(cond).cloned() else {
+            return false;
+        };
+        matches!(self.eval_expression(&expr), Ok(Value::Boolean(true)))
+    }
+
     /// 调试器暂停检查：每条语句执行前调用。
     ///
     /// 命中断点或步进条件时回调调试钩子；解释器的 Rust 调用栈保持原样，
@@ -628,7 +656,12 @@ impl Evaluator {
 
         let file = self.current_source_file.clone().unwrap_or_default();
         let depth = self.call_stack_depth.get();
-        if !state.borrow_mut().should_pause(&file, line, depth) {
+        // 条件断点在位置命中后用当前环境求值条件（为假或求值失败不暂停）
+        let mut eval_cond = |cond: &str| self.eval_debug_condition(cond);
+        if !state
+            .borrow_mut()
+            .should_pause(&file, line, depth, &mut eval_cond)
+        {
             return Ok(Value::Null);
         }
 
@@ -755,7 +788,6 @@ impl Evaluator {
         Evaluator {
             env,
             registry,
-            trace: VecDeque::new(),
             trace_seq: 0,
             trace_entries: VecDeque::new(),
             trace_buffer_size,
@@ -778,6 +810,9 @@ impl Evaluator {
 
             debugger: None,
             debug_hook: None,
+            yield_sink: None,
+            debug_cond_cache: HashMap::new(),
+            forcing_lazy: Vec::new(),
         }
     }
 
@@ -787,7 +822,6 @@ impl Evaluator {
         Evaluator {
             env,
             registry,
-            trace: VecDeque::new(),
             trace_seq: 0,
             trace_entries: VecDeque::new(),
             trace_buffer_size: Self::DEFAULT_TRACE_BUFFER_SIZE,
@@ -810,6 +844,9 @@ impl Evaluator {
 
             debugger: None,
             debug_hook: None,
+            yield_sink: None,
+            debug_cond_cache: HashMap::new(),
+            forcing_lazy: Vec::new(),
         }
     }
 
@@ -838,39 +875,56 @@ impl Evaluator {
         self.import_base_stack.pop();
     }
 
-    /// Append a trace entry (host-readable; no IO side effects).
-    pub fn trace_push(&mut self, msg: String) {
-        self.trace_seq = self.trace_seq.saturating_add(1);
-        let entry = format!("#{} {}", self.trace_seq, msg);
-
-        if self.trace.len() >= self.trace_buffer_size {
-            self.trace.pop_front();
+    /// 追加一条**无级别**的 TRACE 记录（`TRACE(...)` 脚本内置函数）。
+    ///
+    /// 统一存储为结构化条目（level=Info、category=TRACE、label 为
+    /// 首个字符串参数），`trace_by_label` / `trace_by_category` 对脚本
+    /// TRACE 同样生效；字符串视图由 [`Self::take_trace`] 派生。
+    pub fn trace_push(&mut self, label: Option<&str>, values: &[Value]) {
+        let mut entry = crate::runtime::TraceEntry::new(
+            crate::runtime::TraceLevel::Info,
+            "TRACE".to_string(),
+            values.to_vec(),
+        );
+        if let Some(l) = label {
+            entry = entry.with_label(l.to_string());
         }
-        self.trace.push_back(entry);
+        self.trace_push_entry(entry);
     }
 
-    /// Push a structured trace entry (Stage 3.2)
-    fn trace_push_entry(&mut self, entry: crate::runtime::TraceEntry) {
+    /// Push a structured trace entry（唯一存储路径）
+    fn trace_push_entry(&mut self, mut entry: crate::runtime::TraceEntry) {
         self.trace_seq = self.trace_seq.saturating_add(1);
+        entry.seq = self.trace_seq;
 
-        // Add to structured entries
         if self.trace_entries.len() >= self.trace_buffer_size {
             self.trace_entries.pop_front();
         }
-        self.trace_entries.push_back(entry.clone());
-
-        // Also add to formatted trace (for backward compatibility)
-        let formatted = entry.format();
-        let msg = format!("#{} {}", self.trace_seq, formatted);
-        if self.trace.len() >= self.trace_buffer_size {
-            self.trace.pop_front();
-        }
-        self.trace.push_back(msg);
+        self.trace_entries.push_back(entry);
     }
 
-    /// Drain the trace buffer.
+    /// Drain the trace buffer：结构化条目派生为字符串后清空。
+    ///
+    /// - `TRACE(...)` 条目（category=TRACE）保持历史格式
+    ///   `#N payload` / `#N [label] payload`（CLI `--trace` 输出不变）；
+    /// - 级别条目（TRACE_DEBUG 等）为 `#N [LEVEL:category] payload`。
     pub fn take_trace(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.trace).into_iter().collect()
+        self.trace_entries
+            .drain(..)
+            .map(|e| {
+                let payload = e
+                    .values
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                match (&e.category[..], &e.label) {
+                    ("TRACE", Some(l)) => format!("#{} [{}] {}", e.seq, l, payload),
+                    ("TRACE", None) => format!("#{} {}", e.seq, payload),
+                    _ => format!("#{} {}", e.seq, e.format()),
+                }
+            })
+            .collect()
     }
 
     /// Get all structured trace entries
@@ -952,7 +1006,6 @@ impl Evaluator {
 
     /// Clear the trace buffer.
     pub fn clear_trace(&mut self) {
-        self.trace.clear();
         self.trace_entries.clear();
         self.trace_seq = 0;
     }
@@ -964,10 +1017,7 @@ impl Evaluator {
     pub fn set_trace_buffer_size(&mut self, size: usize) {
         self.trace_buffer_size = size;
 
-        // Trim existing buffers if necessary
-        while self.trace.len() > size {
-            self.trace.pop_front();
-        }
+        // Trim existing buffer if necessary
         while self.trace_entries.len() > size {
             self.trace_entries.pop_front();
         }
@@ -987,7 +1037,6 @@ impl Evaluator {
         self.env = Rc::new(RefCell::new(Environment::new()));
 
         // Avoid leaking trace across pooled executions
-        self.trace.clear();
         self.trace_entries.clear();
         self.trace_seq = 0;
 
@@ -1129,12 +1178,17 @@ impl Evaluator {
             }
 
             Stmt::GeneratorDef { name, params, body } => {
-                let r#gen = Value::Generator {
+                // 生成器定义 = 模板内核（捕获当前环境）。
+                // 调用 `Set G NAME(args)` 时由 call_function 的 Generator 分支
+                // 绑定参数并派生新实例；NEXT 时急切收集。
+                let inner = Rc::new(RefCell::new(GeneratorInner {
                     params: params.clone(),
                     body: body.clone(),
                     env: Rc::clone(&self.env),
-                    state: GeneratorState::NotStarted,
-                };
+                    collected: None,
+                    position: 0,
+                }));
+                let r#gen = Value::Generator { inner };
                 self.env.borrow_mut().set(name.clone(), r#gen.clone());
                 Ok(r#gen)
             }
@@ -1156,7 +1210,15 @@ impl Evaluator {
 
             Stmt::Yield(expr) => {
                 let val = self.eval_expression(expr)?;
-                Err(RuntimeError::Yield(val))
+                match &self.yield_sink {
+                    // 生成器收集期间：收入缓冲并继续执行函数体
+                    Some(sink) => {
+                        sink.borrow_mut().push(val);
+                        Ok(Value::Null)
+                    }
+                    // 顶层（或普通函数中）的 Yield 是错误
+                    None => Err(RuntimeError::Yield(val)),
+                }
             }
 
             Stmt::Break => Err(RuntimeError::Break),
@@ -1201,32 +1263,35 @@ impl Evaluator {
                 let iter_val = self.eval_expression(iterable)?;
                 let mut result = Value::Null;
 
-                match iter_val {
-                    Value::Array(arr) => {
-                        let mut should_break = false;
-                        for item in arr {
-                            self.env.borrow_mut().set(var.clone(), item);
-                            for located in body {
-                                match self.eval_located(located) {
-                                    Ok(val) => result = val,
-                                    Err(RuntimeError::Break) => {
-                                        should_break = true;
-                                        break;
-                                    }
-                                    Err(RuntimeError::Continue) => break,
-                                    Err(e) => return Err(e),
-                                }
-                            }
-                            if should_break {
-                                break;
-                            }
-                        }
-                    }
-                    _ => {
+                // 生成器先急切收集（副作用恰好一次），再按数组迭代
+                let items: Vec<Value> = match iter_val {
+                    Value::Array(arr) => arr,
+                    Value::Generator { inner } => self.collect_generator(&inner)?,
+                    other => {
                         return Err(RuntimeError::TypeError(format!(
                             "Cannot iterate over {}",
-                            iter_val.type_name()
+                            other.type_name()
                         )));
+                    }
+                };
+                {
+                    let mut should_break = false;
+                    for item in items {
+                        self.env.borrow_mut().set(var.clone(), item);
+                        for located in body {
+                            match self.eval_located(located) {
+                                Ok(val) => result = val,
+                                Err(RuntimeError::Break) => {
+                                    should_break = true;
+                                    break;
+                                }
+                                Err(RuntimeError::Continue) => break,
+                                Err(e) => return Err(e),
+                            }
+                        }
+                        if should_break {
+                            break;
+                        }
                     }
                 }
 
@@ -1242,35 +1307,38 @@ impl Evaluator {
                 let iter_val = self.eval_expression(iterable)?;
                 let mut result = Value::Null;
 
-                match iter_val {
-                    Value::Array(arr) => {
-                        let mut should_break = false;
-                        for (idx, item) in arr.iter().enumerate() {
-                            self.env
-                                .borrow_mut()
-                                .set(index_var.clone(), Value::Number(idx as f64));
-                            self.env.borrow_mut().set(value_var.clone(), item.clone());
-                            for located in body {
-                                match self.eval_located(located) {
-                                    Ok(val) => result = val,
-                                    Err(RuntimeError::Break) => {
-                                        should_break = true;
-                                        break;
-                                    }
-                                    Err(RuntimeError::Continue) => break,
-                                    Err(e) => return Err(e),
-                                }
-                            }
-                            if should_break {
-                                break;
-                            }
-                        }
-                    }
-                    _ => {
+                // 生成器先急切收集（副作用恰好一次），再按数组迭代
+                let items: Vec<Value> = match iter_val {
+                    Value::Array(arr) => arr,
+                    Value::Generator { inner } => self.collect_generator(&inner)?,
+                    other => {
                         return Err(RuntimeError::TypeError(format!(
                             "Cannot iterate over {}",
-                            iter_val.type_name()
+                            other.type_name()
                         )));
+                    }
+                };
+                {
+                    let mut should_break = false;
+                    for (idx, item) in items.iter().enumerate() {
+                        self.env
+                            .borrow_mut()
+                            .set(index_var.clone(), Value::Number(idx as f64));
+                        self.env.borrow_mut().set(value_var.clone(), item.clone());
+                        for located in body {
+                            match self.eval_located(located) {
+                                Ok(val) => result = val,
+                                Err(RuntimeError::Break) => {
+                                    should_break = true;
+                                    break;
+                                }
+                                Err(RuntimeError::Continue) => break,
+                                Err(e) => return Err(e),
+                            }
+                        }
+                        if should_break {
+                            break;
+                        }
                     }
                 }
 
@@ -1334,7 +1402,10 @@ impl Evaluator {
                 use num_bigint::BigInt;
                 use num_rational::Ratio;
 
-                Ok(Value::Fraction(Ratio::new(big_int.clone(), BigInt::from(1))))
+                Ok(Value::Fraction(Ratio::new(
+                    big_int.clone(),
+                    BigInt::from(1),
+                )))
             }
 
             Expr::String(s) => Ok(Value::String(s.clone())),
@@ -1343,11 +1414,18 @@ impl Evaluator {
 
             Expr::Null => Ok(Value::Null),
 
-            Expr::Identifier(name) => self
-                .env
-                .borrow()
-                .get(name)
-                .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone())),
+            Expr::Identifier(name) => {
+                let val = self
+                    .env
+                    .borrow()
+                    .get(name)
+                    .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))?;
+                // 读取即强制：Lazy 在第一次被读取时求值并记忆化
+                match val {
+                    Value::Lazy { .. } => self.force_lazy(name),
+                    forced => Ok(forced),
+                }
+            }
 
             Expr::Binary { left, op, right } => {
                 // Short-circuit evaluation for And and Or
@@ -1505,13 +1583,30 @@ impl Evaluator {
     }
 
     /// Evaluate binary operation
-    /// 将整数值的 f64 精确转换为 Ratio<BigInt>。
+    /// 混合运算提升：Number → Fraction（数值核心统一规则）。
     ///
-    /// 通过十进制字符串中转，避免 `as i64` 在超出 i64 范围时静默截断。
-    fn f64_to_ratio(a: &f64) -> Option<Ratio<BigInt>> {
-        let s = format!("{:.0}", a);
-        let big = BigInt::parse_bytes(s.as_bytes(), 10)?;
-        Some(Ratio::new(big, BigInt::from(1)))
+    /// 涉及 Fraction 的算术一律精确计算——整数经十进制字符串转换，
+    /// 非整数经连分数重建（`0.5 + TO_FRACTION(1/3) == 5/6`）。
+    /// 转换只对非有限值失败，此处给出可读错误。
+    /// 两个分母为 1 的分数（整数）的乘法快速路径。
+    ///
+    /// `Ratio` 的算术运算符内置 gcd 规约，而 num-bigint 的二进制 gcd 对
+    /// 大整数逐位移位：阶乘这类「大数 × 小整数」热循环中，大操作数低位
+    /// 含大量零比特，规约反复对整个大数移位，总代价 O(n²)（2000 次累乘
+    /// 需要 30 秒以上）。分母为 1 的整数乘整数恒为最简形式，直接
+    /// `new_raw` 构造结果即可跳过规约。
+    fn mul_integer_fraction(a: &Ratio<BigInt>, b: &Ratio<BigInt>) -> Ratio<BigInt> {
+        if a.denom() == &BigInt::from(1) && b.denom() == &BigInt::from(1) {
+            Ratio::new_raw(a.numer() * b.numer(), BigInt::from(1))
+        } else {
+            a * b
+        }
+    }
+
+    fn lift_number(a: &f64) -> Result<Ratio<BigInt>, RuntimeError> {
+        crate::numeric::f64_to_fraction(*a).ok_or_else(|| {
+            RuntimeError::TypeError("无法将非有限 Number 提升为 Fraction".to_string())
+        })
     }
 
     /// 位运算求值：& | ^ << >>
@@ -1525,14 +1620,11 @@ impl Evaluator {
             match v {
                 Value::Number(n) => {
                     if n.fract() != 0.0 {
-                        Err(RuntimeError::TypeError(
-                            "位运算要求整数操作数".to_string(),
-                        ))
+                        Err(RuntimeError::TypeError("位运算要求整数操作数".to_string()))
                     } else {
                         let s = format!("{:.0}", n);
-                        BigInt::parse_bytes(s.as_bytes(), 10).ok_or_else(|| {
-                            RuntimeError::TypeError("无法转换的整数值".to_string())
-                        })
+                        BigInt::parse_bytes(s.as_bytes(), 10)
+                            .ok_or_else(|| RuntimeError::TypeError("无法转换的整数值".to_string()))
                     }
                 }
                 Value::Fraction(f) => {
@@ -1575,10 +1667,8 @@ impl Evaluator {
 
         // 两侧都是小数值 Number 时返回 Number，保持小整数运算的现有行为；
         // 否则返回 Fraction（与 BigInt 求值约定一致）
-        if both_number {
-            if let Some(f) = result.to_f64() {
-                return Ok(Value::Number(f));
-            }
+        if both_number && let Some(f) = result.to_f64() {
+            return Ok(Value::Number(f));
         }
         Ok(Value::Fraction(Ratio::new(result, BigInt::from(1))))
     }
@@ -1590,16 +1680,7 @@ impl Evaluator {
                 (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{}{}", a, b))),
                 (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a + b)),
                 (Value::Number(a), Value::Fraction(b)) | (Value::Fraction(b), Value::Number(a)) => {
-                    if a.fract() == 0.0 {
-                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
-                        Ok(Value::Fraction(a_frac + b))
-                    } else {
-                        // 浮点数和分数混合运算，转换为浮点数
-                        use num_traits::ToPrimitive;
-                        let b_float =
-                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
-                        Ok(Value::Number(a + b_float))
-                    }
+                    Ok(Value::Fraction(Self::lift_number(a)? + b))
                 }
                 _ => Err(RuntimeError::TypeError(format!(
                     "Cannot add {} and {}",
@@ -1612,26 +1693,10 @@ impl Evaluator {
                 (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a - b)),
                 (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a - b)),
                 (Value::Number(a), Value::Fraction(b)) => {
-                    if a.fract() == 0.0 {
-                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
-                        Ok(Value::Fraction(a_frac - b))
-                    } else {
-                        use num_traits::ToPrimitive;
-                        let b_float =
-                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
-                        Ok(Value::Number(a - b_float))
-                    }
+                    Ok(Value::Fraction(Self::lift_number(a)? - b))
                 }
                 (Value::Fraction(a), Value::Number(b)) => {
-                    if b.fract() == 0.0 {
-                        let b_frac = Self::f64_to_ratio(b).expect("整数值 f64 转换不会失败");
-                        Ok(Value::Fraction(a - b_frac))
-                    } else {
-                        use num_traits::ToPrimitive;
-                        let a_float =
-                            a.numer().to_f64().unwrap_or(0.0) / a.denom().to_f64().unwrap_or(1.0);
-                        Ok(Value::Number(a_float - b))
-                    }
+                    Ok(Value::Fraction(a - Self::lift_number(b)?))
                 }
                 _ => Err(RuntimeError::TypeError(format!(
                     "Cannot subtract {} from {}",
@@ -1640,51 +1705,47 @@ impl Evaluator {
                 ))),
             },
 
-            BinOp::Multiply => match (left, right) {
-                (Value::Number(a), Value::Number(b)) => {
-                    // 如果两个数都是整数，且足够大，使用精确计算
-                    if a.fract() == 0.0 && b.fract() == 0.0 {
-                        // 检查是否超过 f64 的安全整数范围 (2^53)
-                        let max_safe = 9007199254740992.0; // 2^53
-                        if a.abs() > max_safe || b.abs() > max_safe {
-                            // 使用 Fraction (BigInt) 进行精确计算
-                            use num_bigint::BigInt;
-                            use num_rational::Ratio;
+            BinOp::Multiply => {
+                match (left, right) {
+                    (Value::Number(a), Value::Number(b)) => {
+                        // 如果两个数都是整数，且足够大，使用精确计算
+                        if a.fract() == 0.0 && b.fract() == 0.0 {
+                            // 检查是否超过 f64 的安全整数范围 (2^53)
+                            let max_safe = 9007199254740992.0; // 2^53
+                            if a.abs() > max_safe || b.abs() > max_safe {
+                                // 使用 Fraction (BigInt) 进行精确计算
+                                use num_bigint::BigInt;
+                                use num_rational::Ratio;
 
-                            // 将 f64 转换为字符串再转为 BigInt，避免精度损失
-                            let a_str = format!("{:.0}", a);
-                            let b_str = format!("{:.0}", b);
+                                // 将 f64 转换为字符串再转为 BigInt，避免精度损失
+                                let a_str = format!("{:.0}", a);
+                                let b_str = format!("{:.0}", b);
 
-                            if let (Ok(a_big), Ok(b_big)) =
-                                (a_str.parse::<BigInt>(), b_str.parse::<BigInt>())
-                            {
-                                let result_big = a_big * b_big;
-                                let frac = Ratio::new(result_big, BigInt::from(1));
-                                return Ok(Value::Fraction(frac));
+                                if let (Ok(a_big), Ok(b_big)) =
+                                    (a_str.parse::<BigInt>(), b_str.parse::<BigInt>())
+                                {
+                                    let result_big = a_big * b_big;
+                                    let frac = Ratio::new(result_big, BigInt::from(1));
+                                    return Ok(Value::Fraction(frac));
+                                }
                             }
                         }
+                        Ok(Value::Number(a * b))
                     }
-                    Ok(Value::Number(a * b))
-                }
-                (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(a * b)),
-                (Value::Number(a), Value::Fraction(b)) | (Value::Fraction(b), Value::Number(a)) => {
-                    use num_bigint::BigInt;
-                    use num_rational::Ratio;
-                    if a.fract() == 0.0 {
-                        let a_frac = Ratio::new(BigInt::from(*a as i64), BigInt::from(1));
-                        Ok(Value::Fraction(a_frac * b))
-                    } else {
-                        Err(RuntimeError::TypeError(
-                            "Cannot multiply non-integer Number with Fraction".to_string(),
-                        ))
+                    (Value::Fraction(a), Value::Fraction(b)) => {
+                        Ok(Value::Fraction(Self::mul_integer_fraction(a, b)))
                     }
+                    (Value::Number(a), Value::Fraction(b))
+                    | (Value::Fraction(b), Value::Number(a)) => Ok(Value::Fraction(
+                        Self::mul_integer_fraction(&Self::lift_number(a)?, b),
+                    )),
+                    _ => Err(RuntimeError::TypeError(format!(
+                        "Cannot multiply {} and {}",
+                        left.type_name(),
+                        right.type_name()
+                    ))),
                 }
-                _ => Err(RuntimeError::TypeError(format!(
-                    "Cannot multiply {} and {}",
-                    left.type_name(),
-                    right.type_name()
-                ))),
-            },
+            }
 
             BinOp::Divide => match (left, right) {
                 (Value::Number(a), Value::Number(b)) => {
@@ -1706,27 +1767,15 @@ impl Evaluator {
                     use num_traits::Zero;
                     if b.is_zero() {
                         Err(RuntimeError::DivisionByZero)
-                    } else if a.fract() == 0.0 {
-                        let a_frac = Self::f64_to_ratio(a).expect("整数值 f64 转换不会失败");
-                        Ok(Value::Fraction(a_frac / b))
                     } else {
-                        use num_traits::ToPrimitive;
-                        let b_float =
-                            b.numer().to_f64().unwrap_or(0.0) / b.denom().to_f64().unwrap_or(1.0);
-                        Ok(Value::Number(a / b_float))
+                        Ok(Value::Fraction(Self::lift_number(a)? / b))
                     }
                 }
                 (Value::Fraction(a), Value::Number(b)) => {
                     if *b == 0.0 {
                         Err(RuntimeError::DivisionByZero)
-                    } else if b.fract() == 0.0 {
-                        let b_frac = Self::f64_to_ratio(b).expect("整数值 f64 转换不会失败");
-                        Ok(Value::Fraction(a / b_frac))
                     } else {
-                        use num_traits::ToPrimitive;
-                        let a_float =
-                            a.numer().to_f64().unwrap_or(0.0) / a.denom().to_f64().unwrap_or(1.0);
-                        Ok(Value::Number(a_float / b))
+                        Ok(Value::Fraction(a / Self::lift_number(b)?))
                     }
                 }
                 _ => Err(RuntimeError::TypeError(format!(
@@ -1795,21 +1844,11 @@ impl Evaluator {
                 ))),
             },
 
-            BinOp::And => {
-                if !left.is_truthy() {
-                    Ok(left.clone())
-                } else {
-                    Ok(right.clone())
-                }
-            }
-
-            BinOp::Or => {
-                if left.is_truthy() {
-                    Ok(left.clone())
-                } else {
-                    Ok(right.clone())
-                }
-            }
+            // And/Or 在 eval_expression 中短路求值，正常不会到达此处
+            // （保留穷尽臂以防未来新增调用路径时静默错误）
+            BinOp::And | BinOp::Or => Err(RuntimeError::InvalidOperation(
+                "逻辑运算符必须在表达式求值中短路处理".to_string(),
+            )),
         }
     }
 
@@ -1990,18 +2029,7 @@ impl Evaluator {
                             (None, args.as_slice())
                         };
 
-                        let payload = payload_args
-                            .iter()
-                            .map(|v| v.to_string())
-                            .collect::<Vec<_>>()
-                            .join(" ");
-
-                        let msg = match label {
-                            Some(l) => format!("[{}] {}", l, payload),
-                            None => payload,
-                        };
-
-                        self.trace_push(msg);
+                        self.trace_push(label, payload_args);
                         Ok(Value::Null)
                     }
                     "TRACE_DEBUG" | "TRACE_INFO" | "TRACE_WARN" | "TRACE_ERROR" => {
@@ -2058,6 +2086,11 @@ impl Evaluator {
                     "MAP" => self.builtin_map(&args),
                     "FILTER" => self.builtin_filter(&args),
                     "REDUCE" => self.builtin_reduce(&args),
+                    // 生成器接口：NEXT/DONE 需要驱动求值器（收集函数体），
+                    // 无法作为纯 builtin 实现，在此按名拦截
+                    // （builtins 侧注册了永错存根，仅用于名字解析）
+                    "NEXT" => self.builtin_next(&args),
+                    "DONE" => self.builtin_done(&args),
                     _ => {
                         // Get the built-in function from the registry
                         if let Some((func, _arity)) = self.registry.get(name) {
@@ -2080,6 +2113,42 @@ impl Evaluator {
                 }
             }
 
+            // 调用生成器定义 `Set G NAME(args)`：绑定参数，派生新实例
+            // （内核不共享——每次调用产生独立的消费序列；
+            //   直接克隆生成器值 `Set G2 G` 才共享消费状态）
+            Value::Generator { inner } => {
+                let (params, body, def_env) = {
+                    let g = inner.borrow();
+                    (g.params.clone(), g.body.clone(), Rc::clone(&g.env))
+                };
+                if params.len() != args.len() {
+                    let err = RuntimeError::WrongArity {
+                        expected: params.len(),
+                        got: args.len(),
+                    };
+                    let err = self.attach_call_stack_if_absent(err);
+                    let _ = self.call_stack.pop();
+                    self.exit_call();
+                    return Err(err);
+                }
+                let instance_env = Rc::new(RefCell::new(Environment::with_parent(def_env)));
+                for (param, arg) in params.iter().zip(args.iter()) {
+                    instance_env.borrow_mut().set(param.clone(), arg.clone());
+                }
+                let instance = Value::Generator {
+                    inner: Rc::new(RefCell::new(GeneratorInner {
+                        params,
+                        body,
+                        env: instance_env,
+                        collected: None,
+                        position: 0,
+                    })),
+                };
+                let _ = self.call_stack.pop();
+                self.exit_call();
+                Ok(instance)
+            }
+
             _ => {
                 let err = RuntimeError::NotCallable(func.type_name().to_string());
                 let err = self.attach_call_stack_if_absent(err);
@@ -2088,6 +2157,162 @@ impl Evaluator {
                 Err(err)
             }
         }
+    }
+
+    /// 急切收集生成器：首次触发时完整执行函数体**一次**。
+    ///
+    /// - 挂载 `yield_sink`，Stmt::Yield 将值收入缓冲并继续；
+    /// - `Return` 提前结束收集（其后的 Yield 自然不发生）；
+    /// - 走 enter_call/步数限制：无限生成器触发 ExecutionLimits 报错
+    ///   而非挂死；
+    /// - 结果写入内核 `collected`，之后 NEXT 按位置弹出。
+    fn collect_generator(
+        &mut self,
+        inner: &Rc<RefCell<GeneratorInner>>,
+    ) -> Result<Vec<Value>, RuntimeError> {
+        if let Some(values) = &inner.borrow().collected {
+            return Ok(values.clone());
+        }
+        // 先取走定义信息，避免跨求值持有 RefCell 借用
+        let (body, gen_env) = {
+            let g = inner.borrow();
+            (g.body.clone(), Rc::clone(&g.env))
+        };
+
+        self.enter_call()?;
+        let prev_env = Rc::clone(&self.env);
+        self.env = gen_env;
+
+        let sink = Rc::new(RefCell::new(Vec::new()));
+        let prev_sink = self.yield_sink.take();
+        self.yield_sink = Some(Rc::clone(&sink));
+
+        let mut exec: Result<(), RuntimeError> = Ok(());
+        for located in &body {
+            match self.eval_located(located) {
+                Ok(_) => {}
+                // Return 提前结束收集（值丢弃，语义为「提前完成」）
+                Err(RuntimeError::Return(_)) => break,
+                Err(e) => {
+                    exec = Err(e);
+                    break;
+                }
+            }
+        }
+
+        self.yield_sink = prev_sink;
+        self.env = prev_env;
+        self.exit_call();
+        exec?;
+
+        let values: Vec<Value> = sink.borrow().clone();
+        inner.borrow_mut().collected = Some(values.clone());
+        Ok(values)
+    }
+
+    /// NEXT(G)：弹出下一个 Yield 值；耗尽后返回 Null（不报错）。
+    fn builtin_next(&mut self, args: &[Value]) -> EvalResult {
+        if args.len() != 1 {
+            return Err(RuntimeError::WrongArity {
+                expected: 1,
+                got: args.len(),
+            });
+        }
+        let inner = match &args[0] {
+            Value::Generator { inner } => Rc::clone(inner),
+            other => {
+                return Err(RuntimeError::TypeError(format!(
+                    "NEXT expects a Generator, got {}",
+                    other.type_name()
+                )));
+            }
+        };
+        self.collect_generator(&inner)?;
+        let mut g = inner.borrow_mut();
+        match g
+            .collected
+            .as_ref()
+            .and_then(|v| v.get(g.position))
+            .cloned()
+        {
+            Some(v) => {
+                g.position += 1;
+                Ok(v)
+            }
+            None => Ok(Value::Null),
+        }
+    }
+
+    /// DONE(G)：是否已消费完（未开始收集时为 false）。
+    fn builtin_done(&mut self, args: &[Value]) -> EvalResult {
+        if args.len() != 1 {
+            return Err(RuntimeError::WrongArity {
+                expected: 1,
+                got: args.len(),
+            });
+        }
+        let inner = match &args[0] {
+            Value::Generator { inner } => inner,
+            other => {
+                return Err(RuntimeError::TypeError(format!(
+                    "DONE expects a Generator, got {}",
+                    other.type_name()
+                )));
+            }
+        };
+        let g = inner.borrow();
+        let done = match &g.collected {
+            Some(values) => g.position >= values.len(),
+            None => false,
+        };
+        Ok(Value::Boolean(done))
+    }
+
+    /// 强制求值 Lazy 变量：读取即触发，首次求值后写回记忆化。
+    ///
+    /// 在 Lazy 自带的环境中求值表达式；enter_call 提供递归保护
+    /// （自引用 `Lazy Y (Y + 1)` 触发递归上限而非死循环）。
+    /// 求值成功后以结果值**替换**两个作用域中的 Lazy 槽位
+    /// （定义作用域 update + 当前读取作用域 set）。
+    fn force_lazy(&mut self, name: &str) -> EvalResult {
+        let lazy_val = self
+            .env
+            .borrow()
+            .get(name)
+            .ok_or_else(|| RuntimeError::UndefinedVariable(name.to_string()))?;
+        let Value::Lazy {
+            expr,
+            env: lazy_env,
+            cached,
+        } = lazy_val
+        else {
+            return Ok(lazy_val);
+        };
+        if let Some(v) = cached {
+            return Ok(*v);
+        }
+
+        // 循环定义检测：求值期间再次读取自身（直接或间接）立即报错，
+        // 不进入递归——树遍历解释器的深层递归会先撑爆原生栈
+        if self.forcing_lazy.iter().any(|n| n == name) {
+            return Err(RuntimeError::InvalidOperation(format!(
+                "Lazy 变量 {name} 在自身求值期间被读取（循环定义）"
+            )));
+        }
+        self.forcing_lazy.push(name.to_string());
+
+        let prev_env = Rc::clone(&self.env);
+        self.env = Rc::clone(&lazy_env);
+        let result = self.eval_expression(&expr);
+        self.env = prev_env;
+        self.forcing_lazy.pop();
+
+        let val = result?;
+
+        // 记忆化：定义作用域与当前读取作用域都以结果值替换 Lazy
+        lazy_env.borrow_mut().update(name, val.clone());
+        self.env.borrow_mut().set(name.to_string(), val.clone());
+        Ok(val)
     }
 
     // 实现 MAP 内置函数

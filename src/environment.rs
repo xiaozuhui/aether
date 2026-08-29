@@ -7,54 +7,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-/// 环境池,用于复用环境对象
-pub struct EnvironmentPool {
-    /// 可复用的环境对象池
-    pool: Vec<Environment>,
-    /// 最大池大小
-    max_size: usize,
-}
-
-impl EnvironmentPool {
-    /// 创建新的环境池
-    pub fn new() -> Self {
-        Self::with_capacity(50)
-    }
-
-    /// 创建指定容量的环境池
-    pub fn with_capacity(max_size: usize) -> Self {
-        EnvironmentPool {
-            pool: Vec::with_capacity(max_size.min(50)),
-            max_size,
-        }
-    }
-
-    /// 从池中获取或创建新环境
-    pub fn acquire(&mut self) -> Environment {
-        self.pool.pop().unwrap_or_default()
-    }
-
-    /// 将环境归还到池中
-    pub fn release(&mut self, mut env: Environment) {
-        if self.pool.len() < self.max_size {
-            env.clear();
-            env.parent = None;
-            self.pool.push(env);
-        }
-    }
-
-    /// 清空池
-    pub fn clear(&mut self) {
-        self.pool.clear();
-    }
-}
-
-impl Default for EnvironmentPool {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Environment for storing variables
 #[derive(Debug, Clone)]
 pub struct Environment {

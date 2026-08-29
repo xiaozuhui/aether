@@ -166,7 +166,9 @@ fn test_bitwise_on_bigint() {
     let mut engine = Aether::new();
 
     // 大整数右移
-    let result = engine.eval("(123456789012345678901234567890 >> 60)").unwrap();
+    let result = engine
+        .eval("(123456789012345678901234567890 >> 60)")
+        .unwrap();
     match result {
         Value::Fraction(frac) => {
             assert_eq!(frac.numer().to_string(), "107081695084");
@@ -214,14 +216,31 @@ fn test_bitwise_precedence() {
 fn test_scientific_notation_positive_exponent() {
     let mut engine = Aether::new();
 
-    // 1e30 超过阈值，应精确为大整数
+    // 0.6.0 语义冻结：科学计数法一律 f64（与「小数保持 f64」一致）。
+    // 需要精确大整数请书写完整数字（超阈值自动 BigInteger）
+    // 或显式 TO_FRACTION。
     let result = engine.eval("1e30").unwrap();
     match result {
+        Value::Number(n) => assert_eq!(n, 1e30),
+        _ => panic!("Expected Number, got {:?}", result),
+    }
+    // 全数字书写的大整数仍是精确 Fraction
+    let exact = engine.eval("1000000000000000000000000000000").unwrap();
+    match exact {
         Value::Fraction(frac) => {
             assert_eq!(frac.numer().to_string(), "1000000000000000000000000000000");
             assert_eq!(frac.denom().to_string(), "1");
         }
-        _ => panic!("Expected Fraction, got {:?}", result),
+        _ => panic!("Expected Fraction, got {:?}", exact),
+    }
+    // 科学计数法经 TO_FRACTION 还原该 double 的精确有理值
+    let recovered = engine.eval("TO_FRACTION(1e30)").unwrap();
+    match recovered {
+        Value::Fraction(frac) => {
+            assert_eq!(frac.numer().to_string(), "1000000000000000019884624838656");
+            assert_eq!(frac.denom().to_string(), "1");
+        }
+        _ => panic!("Expected Fraction, got {:?}", recovered),
     }
 }
 

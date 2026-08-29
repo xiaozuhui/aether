@@ -7,6 +7,8 @@
 //! 每个线程有独立的引擎池，线程间不共享。
 
 use crate::{Aether, Value};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// 线程局部引擎池
 ///
@@ -54,11 +56,12 @@ use crate::{Aether, Value};
 ///
 /// 如果你只需要一个引擎实例，使用 `GlobalEngine` 更简单。
 pub struct EnginePool {
-    /// 槽位为 `None` 表示该引擎已被借出。
+    /// 槽位共享内核：`None` 表示该引擎已被借出。
     ///
-    /// 使用 `Option<Aether>` 而非 `Aether`，避免 `mem::take`
-    /// 需要构造默认引擎作占位（那会退化为每次 acquire 都新建引擎）。
-    engines: Vec<Option<Aether>>,
+    /// `Rc<RefCell<...>>` 让 `PooledEngine` 归还时无需裸指针回指池——
+    /// 即使池先被 drop，句柄仍持有 `Rc` 保活，归还写入孤儿 Vec 是
+    /// 安全的空操作，不会出现悬垂指针。
+    slots: Rc<RefCell<Vec<Option<Aether>>>>,
 }
 
 impl EnginePool {
@@ -78,9 +81,10 @@ impl EnginePool {
     /// ```
     pub fn new(capacity: usize) -> Self {
         // 预创建引擎实例
-        let engines = (0..capacity).map(|_| Some(Aether::new())).collect();
-
-        Self { engines }
+        let slots = (0..capacity).map(|_| Some(Aether::new())).collect();
+        Self {
+            slots: Rc::new(RefCell::new(slots)),
+        }
     }
 
     /// 从池中获取引擎（自动归还）
@@ -91,9 +95,11 @@ impl EnginePool {
     /// # 环境隔离
     ///
     /// 每次获取前自动清空环境变量，保证隔离性。
-    pub fn acquire(&mut self) -> PooledEngine {
+    /// 注意：`acquire` 只需 `&self`——借出状态记录在共享内核中，
+    /// 因此可以同时持有多个句柄（连续调用两次 `pool.acquire()` 即可）。
+    pub fn acquire(&self) -> PooledEngine {
         // 查找可用引擎
-        for (i, slot) in self.engines.iter_mut().enumerate() {
+        for (i, slot) in self.slots.borrow_mut().iter_mut().enumerate() {
             if let Some(mut engine) = slot.take() {
                 // 重置环境（保证隔离性）
                 engine.evaluator.reset_env();
@@ -101,7 +107,7 @@ impl EnginePool {
                 return PooledEngine {
                     engine: Some(engine),
                     pool_index: Some(i),
-                    pool: self as *mut Self,
+                    slots: Rc::clone(&self.slots),
                 };
             }
         }
@@ -111,23 +117,18 @@ impl EnginePool {
         PooledEngine {
             engine: Some(engine),
             pool_index: None,
-            pool: std::ptr::null_mut(),
+            slots: Rc::clone(&self.slots),
         }
-    }
-
-    /// 归还引擎到池中
-    fn return_engine(&mut self, index: usize, engine: Aether) {
-        self.engines[index] = Some(engine);
     }
 
     /// 获取池的容量
     pub fn capacity(&self) -> usize {
-        self.engines.len()
+        self.slots.borrow().len()
     }
 
     /// 获取池中当前可用的引擎数量
     pub fn available(&self) -> usize {
-        self.engines.iter().flatten().count()
+        self.slots.borrow().iter().flatten().count()
     }
 }
 
@@ -137,7 +138,8 @@ impl EnginePool {
 pub struct PooledEngine {
     engine: Option<Aether>,
     pool_index: Option<usize>,
-    pool: *mut EnginePool,
+    /// 池的共享内核（Rc 保活：池先 drop 也不悬垂）
+    slots: Rc<RefCell<Vec<Option<Aether>>>>,
 }
 
 impl PooledEngine {
@@ -202,17 +204,14 @@ impl PooledEngine {
 
 impl Drop for PooledEngine {
     fn drop(&mut self) {
+        // 归还到池中对应槽位；临时引擎（无槽位）直接丢弃。
+        // 池即使已 drop，Rc 仍保活槽位 Vec，写入是安全的空操作
         if let Some(engine) = self.engine.take()
             && let Some(index) = self.pool_index
+            && index < self.slots.borrow().len()
         {
-            // 归还到池中
-            unsafe {
-                if !self.pool.is_null() {
-                    (*self.pool).return_engine(index, engine);
-                }
-            }
+            self.slots.borrow_mut()[index] = Some(engine);
         }
-        // 否则是临时引擎，直接丢弃
     }
 }
 
@@ -222,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_pool_single_thread() {
-        let mut pool = EnginePool::new(2);
+        let pool = EnginePool::new(2);
 
         // 第一次获取
         {
@@ -241,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_pool_multiple_acquire() {
-        let mut pool = EnginePool::new(2);
+        let pool = EnginePool::new(2);
 
         // 多次获取和使用
         for i in 0..10 {
@@ -254,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_pool_auto_return() {
-        let mut pool = EnginePool::new(2);
+        let pool = EnginePool::new(2);
 
         assert_eq!(pool.available(), 2);
 

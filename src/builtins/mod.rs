@@ -13,38 +13,32 @@ pub mod help;
 pub mod io;
 pub mod json;
 pub mod math;
-pub mod network;
 pub mod payroll;
 pub mod precise;
 pub mod string;
 pub mod trace;
 pub mod types;
+pub mod util;
 
 /// Type alias for built-in function implementations
 pub type BuiltInFn = fn(&[Value]) -> Result<Value, RuntimeError>;
 
-/// 函数文档信息
-#[derive(Debug, Clone)]
-pub struct FunctionDoc {
-    /// 函数名称
-    pub name: String,
-    /// 函数描述
-    pub description: String,
-    /// 参数列表（参数名和描述）
-    pub params: Vec<(String, String)>,
-    /// 返回值描述
-    pub returns: String,
-    /// 使用示例
-    pub example: Option<String>,
+/// NEXT/DONE 的注册存根：真实实现在 evaluator::call_function 按名拦截，
+/// 正常求值流程不会走到这里（防御性错误信息指向真实入口）。
+fn generator_stub(_args: &[Value]) -> Result<Value, RuntimeError> {
+    Err(RuntimeError::InvalidOperation(
+        "NEXT/DONE 必须由求值器拦截执行（此存根不应被直接调用）".to_string(),
+    ))
 }
 
-/// IO 权限配置
+/// IO 权限配置。
+///
+/// 信任模型：启用 `filesystem_enabled` 即完全信任脚本，可访问宿主上
+/// 任意用户可访问的路径——设计如此，由宿主自行决定是否授予。
 #[derive(Debug, Clone, Default)]
 pub struct IOPermissions {
     /// 是否允许文件系统操作
     pub filesystem_enabled: bool,
-    /// 是否允许网络操作
-    pub network_enabled: bool,
 }
 
 impl IOPermissions {
@@ -52,7 +46,6 @@ impl IOPermissions {
     pub fn allow_all() -> Self {
         Self {
             filesystem_enabled: true,
-            network_enabled: true,
         }
     }
 
@@ -65,7 +58,6 @@ impl IOPermissions {
 /// Registry of all built-in functions
 pub struct BuiltInRegistry {
     functions: HashMap<String, (BuiltInFn, usize)>, // (function, arity)
-    docs: HashMap<String, FunctionDoc>,             // 函数文档
     #[allow(dead_code)]
     permissions: IOPermissions,
 }
@@ -80,7 +72,6 @@ impl BuiltInRegistry {
     pub fn with_permissions(permissions: IOPermissions) -> Self {
         let mut registry = Self {
             functions: HashMap::new(),
-            docs: HashMap::new(),
             permissions: permissions.clone(),
         };
 
@@ -134,6 +125,12 @@ impl BuiltInRegistry {
         registry.register("STRLEN", string::strlen, 1);
         registry.register("INDEXOF", string::index_of, 2);
         registry.register("CHARAT", string::char_at, 2);
+
+        // 生成器接口：NEXT/DONE 需要驱动求值器（急切收集），
+        // 实际实现位于 evaluator::call_function 的按名拦截；
+        // 此处注册永错存根仅用于名字解析进环境
+        registry.register("NEXT", generator_stub, 1);
+        registry.register("DONE", generator_stub, 1);
 
         // Math functions - Basic
         registry.register("ABS", math::abs, 1);
@@ -217,7 +214,6 @@ impl BuiltInRegistry {
         // Precise (Fraction) arithmetic functions
         registry.register("TO_FRACTION", precise::to_fraction, 1);
         registry.register("TO_FLOAT", precise::to_float, 1);
-        registry.register("SIMPLIFY", precise::simplify, 1);
         registry.register("FRAC_ADD", precise::frac_add, 2);
         registry.register("FRAC_SUB", precise::frac_sub, 2);
         registry.register("FRAC_MUL", precise::frac_mul, 2);
@@ -231,7 +227,6 @@ impl BuiltInRegistry {
         registry.register("TYPE", types::type_of, 1);
         registry.register("TO_STRING", types::to_string, 1);
         registry.register("TO_NUMBER", types::to_number, 1);
-        registry.register("CLONE", types::clone, 1);
 
         // JSON functions
         registry.register("JSON_PARSE", json::json_parse, 1);
@@ -487,31 +482,13 @@ impl BuiltInRegistry {
 
         // Payroll functions - DateTime (12个)
         registry.register("CALC_NATURAL_DAYS", payroll::datetime::calc_natural_days, 2);
-        registry.register(
-            "GET_LEGAL_PAY_DAYS",
-            payroll::datetime::get_legal_pay_days,
-            0,
-        );
-        registry.register("CALC_WORKDAYS", payroll::datetime::calc_workdays, 2);
         registry.register("CALC_WEEKEND_DAYS", payroll::datetime::calc_weekend_days, 2);
-        registry.register("CALC_HOLIDAY_DAYS", payroll::datetime::calc_holiday_days, 1);
         registry.register("IS_WORKDAY", payroll::datetime::is_workday, 2);
         registry.register("IS_WEEKEND", payroll::datetime::is_weekend, 1);
-        registry.register("IS_HOLIDAY", payroll::datetime::is_holiday, 2);
         registry.register("CALC_WORK_HOURS", payroll::datetime::calc_work_hours, 1);
         registry.register(
             "CALC_MONTHLY_WORK_HOURS",
             payroll::datetime::calc_monthly_work_hours,
-            0,
-        );
-        registry.register(
-            "CALC_ANNUAL_WORKDAYS",
-            payroll::datetime::calc_annual_workdays,
-            0,
-        );
-        registry.register(
-            "CALC_ANNUAL_PAY_DAYS",
-            payroll::datetime::calc_annual_pay_days,
             0,
         );
 
@@ -554,27 +531,12 @@ impl BuiltInRegistry {
             registry.register("CREATE_DIR", filesystem::create_dir, 1);
         }
 
-        // Network functions (根据权限注册)
-        if permissions.network_enabled {
-            registry.register("HTTP_GET", network::http_get, 1);
-            registry.register("HTTP_POST", network::http_post, 2); // Variadic: 2-3 args
-            registry.register("HTTP_PUT", network::http_put, 2); // Variadic: 2-3 args
-            registry.register("HTTP_DELETE", network::http_delete, 1);
-        }
-
         registry
     }
 
     /// Register a built-in function
     fn register(&mut self, name: &str, func: BuiltInFn, arity: usize) {
         self.functions.insert(name.to_string(), (func, arity));
-    }
-
-    /// 注册带文档的函数
-    #[allow(dead_code)]
-    fn register_with_doc(&mut self, name: &str, func: BuiltInFn, arity: usize, doc: FunctionDoc) {
-        self.functions.insert(name.to_string(), (func, arity));
-        self.docs.insert(name.to_string(), doc);
     }
 
     /// Get a built-in function by name
@@ -590,16 +552,6 @@ impl BuiltInRegistry {
     /// Get all function names
     pub fn names(&self) -> Vec<String> {
         self.functions.keys().cloned().collect()
-    }
-
-    /// 获取函数文档
-    pub fn get_doc(&self, name: &str) -> Option<&FunctionDoc> {
-        self.docs.get(name)
-    }
-
-    /// 获取所有文档
-    pub fn all_docs(&self) -> &HashMap<String, FunctionDoc> {
-        &self.docs
     }
 }
 

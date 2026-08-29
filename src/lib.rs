@@ -57,33 +57,32 @@
 //! // - ✅ 最大性能（引擎仅创建一次）
 //! // - ✅ AST 缓存累积（高达 142 倍加速！）
 //! // - ✅ 环境隔离（每次调用清除变量）
-//! // - ⚠️ 单线程（使用 Mutex）
+//! // - ⚠️ 线程局部（thread_local，每个线程持有独立实例，不跨线程共享）
 //! ```
 //!
-//! ### 2. EnginePool - 引擎池（最适合多线程）
+//! ### 2. EnginePool - 引擎池（单线程内多实例）
 //!
 //! ```rust
 //! use aether::engine::EnginePool;
-//! use std::thread;
 //!
-//! // 一次性创建池（大小 = 推荐 2-4 倍 CPU 核心数）
-//! let pool = EnginePool::new(8);
+//! // 一次性创建池（避免频繁创建引擎的开销）
+//! let pool = EnginePool::new(4);
 //!
-//! // 跨线程使用
-//! let handles: Vec<_> = (0..4).map(|i| {
-//!     let pool = pool.clone();
-//!     thread::spawn(move || {
-//!         let mut engine = pool.acquire(); // 自动获取
-//!         let code = format!("Set X {}\n(X * 2)", i);
-//!         engine.eval(&code)
-//!     }) // 作用域退出时自动返回
-//! }).collect();
+//! // 借出 → 使用 → 作用域结束自动归还（RAII）
+//! {
+//!     let mut engine = pool.acquire();
+//!     let result = engine.eval("Set X 10\n(X + 20)").unwrap();
+//! }
+//!
+//! // acquire 只需 &self，可同时持有多个句柄
+//! let e1 = pool.acquire();
+//! let e2 = pool.acquire();
 //!
 //! // 优势：
-//! // - ✅ 多线程安全（无锁队列）
-//! // - ✅ RAII 模式（自动返回池）
-//! // - ✅ 环境隔离（获取时清除）
-//! // - ✅ 每个引擎的 AST 缓存
+//! // - ✅ RAII 模式（自动归还池）
+//! // - ✅ 环境隔离（获取时清除变量）
+//! // - ✅ 每个引擎独立维护 AST 缓存
+//! // - ⚠️ 线程局部（Aether 使用 Rc，非 Send；跨线程请为每个线程建独立的池）
 //! ```
 //!
 //! ### 3. ScopedEngine - 闭包风格（最适合简单性）
@@ -111,10 +110,14 @@
 //! | 特性 | GlobalEngine | EnginePool | ScopedEngine |
 //! |---------|-------------|------------|--------------|
 //! | 性能 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-//! | 多线程 | ❌ | ✅ | ✅ |
+//! | 跨线程共享单引擎 | ❌ | ❌ | ❌ |
 //! | 隔离 | ✅ | ✅ | ✅ |
 //! | AST 缓存 | ✅ | ✅ | ❌ |
-//! | 使用场景 | 单线程高频 | 多线程 | 偶尔使用 |
+//! | 使用场景 | 单线程高频 | 单线程多实例 | 偶尔使用 |
+//!
+//! 三种模式的引擎都不能跨线程共享（`Aether` 持有 `Rc`，非 `Send`）。
+//! 多线程场景请为每个线程创建独立的 `GlobalEngine`（thread_local 自动如此）
+//! 或独立的 `EnginePool`。
 //!
 //! ### 选择性标准库加载（推荐用于 DSL）
 //!
@@ -123,39 +126,17 @@
 //! ```
 //! use aether::Aether;
 //!
-//! // 仅加载字符串和数组工具
+//! // 按模块名选择性加载（返回 Result，未知模块名报错）
 //! let mut engine = Aether::new()
-//!     .with_stdlib_string_utils()
-//!     .unwrap()
-//!     .with_stdlib_array_utils()
-//!     .unwrap();
+//!     .with_stdlib_module("string_utils").unwrap()
+//!     .with_stdlib_module("array_utils").unwrap();
 //!
-//! // 或加载数据结构
-//! let mut engine2 = Aether::new()
-//!     .with_stdlib_set()
-//!     .unwrap()
-//!     .with_stdlib_queue()
-//!     .unwrap()
-//!     .with_stdlib_stack()
-//!     .unwrap();
+//! // 或一次性加载全部标准库
+//! let mut full = Aether::with_stdlib().unwrap();
 //!
-//! // 可用模块：
-//! // - with_stdlib_string_utils()
-//! // - with_stdlib_array_utils()
-//! // - with_stdlib_validation()
-//! // - with_stdlib_datetime()
-//! // - with_stdlib_testing()
-//! // - with_stdlib_set()
-//! // - with_stdlib_queue()
-//! // - with_stdlib_stack()
-//! // - with_stdlib_heap()
-//! // - with_stdlib_sorting()
-//! // - with_stdlib_json()
-//! // - with_stdlib_csv()
-//! // - with_stdlib_functional()
-//! // - with_stdlib_cli_utils()
-//! // - with_stdlib_text_template()
-//! // - with_stdlib_regex_utils()
+//! // 可用模块名：string_utils, array_utils, functional, validation, datetime,
+//! // testing, set, queue, stack, heap, sorting, json, csv, regex_utils,
+//! // text_template, cli_utils
 //! ```
 //!
 //! ## 作为独立语言（命令行工具）
@@ -177,6 +158,7 @@ pub mod environment;
 pub mod evaluator;
 pub mod lexer;
 pub mod module_system;
+pub mod numeric;
 pub mod optimizer;
 pub mod parser;
 pub mod runtime;

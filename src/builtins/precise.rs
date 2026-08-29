@@ -3,7 +3,7 @@ use crate::evaluator::RuntimeError;
 use crate::value::Value;
 use num_bigint::BigInt;
 use num_rational::Ratio;
-use num_traits::{One, ToPrimitive, Zero};
+use num_traits::{ToPrimitive, Zero};
 
 /// 将数字转换为分数
 ///
@@ -20,19 +20,13 @@ pub fn to_fraction(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
     match &args[0] {
-        Value::Number(n) => {
-            let s = format!("{}", n);
-            if let Some(dot_pos) = s.find('.') {
-                let decimal_places = s.len() - dot_pos - 1;
-                let denominator = 10_i64.pow(decimal_places as u32);
-                let numerator = (n * denominator as f64).round() as i64;
-                let frac = Ratio::new(BigInt::from(numerator), BigInt::from(denominator));
-                Ok(Value::Fraction(frac))
-            } else {
-                let frac = Ratio::new(BigInt::from(*n as i64), BigInt::one());
-                Ok(Value::Fraction(frac))
-            }
-        }
+        // 连分数重建：还原「本意」分数并保证浮点往返恒等
+        //（TO_FRACTION(1/3) → 1/3、TO_FRACTION(0.1) → 1/10、TO_FRACTION(1e-7) → 1/10^7）
+        Value::Number(n) => crate::numeric::f64_to_fraction(*n)
+            .map(Value::Fraction)
+            .ok_or_else(|| {
+                RuntimeError::TypeError(format!("无法将非有限值 {} 转换为 Fraction", n))
+            }),
         Value::Fraction(f) => Ok(Value::Fraction(f.clone())),
         _ => Err(RuntimeError::TypeErrorDetailed {
             expected: "Number or Fraction".to_string(),
@@ -73,29 +67,6 @@ pub fn to_float(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 }
 
-/// 化简分数（约分）
-///
-/// 参数：
-/// - args[0]: 要化简的分数
-///
-/// 返回：
-/// - 化简后的最简分数
-pub fn simplify(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() != 1 {
-        return Err(RuntimeError::WrongArity {
-            expected: 1,
-            got: args.len(),
-        });
-    }
-    match &args[0] {
-        Value::Fraction(f) => Ok(Value::Fraction(f.reduced())),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Fraction".to_string(),
-            got: format!("{:?}", args[0]),
-        }),
-    }
-}
-
 /// 将 Value 类型转换为 Ratio<BigInt> 分数类型
 ///
 /// 参数：
@@ -106,20 +77,10 @@ pub fn simplify(args: &[Value]) -> Result<Value, RuntimeError> {
 fn value_to_fraction(value: &Value) -> Result<Ratio<BigInt>, RuntimeError> {
     match value {
         Value::Fraction(f) => Ok(f.clone()),
-        Value::Number(n) => {
-            let s = format!("{}", n);
-            if let Some(dot_pos) = s.find('.') {
-                let decimal_places = s.len() - dot_pos - 1;
-                let denominator = 10_i64.pow(decimal_places as u32);
-                let numerator = (n * denominator as f64).round() as i64;
-                Ok(Ratio::new(
-                    BigInt::from(numerator),
-                    BigInt::from(denominator),
-                ))
-            } else {
-                Ok(Ratio::new(BigInt::from(*n as i64), BigInt::one()))
-            }
-        }
+        // Number 经数值核心统一转换（连分数重建，与 TO_FRACTION 同源）
+        Value::Number(n) => crate::numeric::f64_to_fraction(*n).ok_or_else(|| {
+            RuntimeError::TypeError(format!("无法将非有限值 {} 提升为 Fraction", n))
+        }),
         _ => Err(RuntimeError::TypeErrorDetailed {
             expected: "Fraction or Number".to_string(),
             got: format!("{:?}", value),

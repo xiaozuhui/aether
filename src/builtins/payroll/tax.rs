@@ -1,19 +1,9 @@
 // src/builtins/payroll/tax.rs
 //! 个人所得税计算函数
 
+use crate::builtins::util::get_number;
 use crate::evaluator::RuntimeError;
 use crate::value::Value;
-
-/// 辅助函数：安全地获取数字参数
-fn get_number(val: &Value) -> Result<f64, RuntimeError> {
-    match val {
-        Value::Number(n) => Ok(*n),
-        _ => Err(RuntimeError::TypeErrorDetailed {
-            expected: "Number".to_string(),
-            got: format!("{:?}", val),
-        }),
-    }
-}
 
 /// 中国个人所得税税率表（2019年起）
 /// 级数 | 累计应纳税所得额 | 税率 | 速算扣除数
@@ -41,11 +31,18 @@ pub fn calc_personal_tax(args: &[Value]) -> Result<Value, RuntimeError> {
     }
 
     let taxable_income = get_number(&args[0])?;
+    Ok(Value::Number(annual_tax(taxable_income)))
+}
 
+/// 个人所得税**年度累计**税率表（综合所得，7 档超额累进）。
+///
+/// 口径说明：这是年度表；月度应纳税所得额（5000 元/月起征）不能
+/// 直接套用本表——先用 [`calc_taxable_income`] 按月预扣，年度汇算时
+/// 再累计套用本表。`CALC_GROSS_FROM_NET` 的反推也使用本表。
+fn annual_tax(taxable_income: f64) -> f64 {
     if taxable_income <= 0.0 {
-        return Ok(Value::Number(0.0));
+        return 0.0;
     }
-
     let tax = if taxable_income <= 36000.0 {
         taxable_income * 0.03
     } else if taxable_income <= 144000.0 {
@@ -61,8 +58,7 @@ pub fn calc_personal_tax(args: &[Value]) -> Result<Value, RuntimeError> {
     } else {
         taxable_income * 0.45 - 181920.0
     };
-
-    Ok(Value::Number(tax.max(0.0)))
+    tax.max(0.0)
 }
 
 /// 计算应纳税所得额
@@ -138,7 +134,9 @@ pub fn calc_annual_bonus_tax(args: &[Value]) -> Result<Value, RuntimeError> {
         (0.45, 15160.0)
     };
 
-    let tax = bonus * rate - deduction;
+    // 单独计税：税额 = 全额 × 税率 − 速算扣除数 × 12
+    // （速算扣除数是月度表的值，对应全年需乘 12）
+    let tax = bonus * rate - deduction * 12.0;
     Ok(Value::Number(tax.max(0.0)))
 }
 
@@ -179,7 +177,19 @@ pub fn calc_effective_tax_rate(args: &[Value]) -> Result<Value, RuntimeError> {
 /// - 公积金
 ///
 /// # 返回
-/// 应发工资（近似值）
+/// 税后反推税前（单调二分逼近）。
+///
+/// # 参数
+/// - 税后净额
+/// - 社保
+/// - 公积金
+///
+/// # 返回
+/// 税前应发工资
+///
+/// 口径：net = gross − ss − hf − annual_tax(max(gross − ss − hf − 5000, 0))。
+/// 右端对 gross 严格单调递增（边际税率 ≤ 45% < 100%），二分必然收敛，
+/// 100 次迭代精度远高于 0.01 元。
 pub fn calc_gross_from_net(args: &[Value]) -> Result<Value, RuntimeError> {
     if args.len() < 3 {
         return Err(RuntimeError::WrongArity {
@@ -188,38 +198,30 @@ pub fn calc_gross_from_net(args: &[Value]) -> Result<Value, RuntimeError> {
         });
     }
 
-    let net_salary = get_number(&args[0])?;
+    let net = get_number(&args[0])?;
     let social_insurance = get_number(&args[1])?;
     let housing_fund = get_number(&args[2])?;
+    let deductions = social_insurance + housing_fund;
 
-    // 简化算法：迭代逼近
-    let mut gross = net_salary + social_insurance + housing_fund + 1000.0;
+    // 税后净额关于税前严格单调递增，二分求根
+    let net_of = |gross: f64| gross - deductions - annual_tax(gross - deductions - 5000.0);
 
-    for _ in 0..10 {
-        let taxable = gross - social_insurance - housing_fund - 5000.0;
-        let tax = if taxable <= 0.0 {
-            0.0
-        } else if taxable <= 36000.0 {
-            taxable * 0.03
-        } else if taxable <= 144000.0 {
-            taxable * 0.10 - 2520.0
-        } else if taxable <= 300000.0 {
-            taxable * 0.20 - 16920.0
-        } else {
-            taxable * 0.25 - 31920.0
-        };
-
-        let calculated_net = gross - social_insurance - housing_fund - tax;
-        let diff = net_salary - calculated_net;
-
-        if diff.abs() < 0.01 {
-            break;
-        }
-
-        gross += diff * 0.5;
+    // 下界：无税时的税前（f(lo) ≤ net）
+    let mut lo = (net + deductions).max(0.0);
+    // 上界：税率最高 45%，净额 ≥ 55%×应纳税部分，此上界必使 f(hi) ≥ net
+    let mut hi = (net + deductions + 5000.0) / 0.55 + 5000.0;
+    if hi < lo {
+        hi = lo;
     }
-
-    Ok(Value::Number(gross))
+    for _ in 0..100 {
+        let mid = (lo + hi) / 2.0;
+        if net_of(mid) < net {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    Ok(Value::Number((lo + hi) / 2.0))
 }
 
 /// 计算年度汇算清缴退税
