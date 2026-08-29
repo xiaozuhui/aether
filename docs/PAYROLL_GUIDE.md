@@ -12,21 +12,21 @@ Aether 薪酬计算模块提供 72 个函数，覆盖薪资折算、加班费、
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
-| `CALC_HOURLY_PAY` | 月薪, 月工时 | 时薪 |
-| `CALC_DAILY_PAY` | 月薪, 月计薪天数 | 日薪 |
-| `CALC_MONTHLY_FROM_HOURLY` | 时薪, 月工时 | 由时薪折算月薪 |
-| `CALC_ANNUAL_SALARY` | 月薪 | 年薪（×12） |
-| `CALC_BASE_SALARY` | 年薪 | 由年薪折算月薪 |
-| `CALC_GROSS_SALARY` | 基本工资, 津贴合计 | 应发工资 |
-| `CALC_NET_SALARY` | 应发工资, 扣款合计 | 实发工资 |
+| `CALC_HOURLY_PAY` | 月薪[, 月工时=174] | 时薪（月薪 ÷ 月工时） |
+| `CALC_DAILY_PAY` | 月薪[, 计薪天数=21.75] | 日薪 |
+| `CALC_MONTHLY_FROM_HOURLY` | 时薪[, 月工时=174] | 由时薪折算月薪 |
+| `CALC_ANNUAL_SALARY` | 月薪[, 月数=12] | 年薪 |
+| `CALC_BASE_SALARY` | 基本工资, 实际出勤天数, 应出勤天数 | 按出勤率折算的基本工资 |
+| `CALC_GROSS_SALARY` | 基本工资, 加班费, 奖金, 津贴 | 应发工资（四项求和） |
+| `CALC_NET_SALARY` | 应发工资, 社保, 公积金, 个税, 其他扣款 | 实发工资（逐项扣减，不为负） |
 
 ```aether
 Set MONTHLY 10000
 Set HOURLY CALC_HOURLY_PAY(MONTHLY, 174)      // 月标准工时 174 小时
 Set DAILY CALC_DAILY_PAY(MONTHLY, 21.75)
 Set ANNUAL CALC_ANNUAL_SALARY(MONTHLY)
-Set GROSS CALC_GROSS_SALARY(MONTHLY, 1500)    // 基本工资 + 津贴
-Set NET CALC_NET_SALARY(GROSS, 2250)          // 应发 − 扣款
+Set GROSS CALC_GROSS_SALARY(MONTHLY, 800, 0, 1500)   // 基本工资+加班费+奖金+津贴
+Set NET CALC_NET_SALARY(GROSS, 2250, 0, 180, 0)       // 应发 − 社保 − 公积金 − 个税 − 其他
 ```
 
 ### 2. 加班费计算（5 个）
@@ -48,13 +48,13 @@ Set TOTAL CALC_TOTAL_OVERTIME(10000, 10, 8, 4)   // 1.5x + 2x + 3x
 **口径说明（重要，勿混用）**：
 
 - `CALC_PERSONAL_TAX` 使用**年度累计**税率表（综合所得 7 档超额累进，下表）。月度应纳税所得额不能直接套用——月度按 5000 元/月起征预扣（用 `CALC_TAXABLE_INCOME`），年度汇算时再按累计应纳税所得额套用本表。
-- `CALC_TAXABLE_INCOME` 是**月度**口径：入参为月度总收入，自动扣除 5000 元起征点。
+- `CALC_TAXABLE_INCOME` 是**月度**口径：入参为（应发工资, 社保, 公积金[, 专项附加扣除]），公式 max(0, 应发 − 社保 − 公积金 − 5000 起征点 − 专项附加)。
 - `CALC_GROSS_FROM_NET` 的反推同样基于上述 7 档表与 5000 元/月起征点，用二分法求解，往返误差 < 0.01 元。
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `CALC_PERSONAL_TAX` | 应纳税所得额 | 按 7 档年度表计算税额 |
-| `CALC_TAXABLE_INCOME` | 月度总收入 | 减 5000 起征点（月度口径） |
+| `CALC_TAXABLE_INCOME` | 应发工资, 社保, 公积金[, 专项附加] | max(0, 应发−社保−公积金−5000−专项附加) |
 | `CALC_ANNUAL_BONUS_TAX` | 年终奖金额 | 单独计税：除以 12 定档，税率×全额 − 速算扣除×12 |
 | `CALC_EFFECTIVE_TAX_RATE` | 税额, 总收入 | 实际税率（税额 ÷ 总收入） |
 | `CALC_GROSS_FROM_NET` | 税后净额, 社保, 公积金 | 由税后反推税前（二分） |
@@ -74,7 +74,7 @@ Set TOTAL CALC_TOTAL_OVERTIME(10000, 10, 8, 4)   // 1.5x + 2x + 3x
 
 ```aether
 // 月度预扣：月收入 15000，社保+公积金合计 2625
-Set TAXABLE CALC_TAXABLE_INCOME(15000)             // 10000（已扣 5000 起征点）
+Set TAXABLE CALC_TAXABLE_INCOME(15000, 2625, 0)    // 7375 = 15000 − 2625 − 5000
 // 年度汇算：累计应纳税所得额
 Set ANNUAL_TAX CALC_PERSONAL_TAX(120000)           // 年度表
 // 年终奖单独计税
@@ -237,14 +237,15 @@ Func CALC_MONTHLY_PAYROLL(BASE_SALARY, OVERTIME_HOURS, ATTENDANCE_DAYS) {
     Set TRANSPORT CALC_TRANSPORT_ALLOWANCE(10, ATTENDANCE_DAYS)
 
     // 3. 应发工资
-    Set GROSS CALC_GROSS_SALARY(BASE_SALARY, MEAL + TRANSPORT + OVERTIME_PAY)
+    Set GROSS CALC_GROSS_SALARY(BASE_SALARY, OVERTIME_PAY, 0, MEAL + TRANSPORT)
     PRINTLN("应发工资: " + TO_STRING(GROSS))
 
     // 4. 社保公积金（个人部分，含公积金 12%）
     Set SOCIAL CALC_SOCIAL_INSURANCE(BASE_SALARY)
 
     // 5. 个税（月度预扣口径：5000 元/月起征）
-    Set TAXABLE CALC_TAXABLE_INCOME(GROSS - SOCIAL)
+    // 社保合计（含公积金）拆成社保/公积金两处传入
+    Set TAXABLE CALC_TAXABLE_INCOME(GROSS, SOCIAL, 0)
     Set TAX 0
     If (TAXABLE > 0) {
         Set TAX CALC_PERSONAL_TAX(TAXABLE)
@@ -252,7 +253,7 @@ Func CALC_MONTHLY_PAYROLL(BASE_SALARY, OVERTIME_HOURS, ATTENDANCE_DAYS) {
     PRINTLN("个税: " + TO_STRING(TAX))
 
     // 6. 实发工资
-    Set NET CALC_NET_SALARY(GROSS, SOCIAL + TAX)
+    Set NET CALC_NET_SALARY(GROSS, SOCIAL, 0, TAX, 0)
     PRINTLN("实发工资: " + TO_STRING(NET))
 
     Return NET

@@ -1204,7 +1204,7 @@ cargo test --all
 
 ### 测试覆盖
 
-- ✅ **100+ 测试**（单元/集成/脚本测试）
+- ✅ **400+ 测试**（单元/集成/脚本测试，含 12 个 BDD spec 套件）
 - ✅ 完整的解释器测试（Lexer, Parser, Evaluator）
 - ✅ 所有内置函数测试
 - ✅ 错误处理和命名约定测试
@@ -1212,25 +1212,31 @@ cargo test --all
 
 ### 基准测试
 
+`cargo bench` 运行 10 个计算场景（蒙特卡洛 π、1200! 大整数累乘、分数调和级数、尾递归/深尾递归、数组管道、字符串构建、千人工资单、生成器、冷解析）。每个场景都由独立实现的 Rust 镜像校验结果，校验失败以非零退出码结束——可直接作为 CI 语义回归门禁。
+
 ```bash
-# 运行所有基准测试
-cargo bench
-
-# 查看结果
-open target/criterion/report/index.html
-
-# 快速基准测试
-./scripts/bench.sh quick
-
-# 特定类别
-./scripts/bench.sh arithmetic
+cargo bench                                                # 全量（约 5-6s 计算；首次 LTO 编译需数分钟）
+AETHER_BENCH_SCALE=0.2 cargo bench                         # 快速冒烟（重复次数缩至 20%）
+AETHER_BENCH_ONLY=fib cargo bench                          # 只跑名字含 fib 的场景
+AETHER_BENCH_SCALE=10 AETHER_BENCH_ONLY=deep cargo bench   # 单场景深压测
 ```
 
-**基准覆盖：**
+实测结果（Apple M2、release/LTO 构建，2026-08-29，取两次运行的最小值）：
 
-- 算术运算、变量操作、函数调用
-- 控制流、数据结构、解析性能
-- 不同程序规模（小/中/大型）
+| 场景 | 单次耗时 | 折算成本 |
+| --- | --- | --- |
+| monte_carlo_pi（40000 点落点判定） | 74ms | ~1.9µs/迭代 |
+| big_factorial（1200! 全 3175 位） | 2.1ms | 1.8µs/次乘法 |
+| fraction_harmonic（H_300 精确分数） | 4.4ms | 14.7µs/次分数加法 |
+| tail_fib（尾递归 FIB(70)） | 113µs | 1.6µs/次调用 |
+| deep_tail_sum（20000 层尾递归） | 21ms | 1.1µs/层（TCO，栈深恒定） |
+| data_structures（500 元素全管道） | 7.9ms | 15.8µs/元素 |
+| string_build（400 轮拼接+截断） | 1.5ms | 3.8µs/轮 |
+| payroll_batch（1000 人 × 6 个 CALC_*） | 12ms | 11.9µs/人 |
+| generator_squares（5000 个 Yield） | 4.8ms | 0.96µs/元素 |
+| parse_cold（唯一源码冷解析） | 3µs | ~30 万程序/秒 |
+
+基线吞吐：简单语句约 **0.3µs/条**（~300 万条/秒）。完整方法论、两次运行对照与优化方向见 [bench/RESULTS.md](bench/RESULTS.md)。
 
 ---
 
@@ -1310,7 +1316,7 @@ aether[3]> (X + Y)
 30
 ```
 
-### 内置函数一览（共 150 个）
+### 内置函数一览（共 192 个）
 
 以下函数名均为实际注册名，可直接调用。
 
@@ -1489,22 +1495,23 @@ Aether 会在解析和运行时检测以下错误，并附带源码位置信息�
 
 ## 🎯 开发状态
 
-### 当前版本: v0.5.3
+### 当前版本: v0.6.0
 
 **已完成：**
 
 - ✅ 完整的解释器 (Lexer, Parser, Evaluator)
-- ✅ 150 个内置函数
+- ✅ 192 个内置函数
+- ✅ Generator / Lazy / 调试器条件断点（0.6.0）
+- ✅ 尾递归优化（0.6.0；循环体内的尾调用保持解释执行，正确性优先）
 - ✅ 增强的错误报告
 - ✅ 严格的命名约定
 - ✅ AST 缓存和性能优化
-- ✅ 100+ 测试（持续维护）
+- ✅ 400+ 测试（持续维护）
 - ✅ 无IO Trace
 - ✅ 实现注入、Import和Export
 
 **计划中：**
 
-- 🔄 完整的尾递归优化
 - 🔄 JIT 编译器
 - 🔄 试算 - 在内部变量不确定的情况下，通过自动赋值为0或""来让代码跑通，用于代码初期简单测试
 
