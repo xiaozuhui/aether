@@ -33,7 +33,7 @@ Cargo.toml 版本号已升至 0.5.4，尚未打 tag 发布。
   - 位运算符 `&`、`|`、`^`、`<<`、`>>`，普通整数与大整数通用
   - 科学计数法字面量，正指数构造精确值，超阈值自动升级为 BigInteger
   - 可配置大整数阈值：`Aether::set_bigint_threshold` API 与 `--bigint-threshold` CLI 参数
-- CONTRIBUTING、DCO、LICENSE 的简体中文版本
+- CONTRIBUTING、LICENSE 的简体中文版本
 
 ### 修复
 

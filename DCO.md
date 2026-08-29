@@ -1,7 +1,5 @@
 # Developer Certificate of Origin (DCO)
 
-English | [简体中文](DCO.zh-CN.md)
-
 Version 1.1
 
 Copyright (C) 2004, 2006 The Linux Foundation and its contributors.  

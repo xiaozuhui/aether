@@ -25,7 +25,7 @@ git commit -s
 
 这会在提交信息中添加一行 "Signed-off-by"，表示你同意 DCO 条款。
 
-完整文本请参见 [DCO.md](DCO.zh-CN.md)。
+完整文本请参见 [DCO.md](DCO.md)。
 
 ## 行为准则
 
