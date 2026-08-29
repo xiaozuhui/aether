@@ -33,4 +33,4 @@ git commit -s
 
 ## 许可证
 
-一旦你提交了贡献，即表示你同意你的贡献将按照与项目相同的许可证（GPLv3 及例外条款）进行授权。
+一旦你提交了贡献，即表示你同意你的贡献将按照与项目相同的许可证（Business Source License 1.1，见 [LICENSE](LICENSE)）进行授权。

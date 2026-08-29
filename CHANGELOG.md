@@ -17,6 +17,10 @@ Cargo.toml 版本号已升至 0.5.4，尚未打 tag 发布。
   - `Import` 模块的跨文件断点：模块顶层在加载时触发，模块内函数体在调用时按定义文件触发（`Value::Function` 记录定义文件）
   - 嵌入侧 API：`Aether::attach_debugger / detach_debugger / set_source_file / lookup_variable / evaluator_mut`
 
+### 变更
+
+- **许可证由 GPL-3.0（附授权第三方例外条款）变更为 BSL 1.1（Business Source License）**：个人、学习、内部业务及嵌入自有产品的生产使用均无需商业授权，仅竞争性脚本引擎 / DSL 运行时产品需要；Change Date 2030-08-28 到期自动转为 Apache-2.0（见 LICENSE）。已发布的历史版本仍适用其发布时的 GPL-3.0
+
 ### 移除
 
 - **移除全部语言绑定**：删除 C FFI 层（`src/ffi.rs`、`aether.h`、cbindgen）、WASM 导出层与 TypeScript 绑定及全部相关依赖。项目定位收敛为纯 Rust 库 + CLI 两种形态，WASM 目标不再可用，跨平台仅支持 x86_64 与 ARM64

@@ -6,7 +6,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/aether.svg)](https://crates.io/crates/aether-azathoth)
 [![Documentation](https://docs.rs/aether/badge.svg)](https://docs.rs/aether-azathoth/latest/aether/)
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-BUSL--1.1-blue.svg)](LICENSE)
 
 **高性能 · 易集成 · 跨平台 · 安全优先**
 
@@ -1473,7 +1473,12 @@ Aether 会在解析和运行时检测以下错误，并附带源码位置信息�
 
 ## 📄 许可证
 
-根据 GNU General Public License Version 3 (GPLv3) 许可，附加例外条款（[LICENSE](LICENSE)）。
+采用 [Business Source License 1.1（BSL 1.1）](LICENSE) 授权：
+
+- **附加使用授权**：个人、学习、内部业务用途，以及将 Aether 嵌入你自己的产品或服务并用于生产，均无需商业授权；仅向他方提供以 Aether 为竞争替代品的脚本引擎 / DSL 运行时产品时需要商业授权
+- **转换日期**：2030-08-28。在此日期之前发布的所有版本（含日后的新版本，只要不改动 Change Date）将于同一天自动转为 Apache-2.0 开源许可；「每个版本以首次公开发布满 4 周年」仅为兜底上限
+
+已发布的历史版本（≤ 0.5.3）仍适用其发布时的 GPL-3.0。
 
 **注意**：所有为该项目添加代码的成员都必须签署`DCO协议`[DCO](DCO.md)
 

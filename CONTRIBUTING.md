@@ -33,4 +33,4 @@ Please be respectful and inclusive in all interactions.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project (GPLv3 with exceptions).
+By contributing, you agree that your contributions will be licensed under the same license as the project (Business Source License 1.1, see [LICENSE](LICENSE)).
