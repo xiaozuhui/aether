@@ -125,7 +125,9 @@ fn run_scenario(sc: &Scenario, reps: usize) -> Result<Stats, String> {
 
     // 预热 + 校验第 0 次（失败直接报错，不进入计时）
     let warm = (sc.code)(0);
-    let v = engine.eval(&warm).map_err(|e| format!("预热执行失败: {e}"))?;
+    let v = engine
+        .eval(&warm)
+        .map_err(|e| format!("预热执行失败: {e}"))?;
     (sc.validate)(&v, 0)?;
 
     let mut durations = Vec::with_capacity(reps);
@@ -133,7 +135,9 @@ fn run_scenario(sc: &Scenario, reps: usize) -> Result<Stats, String> {
     for rep in 0..reps {
         let code = (sc.code)(rep);
         let start = Instant::now();
-        let v = engine.eval(&code).map_err(|e| format!("第 {rep} 次执行失败: {e}"))?;
+        let v = engine
+            .eval(&code)
+            .map_err(|e| format!("第 {rep} 次执行失败: {e}"))?;
         durations.push(start.elapsed());
         (sc.validate)(&v, rep)?;
     }
