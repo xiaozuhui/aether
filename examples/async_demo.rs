@@ -92,7 +92,7 @@ async fn global_engine_async_example() {
 
 /// 示例 3: EnginePool 异步调用
 async fn engine_pool_async_example() {
-    let mut pool = EnginePool::new(4);
+    let pool = EnginePool::new(4);
 
     // 注意：由于 Aether 使用 Rc (非 Send)，不能直接在 tokio::spawn 中使用
     // 正确做法是在同一线程中顺序执行多个异步操作
